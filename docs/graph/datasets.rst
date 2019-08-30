@@ -25,6 +25,9 @@ Software Heritage Graph.  It is available in the following formats:
 Teaser datasets
 ---------------
 
+If the above dataset is too big, we also provide the following "teaser"
+datasets that can get you started and have a smaller size fingerprint.
+
 popular-4k
 ~~~~~~~~~~
 
