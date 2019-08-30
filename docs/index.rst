@@ -1,4 +1,4 @@
-.. _swh-py-template:
+.. _swh-dataset:
 
 Software Heritage Graph Dataset
 ===============================
@@ -40,9 +40,9 @@ If you use this dataset for research purposes, please cite the following paper:
    :maxdepth: 2
    :caption: Contents:
 
-   datasets.rst
-   postgresql.rst
-   athena.rst
+   datasets
+   postgresql
+   athena
 
 
 Indices and tables
