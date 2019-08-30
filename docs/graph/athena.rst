@@ -1,0 +1,115 @@
+Setup on Amazon Athena
+======================
+
+The Software Heritage Graph Dataset is available as a public dataset in `Amazon
+Athena <https://aws.amazon.com/athena/>`_. Athena uses `presto
+<https://prestodb.github.io/>`_, a distributed SQL query engine, to
+automatically scale queries on large datasets.
+
+The pricing of Athena depends on the amount of data scanned by each query,
+generally at a cost of $5 per TiB of data scanned. Full pricing details are
+available `here <https://aws.amazon.com/athena/pricing/>`_.
+
+Note that because the Software Heritage Graph Dataset is available as a public
+dataset, you **do not have to pay for the storage, only for the queries**
+(except for the data you store on S3 yourself, like query results).
+
+
+Loading the tables
+------------------
+
+.. highlight:: bash
+
+AWS account
+~~~~~~~~~~~
+
+In order to use Amazon Athena, you will first need to `create an AWS account
+and setup billing
+<https://aws.amazon.com/premiumsupport/knowledge-center/create-and-activate-aws-account/>`_.
+
+
+Setup
+~~~~~
+
+Athena needs to be made aware of the location and the schema of the Parquet
+files available as a public dataset. Unfortunately, since Athena does not
+support queries that contain multiple commands, it is not as simple as pasting
+an installation script in the console. Instead, we provide a Python script that
+can be run locally on your machine, that will communicate with Athena to create
+the tables automatically with the appropriate schema.
+
+To run this script, you will need to install a few dependencies on your
+machine:
+
+- For **Ubuntu** and **Debian**::
+
+    sudo apt install python3 python3-boto3 awscli
+
+- For **Archlinux**::
+
+    sudo pacman -S --needed python python-boto3 aws-cli
+
+Once the dependencies are installed, run::
+
+  aws configure
+
+This will ask for an AWS Access Key ID and an AWS Secret Access Key in
+order to give Python access to your AWS account. These keys can be generated at
+`this address
+<https://console.aws.amazon.com/iam/home#/security_credentials>`_.
+
+It will also ask for the region in which you want to run the queries. We
+recommand to use ``us-east-1``, since that's where the public dataset is
+located.
+
+Creating the tables
+~~~~~~~~~~~~~~~~~~~
+
+Download and run the Python script that will create the tables on your account:
+
+.. tabs::
+
+  .. group-tab:: full
+
+    ::
+
+      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/tables.py
+      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/gen_schema.py
+      ./gen_schema.py
+
+  .. group-tab:: teaser: popular-4k
+
+    This teaser is not available on Athena yet.
+
+  .. group-tab:: teaser: popular-3k-python
+
+    This teaser is not available on Athena yet.
+
+To check that the tables have been successfully created in your account, you
+can open your `Amazon Athena console
+<https://console.aws.amazon.com/athena/home>`_. You should be able to select
+the database corresponding to your dataset, and see the tables:
+
+.. image:: _images/athena_tables.png
+
+
+Running queries
+---------------
+
+.. highlight:: sql
+
+From the console, once you have selected the database of your dataset, you can
+run SQL queries directly from the Query Editor.
+
+Try for instance this query that computes the most frequent file names in the
+archive::
+
+  SELECT from_utf8(name, '?') AS name, COUNT(DISTINCT target) AS cnt
+  FROM directory_entry_file
+  GROUP BY name
+  ORDER BY cnt DESC
+  LIMIT 10;
+
+Other examples are available in the preprint of our article: `The Software
+Heritage Graph Dataset: Public software development under one roof.
+<https://upsilon.cc/~zack/research/publications/msr-2019-swh.pdf>`_
