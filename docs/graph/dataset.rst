@@ -12,15 +12,16 @@ Software Heritage Graph.  It is available in the following formats:
 
 - **PostgreSQL (compressed)**:
 
+  - **Total size**: 1.2 TiB
   - **URL**: `/graph/latest/sql/
     <https://annex.softwareheritage.org/public/dataset/graph/latest/sql/>`_
-  - **Total size**: 1.2 TiB
 
 - **Apache Parquet**:
 
+  - **Total size**: 1.2 TiB
   - **URL**: `/graph/latest/parquet/
     <https://annex.softwareheritage.org/public/dataset/graph/latest/parquet/>`_
-  - **Total size**: 1.2 TiB
+  - **S3**: ``s3://softwareheritage/graph``
 
 Teaser datasets
 ---------------
@@ -46,15 +47,16 @@ This teaser is available in the following formats:
 
 - **PostgreSQL (compressed)**:
 
+  - **Total size**: 23 GiB
   - **URL**: `/graph/latest/popular-4k/sql/
     <https://annex.softwareheritage.org/public/dataset/graph/latest/popular-4k/sql/>`_
-  - **Total size**: TODO
 
 - **Apache Parquet**:
 
+  - **Total size**: 27 GiB
   - **URL**: `/graph/latest/popular-4k/parquet/
     <https://annex.softwareheritage.org/public/dataset/graph/latest/popular-4k/parquet/>`_
-  - **Total size**: TODO
+  - **S3**: ``s3://softwareheritage/teasers/popular-4k``
 
 popular-3k-python
 ~~~~~~~~~~~~~~~~~
@@ -75,12 +77,13 @@ was the following, similar to ``popular-4k``:
 
 - **PostgreSQL (compressed)**:
 
+  - **Total size**: 4.7 GiB
   - **URL**: `/graph/latest/popular-3k-python/sql/
     <https://annex.softwareheritage.org/public/dataset/graph/latest/popular-3k-python/sql/>`_
-  - **Total size**: TODO
 
 - **Apache Parquet**:
 
+  - **Total size**: 5.3 GiB
   - **URL**: `/graph/latest/popular-3k-python/sql/
     <https://annex.softwareheritage.org/public/dataset/graph/latest/popular-3k-python/parquet/>`_
-  - **Total size**: TODO
+  - **S3**: ``s3://softwareheritage/teasers/popular-4k``

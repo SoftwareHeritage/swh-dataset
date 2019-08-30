@@ -47,22 +47,22 @@ dataset you chose:
 
     ::
 
-      mkdir full && cd full
-      wget -c -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/2019-01-28/sql/
+      mkdir swhgd && cd swhgd
+      wget -c -q --show-progress -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/2019-01-28/sql/
 
   .. group-tab:: teaser: popular-4k
 
     ::
 
-      mkdir full && cd full
-      wget -c -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/2019-01-28/popular-4k/sql/
+      mkdir popular-4k && cd popular-4k
+      wget -c -q --show-progress -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/2019-01-28/popular-4k/sql/
 
   .. group-tab:: teaser: popular-3k-python
 
     ::
 
-      mkdir full && cd full
-      wget -c -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/2019-01-28/popular-3k-python/sql/
+      mkdir popular-3k-python && cd popular-3k-python
+      wget -c -q --show-progress -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/2019-01-28/popular-3k-python/sql/
 
 Loading the dataset
 -------------------
@@ -77,21 +77,21 @@ contain it, and load the database:
     ::
 
       createdb swhgd
-      psql swhgd < swh_import.sql
+      psql swhgd < load.sql
 
   .. group-tab:: teaser: popular-4k
 
     ::
 
       createdb swhgd-popular-4k
-      psql swhgd-popular-4k < swh_import.sql
+      psql swhgd-popular-4k < load.sql
 
   .. group-tab:: teaser: popular-3k-python
 
     ::
 
       createdb swhgd-popular-3k-python
-      psql swhgd-popular-3k-python < swh_import.sql
+      psql swhgd-popular-3k-python < load.sql
 
 
 You can now run SQL queries on your database. Run ``psql <database_name>`` to

@@ -41,6 +41,7 @@ If you use this dataset for research purposes, please cite the following paper:
    :caption: Contents:
 
    dataset
+   schema
    postgresql
    athena
    databricks
