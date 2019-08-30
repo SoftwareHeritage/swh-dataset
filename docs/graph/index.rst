@@ -40,9 +40,10 @@ If you use this dataset for research purposes, please cite the following paper:
    :maxdepth: 2
    :caption: Contents:
 
-   datasets
+   dataset
    postgresql
    athena
+   databricks
 
 
 Indices and tables
