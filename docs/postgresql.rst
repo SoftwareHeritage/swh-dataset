@@ -18,13 +18,13 @@ to the next section.*
 
 - For **Ubuntu** and **Debian**::
 
-  sudo apt install postgresql
+    sudo apt install postgresql
 
 - For **Archlinux**::
 
-  sudo pacman -S --needed postgresql
-  sudo -u postgres initdb -D '/var/lib/postgres/data'
-  sudo systemctl enable --now postgresql
+    sudo pacman -S --needed postgresql
+    sudo -u postgres initdb -D '/var/lib/postgres/data'
+    sudo systemctl enable --now postgresql
 
 Once PostgreSQL is running, you also need an user that will be able to create
 databases and run queries. The easiest way to achieve that is simply to create
@@ -76,22 +76,22 @@ contain it, and load the database:
 
     ::
 
-      createdb softwareheritage-full
-      psql softwareheritage-full < swh_import.sql
+      createdb swhgd
+      psql swhgd < swh_import.sql
 
   .. group-tab:: popular-4k
 
     ::
 
-      createdb softwareheritage-popular-4k
-      psql softwareheritage-popular-4k < swh_import.sql
+      createdb swhgd-popular-4k
+      psql swhgd-popular-4k < swh_import.sql
 
   .. group-tab:: popular-3k-python
 
     ::
 
-      createdb softwareheritage-popular-3k-python
-      psql softwareheritage-popular-3k-python < swh_import.sql
+      createdb swhgd-popular-3k-python
+      psql swhgd-popular-3k-python < swh_import.sql
 
 
 You can now run SQL queries on your database. Run ``psql <database_name>`` to

@@ -1,16 +1,17 @@
-Datasets
-========
+Dataset
+=======
 
-We provide the full graph dataset along with two, smaller datasets that can be
-used for smaller-scale experiments.
+We provide the full graph dataset along with two "teaser" datasets that can be
+used for trying out smaller-scale experiments before using the full graph.
 
 The main URLs of the datasets are relative to our dataset prefix:
 `https://annex.softwareheritage.org/public/dataset/ <https://annex.softwareheritage.org/public/dataset/>`__
 
-full
-----
 
-The ``full`` dataset contains the full Software Heritage Graph. It is available
+Main dataset
+------------
+
+The main dataset contains the full Software Heritage Graph. It is available
 in the following formats:
 
 - **PostgreSQL (compressed)**:
@@ -25,10 +26,13 @@ in the following formats:
     <https://annex.softwareheritage.org/public/dataset/graph/latest/parquet/>`_
   - **Total size**: 1.2 TiB
 
-popular-4k
-----------
+Teaser datasets
+---------------
 
-The ``popular-4k`` dataset contains a subset of 4000 popular
+popular-4k
+~~~~~~~~~~
+
+The ``popular-4k`` teaser contains a subset of 4000 popular
 repositories from GitHub, Gitlab, PyPI and Debian. The selection criteria to
 pick the software origins was the following:
 
@@ -39,7 +43,7 @@ pick the software origins was the following:
 - The 1000 most popular Debian packages (by "votes" according to the `Debian
   Popularity Contest <https://popcon.debian.org/>`_ database)
 
-This dataset is available in the following formats:
+This teaser is available in the following formats:
 
 - **PostgreSQL (compressed)**:
 
@@ -54,9 +58,9 @@ This dataset is available in the following formats:
   - **Total size**: TODO
 
 popular-3k-python
------------------
+~~~~~~~~~~~~~~~~~
 
-The ``popular-3k-python`` dataset contains a subset of 3052 popular
+The ``popular-3k-python`` teaser contains a subset of 3052 popular
 repositories **tagged as being written in the Python language**, from GitHub,
 Gitlab, PyPI and Debian. The selection criteria to pick the software origins
 was the following, similar to ``popular-4k``:
