@@ -27,6 +27,11 @@ In order to use Amazon Athena, you will first need to `create an AWS account
 and setup billing
 <https://aws.amazon.com/premiumsupport/knowledge-center/create-and-activate-aws-account/>`_.
 
+You will also need to create an **output S3 bucket**: this is the place where
+Athena will store your query results, so that you can retrieve them and analyze
+them afterwards.  To do that, go on the `S3 console
+<https://s3.console.aws.amazon.com/s3/home>`_ and create a new bucket.
+
 
 Setup
 ~~~~~
@@ -73,17 +78,22 @@ Download and run the Python script that will create the tables on your account:
 
     ::
 
-      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/tables.py
-      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/gen_schema.py
-      ./gen_schema.py
+      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/athena.py
+      python3 athena.py -o 's3://YOUR_OUTPUT_BUCKET/'
 
   .. group-tab:: teaser: popular-4k
 
-    This teaser is not available on Athena yet.
+    ::
+
+      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/athena.py
+      python3 athena.py -o 's3://YOUR_OUTPUT_BUCKET/' -d popular4k -l 's3://softwareheritage/teasers/popular-4k'
 
   .. group-tab:: teaser: popular-3k-python
 
-    This teaser is not available on Athena yet.
+    ::
+
+      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/athena.py
+      python3 athena.py -o 's3://YOUR_OUTPUT_BUCKET/' -d popular3kpython -l 's3://softwareheritage/teasers/popular-3k-python'
 
 To check that the tables have been successfully created in your account, you
 can open your `Amazon Athena console
