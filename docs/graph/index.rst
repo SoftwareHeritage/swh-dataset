@@ -39,6 +39,7 @@ If you use this dataset for research purposes, please cite the following paper:
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+   :titlesonly:
 
    dataset
    schema
@@ -48,7 +49,7 @@ If you use this dataset for research purposes, please cite the following paper:
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
