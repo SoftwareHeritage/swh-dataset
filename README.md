@@ -1,5 +1,6 @@
-swh-py-template
-===============
+swh-dataset
+===========
 
-Python module template, used as skeleton to create new modules.
+Public datasets produced and released by `Software Heritage`_.
 
+.. _Software Heritage: https://www.softwareheritage.org
