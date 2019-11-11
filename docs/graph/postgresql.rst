@@ -48,21 +48,21 @@ dataset you chose:
     ::
 
       mkdir swhgd && cd swhgd
-      wget -c -q --show-progress -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/2019-01-28/sql/
+      wget -c -q --show-progress -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/latest/sql/
 
   .. group-tab:: teaser: popular-4k
 
     ::
 
       mkdir popular-4k && cd popular-4k
-      wget -c -q --show-progress -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/2019-01-28/popular-4k/sql/
+      wget -c -q --show-progress -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/latest/popular-4k/sql/
 
   .. group-tab:: teaser: popular-3k-python
 
     ::
 
       mkdir popular-3k-python && cd popular-3k-python
-      wget -c -q --show-progress -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/2019-01-28/popular-3k-python/sql/
+      wget -c -q --show-progress -A gz,sql -nd -r -np -nH https://annex.softwareheritage.org/public/dataset/graph/latest/popular-3k-python/sql/
 
 Loading the dataset
 -------------------
