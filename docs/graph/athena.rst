@@ -64,7 +64,7 @@ order to give Python access to your AWS account. These keys can be generated at
 <https://console.aws.amazon.com/iam/home#/security_credentials>`_.
 
 It will also ask for the region in which you want to run the queries. We
-recommand to use ``us-east-1``, since that's where the public dataset is
+recommend to use ``us-east-1``, since that's where the public dataset is
 located.
 
 Creating the tables

@@ -30,7 +30,7 @@ access <https://www.softwareheritage.org/legal/bulk-access-terms-of-use/>`__.
 
 If you use this dataset for research purposes, please cite the following paper:
 
-* 
+*
     | Antoine Pietri, Diomidis Spinellis, Stefano Zacchiroli.
     | *The Software Heritage Graph Dataset: Public software development under one roof.*
     | In proceedings of `MSR 2019 <http://2019.msrconf.org/>`_: The 16th International Conference on Mining Software Repositories, May 2019, Montreal, Canada. Co-located with `ICSE 2019 <https://2019.icse-conferences.org/>`_.

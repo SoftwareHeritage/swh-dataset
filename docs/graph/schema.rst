@@ -37,7 +37,7 @@ This page documents the details of the schema.
     this directory, as references to an entry in the ``directory_entry_rev``
     table.
 
-- **directory_entry_file**: contains informations about file entries in
+- **directory_entry_file**: contains information about file entries in
   directories.
 
   - ``id`` (integer): unique identifier for the entry
@@ -45,7 +45,7 @@ This page documents the details of the schema.
   - ``name`` (bytes): the name of the file (basename of its path)
   - ``perms`` (integer): the permissions of the file
 
-- **directory_entry_dir**: contains informations about directory entries in
+- **directory_entry_dir**: contains information about directory entries in
   directories.
 
   - ``id`` (integer): unique identifier for the entry
@@ -53,7 +53,7 @@ This page documents the details of the schema.
   - ``name`` (bytes): the name of the directory
   - ``perms`` (integer): the permissions of the directory
 
-- **directory_entry_rev**: contains informations about revision entries in
+- **directory_entry_rev**: contains information about revision entries in
   directories.
 
   - ``id`` (integer): unique identifier for the entry
