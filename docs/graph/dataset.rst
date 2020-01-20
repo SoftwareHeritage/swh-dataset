@@ -84,6 +84,6 @@ was the following, similar to ``popular-4k``:
 - **Apache Parquet**:
 
   - **Total size**: 5.3 GiB
-  - **URL**: `/graph/latest/popular-3k-python/sql/
+  - **URL**: `/graph/latest/popular-3k-python/parquet/
     <https://annex.softwareheritage.org/public/dataset/graph/latest/popular-3k-python/parquet/>`_
   - **S3**: ``s3://softwareheritage/teasers/popular-4k``

@@ -17,7 +17,7 @@ This page documents the details of the schema.
   - ``length`` (integer): the length of the content
 
 -  **skipped_content**: contains information on the contents that were not archived for
-  various reasons.
+   various reasons.
 
   - ``sha1`` (bytes): the SHA-1 of the missing content
   - ``sha1_git`` (bytes): the Git SHA-1 of the missing content
