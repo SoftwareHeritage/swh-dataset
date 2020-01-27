@@ -1,0 +1,23 @@
+{
+  "Version": 2,
+  "Id": "software-heritage-graph-dataset%%TABLE_SLUG%%",
+  "Slug": "software-heritage-graph-dataset%%TABLE_SLUG%%",
+  "Name": "Software Heritage Graph Dataset%%TABLE_TITLE%%",
+  "DataFormat": {
+    "Type": "Parquet"
+  },
+  "IconUrl": "https://swhopendataset.blob.core.windows.net/swhgraph/swh-logo.svg",
+  "Tags": [
+    "software heritage",
+    "graph dataset",
+    "development history",
+    "software repositories",
+    "source code",
+    "open source software",
+    "free software",
+    "development history graph"
+  ],
+  "ProfileIntervalInSeconds": "TODO",
+  "BootstrapTimeUtc": "TODO",
+  "Triaged": "TODO"
+}

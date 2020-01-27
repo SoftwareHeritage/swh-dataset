@@ -9,14 +9,14 @@ A simplified view of the corresponding database schema is shown here:
 
 This page documents the details of the schema.
 
--  **content**: contains information on the contents stored in
+- **content**: contains information on the contents stored in
    the archive.
 
   - ``sha1`` (bytes): the SHA-1 of the content
   - ``sha1_git`` (bytes): the Git SHA-1 of the content
   - ``length`` (integer): the length of the content
 
--  **skipped_content**: contains information on the contents that were not archived for
+- **skipped_content**: contains information on the contents that were not archived for
   various reasons.
 
   - ``sha1`` (bytes): the SHA-1 of the missing content
