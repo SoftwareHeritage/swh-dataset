@@ -10,7 +10,8 @@ class ZSTWriter:
         is_text = not (self.mode == 'wb')
         self.process = subprocess.Popen(
             ['zstd', '-q', '-o', self.path],
-            text=is_text, stdin=subprocess.PIPE
+            text=is_text,
+            stdin=subprocess.PIPE
         )
         return self
 

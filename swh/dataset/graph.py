@@ -16,7 +16,13 @@ from swh.dataset.utils import ZSTWriter
 from swh.model.identifiers import origin_identifier, persistent_identifier
 
 
-def process_messages(messages, writer, config):
+def process_messages(messages, writer, config) -> None:
+    """
+    Args:
+        messages: A sequence of messages to process
+        writer: A file-like object that can be written to
+        config: The exporter configuration
+    """
     def write(src, dst):
         src_type, src_id = src
         dst_type, dst_id = dst
@@ -38,8 +44,8 @@ def process_messages(messages, writer, config):
             if branch is None or not branch_name:
                 continue
             if (config.get('remove_pull_requests')
-                    and branch_name.startswith(b'refs/pull')
-                    or branch_name.startswith(b'refs/merge-requests')):
+                    and (branch_name.startswith(b'refs/pull')
+                         or branch_name.startswith(b'refs/merge-requests'))):
                 continue
             write(('snapshot', snapshot['id']),
                   (branch['target_type'], branch['target']))
@@ -67,6 +73,12 @@ def process_messages(messages, writer, config):
 
 
 class GraphEdgeExporter(ParallelExporter):
+    """
+    Implementation of ParallelExporter which writes all the graph edges
+    of a specific type in a Zstandard-compressed CSV file.
+
+    Each row of the CSV is in the format: `<SRC PID> <DST PID>
+    """
     def export_worker(self, export_path, **kwargs):
         dataset_path = pathlib.Path(export_path)
         dataset_path.mkdir(exist_ok=True, parents=True)
@@ -81,6 +93,7 @@ class GraphEdgeExporter(ParallelExporter):
 
 
 def export_edges(config, export_path, export_id, processes):
+    """Run the edge exporter for each edge type."""
     object_types = [
         'origin_visit',
         'snapshot',
@@ -95,6 +108,19 @@ def export_edges(config, export_path, export_id, processes):
 
 
 def sort_graph_nodes(export_path, config):
+    """
+    Generate the node list from the edges files.
+
+    We cannot solely rely on the object IDs that are read in the journal,
+    as some nodes that are referred to as destinations in the edge file
+    might not be present in the archive (e.g a rev_entry referring to a
+    revision that we do not have crawled yet).
+
+    The most efficient way of getting all the nodes that are mentioned in
+    the edges file is therefore to use sort(1) on the gigantic edge files
+    to get all the unique node IDs, while using the disk as a temporary
+    buffer.
+    """
     # Use bytes for the sorting algorithm (faster than being locale-specific)
     env = {
         **os.environ.copy(),
@@ -107,7 +133,8 @@ def sort_graph_nodes(export_path, config):
     with tempfile.TemporaryDirectory(prefix='.graph_node_sort_',
                                      dir=disk_buffer_dir) as buffer_path:
         subprocess.run(
-            ("zstdcat {export_path}/*.edges.csv.zst | "
+            ("pv {export_path}/*.edges.csv.zst | "
+             "zstdcat |"
              "tr ' ' '\\n' | "
              "sort -u -S{sort_buffer_size} -T{buffer_path} | "
              "zstdmt > {export_path}/graph.nodes.csv.zst")

@@ -31,6 +31,7 @@ def cli(ctx, config_file):
               help="Number of parallel processes")
 @click.pass_context
 def export_graph(ctx, export_path, export_id, processes):
+    """Export the Software Heritage graph as an edge dataset."""
     config = ctx.obj['config']
     if not export_id:
         export_id = str(uuid.uuid4())
