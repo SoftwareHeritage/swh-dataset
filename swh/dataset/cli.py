@@ -24,7 +24,14 @@ def cli(ctx, config_file):
     ctx.obj['config'] = conf
 
 
-@cli.command('export-graph')
+@cli.group('graph')
+@click.pass_context
+def graph(ctx):
+    """Manage graph edges export"""
+    pass
+
+
+@graph.command('export')
 @click.argument('export-path', type=click.Path())
 @click.option('--export-id', '-e', help="Unique ID of the export run.")
 @click.option('--processes', '-p', default=1,
@@ -36,10 +43,12 @@ def export_graph(ctx, export_path, export_id, processes):
     if not export_id:
         export_id = str(uuid.uuid4())
 
-    print()
-    print('== Edges export phase ==')
     export_edges(config, export_path, export_id, processes)
 
-    print()
-    print('== Sort phase ==')
+
+@graph.command('sort')
+@click.argument('export-path', type=click.Path())
+@click.pass_context
+def sort_graph(ctx, export_path):
+    config = ctx.obj['config']
     sort_graph_nodes(export_path, config)

@@ -5,6 +5,7 @@
 
 import functools
 import os
+import os.path
 import pathlib
 import shlex
 import subprocess
@@ -14,29 +15,43 @@ import uuid
 from swh.dataset.exporter import ParallelExporter
 from swh.dataset.utils import ZSTWriter
 from swh.model.identifiers import origin_identifier, persistent_identifier
+from swh.journal.fixer import fix_objects
 
 
-def process_messages(messages, writer, config) -> None:
+def process_messages(messages, config, node_writer, edge_writer):
     """
     Args:
         messages: A sequence of messages to process
-        writer: A file-like object that can be written to
         config: The exporter configuration
+        node_writer: A file-like object where to write nodes
+        edge_writer: A file-like object where to write edges
     """
-    def write(src, dst):
+    def write_node(node):
+        node_type, node_id = node
+        if node_id is None:
+            return
+        node_pid = persistent_identifier(object_type=node_type,
+                                         object_id=node_id)
+        node_writer.write('{}\n'.format(node_pid))
+
+    def write_edge(src, dst):
         src_type, src_id = src
         dst_type, dst_id = dst
         if src_id is None or dst_id is None:
             return
         src_pid = persistent_identifier(object_type=src_type, object_id=src_id)
         dst_pid = persistent_identifier(object_type=dst_type, object_id=dst_id)
-        writer.write('{} {}\n'.format(src_pid, dst_pid))
+        edge_writer.write('{} {}\n'.format(src_pid, dst_pid))
+
+    messages = {k: fix_objects(k, v) for k, v in messages.items()}
 
     for visit in messages.get('origin_visit', []):
-        write(('origin', origin_identifier({'url': visit['origin']['url']})),
-              ('snapshot', visit['snapshot']))
+        origin_id = origin_identifier({'url': visit['origin']})
+        write_node(('origin', origin_id))
+        write_edge(('origin', origin_id), ('snapshot', visit['snapshot']))
 
     for snapshot in messages.get('snapshot', []):
+        write_node(('snapshot', snapshot['id']))
         for branch_name, branch in snapshot['branches'].items():
             while branch and branch.get('target_type') == 'alias':
                 branch_name = branch['target']
@@ -47,29 +62,35 @@ def process_messages(messages, writer, config) -> None:
                     and (branch_name.startswith(b'refs/pull')
                          or branch_name.startswith(b'refs/merge-requests'))):
                 continue
-            write(('snapshot', snapshot['id']),
-                  (branch['target_type'], branch['target']))
+            write_edge(('snapshot', snapshot['id']),
+                       (branch['target_type'], branch['target']))
 
     for release in messages.get('release', []):
-        write(('release', release['id']),
-              (release['target_type'], release['target']))
+        write_node(('release', release['id']))
+        write_edge(('release', release['id']),
+                   (release['target_type'], release['target']))
 
     for revision in messages.get('revision', []):
-        write(('revision', revision['id']),
-              ('directory', revision['directory']))
+        write_node(('revision', revision['id']))
+        write_edge(('revision', revision['id']),
+                   ('directory', revision['directory']))
         for parent in revision['parents']:
-            write(('revision', revision['id']),
-                  ('revision', parent))
+            write_edge(('revision', revision['id']),
+                       ('revision', parent))
 
     for directory in messages.get('directory', []):
+        write_node(('directory', directory['id']))
         for entry in directory['entries']:
             entry_type_mapping = {
                 'file': 'content',
                 'dir': 'directory',
                 'rev': 'revision'
             }
-            write(('directory', directory['id']),
-                  (entry_type_mapping[entry['type']], entry['target']))
+            write_edge(('directory', directory['id']),
+                       (entry_type_mapping[entry['type']], entry['target']))
+
+    for content in messages.get('content', []):
+        write_node(('content', content['id']))
 
 
 class GraphEdgeExporter(ParallelExporter):
@@ -82,12 +103,19 @@ class GraphEdgeExporter(ParallelExporter):
     def export_worker(self, export_path, **kwargs):
         dataset_path = pathlib.Path(export_path)
         dataset_path.mkdir(exist_ok=True, parents=True)
-        dataset_file = dataset_path / ('graph-{}.edges.csv.zst'
-                                       .format(str(uuid.uuid4())))
+        nodes_file = dataset_path / ('graph-{}.nodes.csv.zst'
+                                     .format(str(uuid.uuid4())))
+        edges_file = dataset_path / ('graph-{}.edges.csv.zst'
+                                     .format(str(uuid.uuid4())))
 
-        with ZSTWriter(dataset_file) as writer:
+        with \
+                ZSTWriter(nodes_file) as nodes_writer, \
+                ZSTWriter(edges_file) as edges_writer:
             process_fn = functools.partial(
-                process_messages, writer=writer, config=self.config,
+                process_messages,
+                config=self.config,
+                nodes_writer=nodes_writer,
+                edges_writer=edges_writer
             )
             self.process(process_fn, **kwargs)
 
@@ -104,7 +132,7 @@ def export_edges(config, export_path, export_id, processes):
     for obj_type in object_types:
         print('{} edges:'.format(obj_type))
         exporter = GraphEdgeExporter(config, export_id, obj_type, processes)
-        exporter.run(export_path)
+        exporter.run(os.path.join(export_path, obj_type))
 
 
 def sort_graph_nodes(export_path, config):
@@ -120,6 +148,20 @@ def sort_graph_nodes(export_path, config):
     the edges file is therefore to use sort(1) on the gigantic edge files
     to get all the unique node IDs, while using the disk as a temporary
     buffer.
+
+    This pipeline does, in order:
+
+     - concatenate and write all the compressed edges files in
+       graph.edges.csv.zst (using the fact that ZST compression is an additive
+       function) ;
+     - deflate the edges ;
+     - count the number of edges and write it in graph.edges.count.txt ;
+     - concatenate all the (deflated) nodes from the export with the
+       destination edges, and sort the output to get the list of unique graph
+       nodes ;
+     - count the number of unique graph nodes and write it in
+       graph.nodes.count.txt ;
+     - compress and write the resulting nodes in graph.nodes.csv.zst.
     """
     # Use bytes for the sorting algorithm (faster than being locale-specific)
     env = {
@@ -133,10 +175,14 @@ def sort_graph_nodes(export_path, config):
     with tempfile.TemporaryDirectory(prefix='.graph_node_sort_',
                                      dir=disk_buffer_dir) as buffer_path:
         subprocess.run(
-            ("pv {export_path}/*.edges.csv.zst | "
+            ("pv {export_path}/*/*.edges.csv.zst | "
+             "tee {export_path}/graph.edges.csv.zst |"
              "zstdcat |"
-             "tr ' ' '\\n' | "
+             "tee >( wc -l > {export_path}/graph.edges.count.txt ) |"
+             "cut -d' ' -f2 | "
+             "cat - <( zstdcat {export_path}/*/*.nodes.csv.zst ) | "
              "sort -u -S{sort_buffer_size} -T{buffer_path} | "
+             "tee >( wc -l > {export_path}/graph.nodes.count.txt ) |"
              "zstdmt > {export_path}/graph.nodes.csv.zst")
             .format(
                 export_path=shlex.quote(export_path),

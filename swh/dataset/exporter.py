@@ -1,7 +1,7 @@
 import concurrent.futures
 import multiprocessing
-import tqdm
 import time
+import tqdm
 from typing import Mapping, Sequence, Tuple
 from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor
 from confluent_kafka import TopicPartition
