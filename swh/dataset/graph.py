@@ -1,4 +1,4 @@
-# Copyright (C) 2019  The Software Heritage developers
+# Copyright (C) 2020  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -13,7 +13,7 @@ import tempfile
 import uuid
 
 from swh.dataset.exporter import ParallelExporter
-from swh.dataset.utils import ZSTWriter
+from swh.dataset.utils import ZSTFile
 from swh.model.identifiers import origin_identifier, persistent_identifier
 from swh.journal.fixer import fix_objects
 
@@ -90,7 +90,7 @@ def process_messages(messages, config, node_writer, edge_writer):
                        (entry_type_mapping[entry['type']], entry['target']))
 
     for content in messages.get('content', []):
-        write_node(('content', content['id']))
+        write_node(('content', content['sha1_git']))
 
 
 class GraphEdgeExporter(ParallelExporter):
@@ -109,8 +109,8 @@ class GraphEdgeExporter(ParallelExporter):
                                      .format(str(uuid.uuid4())))
 
         with \
-                ZSTWriter(nodes_file) as nodes_writer, \
-                ZSTWriter(edges_file) as edges_writer:
+                ZSTFile(nodes_file, 'w') as nodes_writer, \
+                ZSTFile(edges_file, 'w') as edges_writer:
             process_fn = functools.partial(
                 process_messages,
                 config=self.config,
@@ -175,20 +175,23 @@ def sort_graph_nodes(export_path, config):
     with tempfile.TemporaryDirectory(prefix='.graph_node_sort_',
                                      dir=disk_buffer_dir) as buffer_path:
         subprocess.run(
-            ("pv {export_path}/*/*.edges.csv.zst | "
-             "tee {export_path}/graph.edges.csv.zst |"
-             "zstdcat |"
-             "tee >( wc -l > {export_path}/graph.edges.count.txt ) |"
-             "cut -d' ' -f2 | "
-             "cat - <( zstdcat {export_path}/*/*.nodes.csv.zst ) | "
-             "sort -u -S{sort_buffer_size} -T{buffer_path} | "
-             "tee >( wc -l > {export_path}/graph.nodes.count.txt ) |"
-             "zstdmt > {export_path}/graph.nodes.csv.zst")
-            .format(
-                export_path=shlex.quote(export_path),
-                buffer_path=shlex.quote(buffer_path),
-                sort_buffer_size=shlex.quote(sort_buffer_size),
-            ),
-            shell=True,
+            [
+                "bash",
+                "-c",
+                ("pv {export_path}/*/*.edges.csv.zst | "
+                 "tee {export_path}/graph.edges.csv.zst |"
+                 "zstdcat |"
+                 "tee >( wc -l > {export_path}/graph.edges.count.txt ) |"
+                 "cut -d' ' -f2 | "
+                 "cat - <( zstdcat {export_path}/*/*.nodes.csv.zst ) | "
+                 "sort -u -S{sort_buffer_size} -T{buffer_path} | "
+                 "tee >( wc -l > {export_path}/graph.nodes.count.txt ) |"
+                 "zstdmt > {export_path}/graph.nodes.csv.zst")
+                .format(
+                    export_path=shlex.quote(str(export_path)),
+                    buffer_path=shlex.quote(str(buffer_path)),
+                    sort_buffer_size=shlex.quote(sort_buffer_size),
+                ),
+            ],
             env=env,
         )
