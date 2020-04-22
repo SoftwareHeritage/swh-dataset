@@ -433,5 +433,5 @@ def test_sort_pipeline(tmp_path):
     assert output_nodes == sorted(expected_nodes)
     assert int((tmp_path / 'graph.nodes.count.txt').read_text()) == len(expected_nodes)
 
-    assert set(output_edges) == set(input_edges)
+    assert sorted(output_edges) == sorted(input_edges)
     assert int((tmp_path / 'graph.edges.count.txt').read_text()) == len(input_edges)
