@@ -277,10 +277,7 @@ def test_export_revision(exporter):
                     **TEST_REVISION,
                     "id": binhash("rev1"),
                     "directory": binhash("dir1"),
-                    "parents": [
-                        binhash("rev2"),
-                        binhash("rev3"),
-                    ],
+                    "parents": [binhash("rev2"), binhash("rev3"),],
                 },
                 {
                     **TEST_REVISION,
@@ -299,7 +296,6 @@ def test_export_revision(exporter):
         call(f"swh:1:rev:{hexhash('rev1')} swh:1:dir:{hexhash('dir1')}\n"),
         call(f"swh:1:rev:{hexhash('rev1')} swh:1:rev:{hexhash('rev2')}\n"),
         call(f"swh:1:rev:{hexhash('rev1')} swh:1:rev:{hexhash('rev3')}\n"),
-
         call(f"swh:1:rev:{hexhash('rev2')} swh:1:dir:{hexhash('dir2')}\n"),
     ]
 
@@ -316,10 +312,7 @@ def test_export_directory(exporter):
                         {"type": "rev", "target": binhash("rev1")},
                     ],
                 },
-                {
-                    "id": binhash("dir2"),
-                    "entries": [],
-                },
+                {"id": binhash("dir2"), "entries": [],},
             ]
         }
     )
@@ -338,14 +331,8 @@ def test_export_content(exporter):
     node_writer, edge_writer = exporter(
         {
             "content": [
-                {
-                    **TEST_CONTENT,
-                    "sha1_git": binhash("cnt1"),
-                },
-                {
-                    **TEST_CONTENT,
-                    "sha1_git": binhash("cnt2"),
-                },
+                {**TEST_CONTENT, "sha1_git": binhash("cnt1"),},
+                {**TEST_CONTENT, "sha1_git": binhash("cnt2"),},
             ]
         }
     )
@@ -357,24 +344,24 @@ def test_export_content(exporter):
 
 
 def zstwrite(fp, lines):
-    with ZSTFile(fp, 'w') as writer:
+    with ZSTFile(fp, "w") as writer:
         for l in lines:
             writer.write(l + "\n")
 
 
 def zstread(fp):
-    with ZSTFile(fp, 'r') as reader:
+    with ZSTFile(fp, "r") as reader:
         return reader.read()
 
 
 def test_sort_pipeline(tmp_path):
     short_type_mapping = {
-        'origin_visit': 'ori',
-        'snapshot': 'snp',
-        'release': 'rel',
-        'revision': 'rev',
-        'directory': 'dir',
-        'content': 'cnt',
+        "origin_visit": "ori",
+        "snapshot": "snp",
+        "release": "rel",
+        "revision": "rev",
+        "directory": "dir",
+        "content": "cnt",
     }
 
     input_nodes = [
@@ -388,41 +375,37 @@ def test_sort_pipeline(tmp_path):
         f"swh:1:ori:{hexhash('ori2')} swh:1:snp:{hexhash('snp2')}",
         f"swh:1:ori:{hexhash('ori3')} swh:1:snp:{hexhash('snp3')}",
         f"swh:1:ori:{hexhash('ori4')} swh:1:snp:{hexhash('snpX')}",  # missing dest
-
         f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}",  # dup
         f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}",  # dup
         f"swh:1:snp:{hexhash('snp3')} swh:1:cnt:{hexhash('cnt1')}",
         f"swh:1:snp:{hexhash('snp4')} swh:1:rel:{hexhash('rel1')}",
-
         f"swh:1:rel:{hexhash('rel1')} swh:1:rel:{hexhash('rel2')}",
         f"swh:1:rel:{hexhash('rel2')} swh:1:rev:{hexhash('rev1')}",
         f"swh:1:rel:{hexhash('rel3')} swh:1:rev:{hexhash('rev2')}",
         f"swh:1:rel:{hexhash('rel4')} swh:1:dir:{hexhash('dir1')}",
-
         f"swh:1:rev:{hexhash('rev1')} swh:1:rev:{hexhash('rev1')}",  # dup
         f"swh:1:rev:{hexhash('rev1')} swh:1:rev:{hexhash('rev1')}",  # dup
         f"swh:1:rev:{hexhash('rev1')} swh:1:rev:{hexhash('rev2')}",
         f"swh:1:rev:{hexhash('rev2')} swh:1:rev:{hexhash('revX')}",  # missing dest
         f"swh:1:rev:{hexhash('rev3')} swh:1:rev:{hexhash('rev2')}",
         f"swh:1:rev:{hexhash('rev4')} swh:1:dir:{hexhash('dir1')}",
-
         f"swh:1:dir:{hexhash('dir1')} swh:1:cnt:{hexhash('cnt1')}",
         f"swh:1:dir:{hexhash('dir1')} swh:1:dir:{hexhash('dir1')}",
         f"swh:1:dir:{hexhash('dir1')} swh:1:rev:{hexhash('rev1')}",
     ]
 
     for obj_type, short_obj_type in short_type_mapping.items():
-        p = (tmp_path / obj_type)
+        p = tmp_path / obj_type
         p.mkdir()
         edges = [e for e in input_edges if e.startswith(f"swh:1:{short_obj_type}")]
-        zstwrite(p / '00.edges.csv.zst', edges[0::2])
-        zstwrite(p / '01.edges.csv.zst', edges[1::2])
+        zstwrite(p / "00.edges.csv.zst", edges[0::2])
+        zstwrite(p / "01.edges.csv.zst", edges[1::2])
 
         nodes = [n for n in input_nodes if n.startswith(f"swh:1:{short_obj_type}")]
-        zstwrite(p / '00.nodes.csv.zst', nodes[0::2])
-        zstwrite(p / '01.nodes.csv.zst', nodes[1::2])
+        zstwrite(p / "00.nodes.csv.zst", nodes[0::2])
+        zstwrite(p / "01.nodes.csv.zst", nodes[1::2])
 
-    sort_graph_nodes(tmp_path, config={'sort_buffer_size': '1M'})
+    sort_graph_nodes(tmp_path, config={"sort_buffer_size": "1M"})
 
     output_nodes = zstread(tmp_path / "graph.nodes.csv.zst").split("\n")
     output_edges = zstread(tmp_path / "graph.edges.csv.zst").split("\n")
@@ -431,7 +414,7 @@ def test_sort_pipeline(tmp_path):
 
     expected_nodes = set(input_nodes) | set(l.split()[1] for l in input_edges)
     assert output_nodes == sorted(expected_nodes)
-    assert int((tmp_path / 'graph.nodes.count.txt').read_text()) == len(expected_nodes)
+    assert int((tmp_path / "graph.nodes.count.txt").read_text()) == len(expected_nodes)
 
     assert sorted(output_edges) == sorted(input_edges)
-    assert int((tmp_path / 'graph.edges.count.txt').read_text()) == len(input_edges)
+    assert int((tmp_path / "graph.edges.count.txt").read_text()) == len(input_edges)

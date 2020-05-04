@@ -7,24 +7,21 @@ import subprocess
 
 
 class ZSTFile:
-    def __init__(self, path, mode='r'):
-        if mode not in ('r', 'rb', 'w', 'wb'):
+    def __init__(self, path, mode="r"):
+        if mode not in ("r", "rb", "w", "wb"):
             raise ValueError(f"ZSTFile mode {mode} is invalid.")
         self.path = path
         self.mode = mode
 
     def __enter__(self):
-        is_text = not (self.mode in ('rb', 'wb'))
-        writing = self.mode in ('w', 'wb')
+        is_text = not (self.mode in ("rb", "wb"))
+        writing = self.mode in ("w", "wb")
         if writing:
-            cmd = ['zstd', '-q', '-o', self.path]
+            cmd = ["zstd", "-q", "-o", self.path]
         else:
-            cmd = ['zstdcat', self.path]
+            cmd = ["zstdcat", self.path]
         self.process = subprocess.Popen(
-            cmd,
-            text=is_text,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
+            cmd, text=is_text, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         )
         return self
 

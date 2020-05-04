@@ -46,10 +46,10 @@ setup(
     packages=find_packages(),  # packages's modules
     install_requires=parse_requirements() + parse_requirements("swh"),
     tests_require=parse_requirements("test"),
-    entry_points='''
+    entry_points="""
         [swh.cli.subcommands]
         dataset=swh.dataset.cli:cli
-    ''',
+    """,
     setup_requires=["vcversioner"],
     extras_require={"testing": parse_requirements("test")},
     vcversioner={},

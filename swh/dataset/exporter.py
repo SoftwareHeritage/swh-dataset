@@ -21,14 +21,15 @@ class JournalClientOffsetRanges(JournalClient):
 
     This client can only read a single topic at a time.
     """
+
     def __init__(
-            self,
-            *args,
-            offset_ranges: Mapping[int, Tuple[int, int]] = None,
-            assignment: Sequence[int] = None,
-            progress_queue: multiprocessing.Queue = None,
-            refresh_every: int = 200,
-            **kwargs,
+        self,
+        *args,
+        offset_ranges: Mapping[int, Tuple[int, int]] = None,
+        assignment: Sequence[int] = None,
+        progress_queue: multiprocessing.Queue = None,
+        refresh_every: int = 200,
+        **kwargs,
     ):
         """
         Args:
@@ -50,9 +51,9 @@ class JournalClientOffsetRanges(JournalClient):
     def subscribe(self):
         self.topic_name = self.subscription[0]
         time.sleep(0.1)  # https://github.com/edenhill/librdkafka/issues/1983
-        self.consumer.assign([
-            TopicPartition(self.topic_name, pid) for pid in self.assignment
-        ])
+        self.consumer.assign(
+            [TopicPartition(self.topic_name, pid) for pid in self.assignment]
+        )
 
     def process(self, *args, **kwargs):
         self.count = 0
@@ -62,13 +63,13 @@ class JournalClientOffsetRanges(JournalClient):
         except EOFError:
             self.progress_queue.put(None)
 
-    def handle_committed_offsets(self, ):
+    def handle_committed_offsets(self,):
         """
         Handle already committed partition offsets before starting processing.
         """
-        committed = self.consumer.committed([
-            TopicPartition(self.topic_name, pid) for pid in self.assignment
-        ])
+        committed = self.consumer.committed(
+            [TopicPartition(self.topic_name, pid) for pid in self.assignment]
+        )
         for tp in committed:
             self.handle_offset(tp.partition, tp.offset)
 
@@ -85,8 +86,7 @@ class JournalClientOffsetRanges(JournalClient):
             self.progress_queue.put({partition_id: offset})
 
         if offset >= self.offset_ranges[partition_id][1] - 1:
-            self.assignment = [pid for pid in self.assignment
-                               if pid != partition_id]
+            self.assignment = [pid for pid in self.assignment if pid != partition_id]
             self.subscribe()
 
         if not self.assignment:
@@ -109,6 +109,7 @@ class ParallelExporter:
     Each exporter should override the `export_worker` function with an
     implementation of how to run the message processing.
     """
+
     def __init__(self, config, export_id: str, obj_type, processes=1):
         """
         Args:
@@ -120,7 +121,7 @@ class ParallelExporter:
             processes: The number of processes to run.
         """
         self.config = config
-        self.export_id = 'swh-dataset-export-{}'.format(export_id)
+        self.export_id = "swh-dataset-export-{}".format(export_id)
         self.obj_type = obj_type
         self.processes = processes
         self.offsets = None
@@ -132,7 +133,7 @@ class ParallelExporter:
         """
         if self.offsets is None:
             client = JournalClient(
-                **self.config['journal'],
+                **self.config["journal"],
                 object_types=[self.obj_type],
                 group_id=self.export_id,
             )
@@ -141,8 +142,9 @@ class ParallelExporter:
             partitions = topics[topic_name].partitions
 
             self.offsets = {}
-            for partition_id in tqdm.tqdm(partitions.keys(),
-                                          desc="  - Partition offsets"):
+            for partition_id in tqdm.tqdm(
+                partitions.keys(), desc="  - Partition offsets"
+            ):
                 tp = TopicPartition(topic_name, partition_id)
                 (lo, hi) = client.consumer.get_watermark_offsets(tp)
                 self.offsets[partition_id] = (lo, hi)
@@ -161,12 +163,14 @@ class ParallelExporter:
         with ProcessPoolExecutor(self.processes + 1) as pool:
             futures = []
             for i in range(self.processes):
-                futures.append(pool.submit(
-                    self.export_worker,
-                    *args,
-                    assignment=to_assign[i::self.processes],
-                    queue=q
-                ))
+                futures.append(
+                    pool.submit(
+                        self.export_worker,
+                        *args,
+                        assignment=to_assign[i :: self.processes],
+                        queue=q,
+                    )
+                )
             futures.append(pool.submit(self.progress_worker, queue=q))
 
             concurrent.futures.wait(futures, return_when=FIRST_EXCEPTION)
@@ -196,16 +200,17 @@ class ParallelExporter:
                     continue
                 d.update(item)
                 progress = sum(n - self.offsets[p][0] for p, n in d.items())
-                pbar.set_postfix(active_workers=active_workers,
-                                 total_workers=self.processes)
+                pbar.set_postfix(
+                    active_workers=active_workers, total_workers=self.processes
+                )
                 pbar.update(progress - pbar.n)
 
     def process(self, callback, assignment=None, queue=None):
         client = JournalClientOffsetRanges(
-            **self.config['journal'],
+            **self.config["journal"],
             object_types=[self.obj_type],
             group_id=self.export_id,
-            debug='cgrp,broker',
+            debug="cgrp,broker",
             offset_ranges=self.offsets,
             assignment=assignment,
             progress_queue=queue,
