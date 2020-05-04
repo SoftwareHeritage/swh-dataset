@@ -61,7 +61,6 @@ class JournalClientOffsetRanges(JournalClient):
             super().process(*args, **kwargs)
         except EOFError:
             self.progress_queue.put(None)
-            pass
 
     def handle_committed_offsets(self, ):
         """
@@ -153,8 +152,8 @@ class ParallelExporter:
         """
         Run the parallel export.
         """
-        self.get_offsets()
-        to_assign = list(self.offsets.keys())
+        offsets = self.get_offsets()
+        to_assign = list(offsets.keys())
 
         manager = multiprocessing.Manager()
         q = manager.Queue()
