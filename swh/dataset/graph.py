@@ -15,7 +15,7 @@ import uuid
 from swh.dataset.exporter import ParallelExporter
 from swh.dataset.utils import ZSTFile
 from swh.model.identifiers import origin_identifier, persistent_identifier
-from swh.journal.fixer import fix_objects
+from swh.storage.fixer import fix_objects
 
 
 def process_messages(messages, config, node_writer, edge_writer):
