@@ -4,9 +4,16 @@
 # See top-level LICENSE file for more information
 
 import subprocess
+import sqlite3
+import os
 
 
 class ZSTFile:
+    """
+    Object-like wrapper around a ZST file. Uses a subprocess of the "zstd"
+    command to compress and deflate the objects.
+    """
+
     def __init__(self, path, mode="r"):
         if mode not in ("r", "rb", "w", "wb"):
             raise ValueError(f"ZSTFile mode {mode} is invalid.")
@@ -35,3 +42,40 @@ class ZSTFile:
 
     def write(self, buf):
         self.process.stdin.write(buf)
+
+
+class SQLiteSet:
+    """
+    On-disk Set object for hashes using SQLite as an indexer backend. Used to
+    deduplicate objects when processing large queues with duplicates.
+    """
+
+    def __init__(self, db_path: os.PathLike):
+        self.db_path = db_path
+
+    def __enter__(self):
+        self.db = sqlite3.connect(str(self.db_path))
+        self.db.execute(
+            "CREATE TABLE tmpset (val TEXT NOT NULL PRIMARY KEY) WITHOUT ROWID"
+        )
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.db.close()
+
+    def add(self, v: bytes) -> bool:
+        """
+        Add an item to the set.
+
+        Args:
+            v: The value to add to the set.
+
+        Returns:
+              True if the value was added to the set, False if it was already present.
+        """
+        try:
+            self.db.execute("INSERT INTO tmpset(val) VALUES (?)", (v.hex(),))
+        except sqlite3.IntegrityError:
+            return False
+        else:
+            return True

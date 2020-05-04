@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import contextlib
 import functools
 import os
 import os.path
@@ -13,12 +14,12 @@ import tempfile
 import uuid
 
 from swh.dataset.exporter import ParallelExporter
-from swh.dataset.utils import ZSTFile
+from swh.dataset.utils import ZSTFile, SQLiteSet
 from swh.model.identifiers import origin_identifier, persistent_identifier
 from swh.storage.fixer import fix_objects
 
 
-def process_messages(messages, config, node_writer, edge_writer):
+def process_messages(messages, config, node_writer, edge_writer, node_set):
     """
     Args:
         messages: A sequence of messages to process
@@ -47,10 +48,14 @@ def process_messages(messages, config, node_writer, edge_writer):
 
     for visit in messages.get("origin_visit", []):
         origin_id = origin_identifier({"url": visit["origin"]})
+        if not node_set.add(origin_id):
+            continue
         write_node(("origin", origin_id))
         write_edge(("origin", origin_id), ("snapshot", visit["snapshot"]))
 
     for snapshot in messages.get("snapshot", []):
+        if not node_set.add(snapshot["id"]):
+            continue
         write_node(("snapshot", snapshot["id"]))
         for branch_name, branch in snapshot["branches"].items():
             while branch and branch.get("target_type") == "alias":
@@ -68,18 +73,24 @@ def process_messages(messages, config, node_writer, edge_writer):
             )
 
     for release in messages.get("release", []):
+        if not node_set.add(release["id"]):
+            continue
         write_node(("release", release["id"]))
         write_edge(
             ("release", release["id"]), (release["target_type"], release["target"])
         )
 
     for revision in messages.get("revision", []):
+        if not node_set.add(revision["id"]):
+            continue
         write_node(("revision", revision["id"]))
         write_edge(("revision", revision["id"]), ("directory", revision["directory"]))
         for parent in revision["parents"]:
             write_edge(("revision", revision["id"]), ("revision", parent))
 
     for directory in messages.get("directory", []):
+        if not node_set.add(directory["id"]):
+            continue
         write_node(("directory", directory["id"]))
         for entry in directory["entries"]:
             entry_type_mapping = {
@@ -93,6 +104,8 @@ def process_messages(messages, config, node_writer, edge_writer):
             )
 
     for content in messages.get("content", []):
+        if not node_set.add(content["sha1_git"]):
+            continue
         write_node(("content", content["sha1_git"]))
 
 
@@ -107,17 +120,22 @@ class GraphEdgeExporter(ParallelExporter):
     def export_worker(self, export_path, **kwargs):
         dataset_path = pathlib.Path(export_path)
         dataset_path.mkdir(exist_ok=True, parents=True)
-        nodes_file = dataset_path / ("graph-{}.nodes.csv.zst".format(str(uuid.uuid4())))
-        edges_file = dataset_path / ("graph-{}.edges.csv.zst".format(str(uuid.uuid4())))
+        unique_id = str(uuid.uuid4())
+        nodes_file = dataset_path / ("graph-{}.nodes.csv.zst".format(unique_id))
+        edges_file = dataset_path / ("graph-{}.edges.csv.zst".format(unique_id))
+        node_set_file = dataset_path / (".set-nodes-{}.sqlite3".format(unique_id))
 
-        with ZSTFile(nodes_file, "w") as nodes_writer, ZSTFile(
-            edges_file, "w"
-        ) as edges_writer:
+        with contextlib.ExitStack() as stack:
+            nodes_writer = stack.enter_context(ZSTFile(nodes_file, "w"))
+            edges_writer = stack.enter_context(ZSTFile(edges_file, "w"))
+            node_set = stack.enter_context(SQLiteSet(node_set_file))
+
             process_fn = functools.partial(
                 process_messages,
                 config=self.config,
                 nodes_writer=nodes_writer,
                 edges_writer=edges_writer,
+                node_set=node_set,
             )
             self.process(process_fn, **kwargs)
 

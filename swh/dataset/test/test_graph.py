@@ -68,13 +68,19 @@ TEST_ORIGIN_VISIT = {
 
 @pytest.fixture
 def exporter():
-    def wrapped(messages, config=None) -> Tuple[Mock, Mock]:
+    def wrapped(messages, config=None, nodes_already_there=False) -> Tuple[Mock, Mock]:
         if config is None:
             config = {}
         node_writer = Mock()
         edge_writer = Mock()
+        node_set = Mock()
+        node_set.add.return_value = not nodes_already_there
         process_messages(
-            messages, config=config, node_writer=node_writer, edge_writer=edge_writer,
+            messages,
+            config=config,
+            node_writer=node_writer,
+            edge_writer=edge_writer,
+            node_set=node_set,
         )
         return node_writer.write, edge_writer.write
 
@@ -340,6 +346,18 @@ def test_export_content(exporter):
         call(f"swh:1:cnt:{hexhash('cnt1')}\n"),
         call(f"swh:1:cnt:{hexhash('cnt2')}\n"),
     ]
+    assert edge_writer.mock_calls == []
+
+
+def test_export_already_there_nodes(exporter):
+    node_writer, edge_writer = exporter(
+        {
+            "content": [{**TEST_CONTENT, "sha1_git": binhash("cnt1")}],
+            "directory": [{"id": binhash("dir2"), "entries": []}],
+        },
+        nodes_already_there=True,
+    )
+    assert node_writer.mock_calls == []
     assert edge_writer.mock_calls == []
 
 
