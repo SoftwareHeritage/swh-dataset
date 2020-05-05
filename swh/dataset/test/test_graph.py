@@ -55,9 +55,11 @@ TEST_RELEASE = {
 }
 
 TEST_ORIGIN = {"url": "https://somewhere.org/den/fox"}
+TEST_ORIGIN_2 = {"url": "https://somewhere.org/den/fox/2"}
 
 TEST_ORIGIN_VISIT = {
     "origin": TEST_ORIGIN["url"],
+    "visit": 1,
     "date": "2013-05-07 04:20:39.369271+00:00",
     "snapshot": None,  # TODO
     "status": "ongoing",  # TODO
@@ -66,15 +68,29 @@ TEST_ORIGIN_VISIT = {
 }
 
 
+class FakeDiskSet(set):
+    """
+    A set with an add() method that returns whether the item has been added
+    or was already there. Used to replace SQLiteSet in unittests.
+    """
+
+    def add(self, v):
+        assert isinstance(v, bytes)
+        r = True
+        if v in self:
+            r = False
+        super().add(v)
+        return r
+
+
 @pytest.fixture
 def exporter():
-    def wrapped(messages, config=None, nodes_already_there=False) -> Tuple[Mock, Mock]:
+    def wrapped(messages, config=None) -> Tuple[Mock, Mock]:
         if config is None:
             config = {}
         node_writer = Mock()
         edge_writer = Mock()
-        node_set = Mock()
-        node_set.add.return_value = not nodes_already_there
+        node_set = FakeDiskSet()
         process_messages(
             messages,
             config=config,
@@ -349,15 +365,42 @@ def test_export_content(exporter):
     assert edge_writer.mock_calls == []
 
 
-def test_export_already_there_nodes(exporter):
+def test_export_duplicate_node(exporter):
     node_writer, edge_writer = exporter(
         {
-            "content": [{**TEST_CONTENT, "sha1_git": binhash("cnt1")}],
-            "directory": [{"id": binhash("dir2"), "entries": []}],
+            "content": [
+                {**TEST_CONTENT, "sha1_git": binhash("cnt1")},
+                {**TEST_CONTENT, "sha1_git": binhash("cnt1")},
+                {**TEST_CONTENT, "sha1_git": binhash("cnt1")},
+            ],
         },
-        nodes_already_there=True,
     )
-    assert node_writer.mock_calls == []
+    assert node_writer.mock_calls == [
+        call(f"swh:1:cnt:{hexhash('cnt1')}\n"),
+    ]
+    assert edge_writer.mock_calls == []
+
+
+def test_export_duplicate_visit(exporter):
+    node_writer, edge_writer = exporter(
+        {
+            "origin_visit": [
+                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori1"}, "visit": 1},
+                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori2"}, "visit": 1},
+                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori1"}, "visit": 1},
+                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori2"}, "visit": 1},
+                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori1"}, "visit": 2},
+                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori2"}, "visit": 2},
+                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori2"}, "visit": 2},
+            ],
+        },
+    )
+    assert node_writer.mock_calls == [
+        call(f"swh:1:ori:{hexhash('ori1')}\n"),
+        call(f"swh:1:ori:{hexhash('ori2')}\n"),
+        call(f"swh:1:ori:{hexhash('ori1')}\n"),
+        call(f"swh:1:ori:{hexhash('ori2')}\n"),
+    ]
     assert edge_writer.mock_calls == []
 
 

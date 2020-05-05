@@ -48,7 +48,8 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
 
     for visit in messages.get("origin_visit", []):
         origin_id = origin_identifier({"url": visit["origin"]})
-        if not node_set.add(origin_id):
+        visit_id = visit["visit"]
+        if not node_set.add("{}:{}".format(origin_id, visit_id).encode()):
             continue
         write_node(("origin", origin_id))
         write_edge(("origin", origin_id), ("snapshot", visit["snapshot"]))
