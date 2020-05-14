@@ -133,15 +133,15 @@ class GraphEdgeExporter(ParallelExporter):
         node_set_file = dataset_path / (".set-nodes-{}.sqlite3".format(unique_id))
 
         with contextlib.ExitStack() as stack:
-            nodes_writer = stack.enter_context(ZSTFile(nodes_file, "w"))
-            edges_writer = stack.enter_context(ZSTFile(edges_file, "w"))
+            node_writer = stack.enter_context(ZSTFile(nodes_file, "w"))
+            edge_writer = stack.enter_context(ZSTFile(edges_file, "w"))
             node_set = stack.enter_context(SQLiteSet(node_set_file))
 
             process_fn = functools.partial(
                 process_messages,
                 config=self.config,
-                nodes_writer=nodes_writer,
-                edges_writer=edges_writer,
+                node_writer=node_writer,
+                edge_writer=edge_writer,
                 node_set=node_set,
             )
             self.process(process_fn, **kwargs)
@@ -155,6 +155,7 @@ def export_edges(config, export_path, export_id, processes):
         "release",
         "revision",
         "directory",
+        "content",
     ]
     for obj_type in object_types:
         print("{} edges:".format(obj_type))
