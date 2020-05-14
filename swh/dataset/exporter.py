@@ -61,6 +61,8 @@ class JournalClientOffsetRanges(JournalClient):
             self.handle_committed_offsets()
             super().process(*args, **kwargs)
         except EOFError:
+            pass
+        finally:
             self.progress_queue.put(None)
 
     def handle_committed_offsets(self,):
