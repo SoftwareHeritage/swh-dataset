@@ -64,9 +64,15 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
                 branch = snapshot["branches"][branch_name]
             if branch is None or not branch_name:
                 continue
+            # Heuristic to filter out pull requests in snapshots: remove all
+            # branches that start with refs/ but do not start with refs/heads or
+            # refs/tags.
             if config.get("remove_pull_requests") and (
-                branch_name.startswith(b"refs/pull")
-                or branch_name.startswith(b"refs/merge-requests")
+                branch_name.startswith(b"refs/")
+                and not (
+                    branch_name.startswith(b"refs/heads")
+                    or branch_name.startswith(b"refs/tags")
+                )
             ):
                 continue
             write_edge(

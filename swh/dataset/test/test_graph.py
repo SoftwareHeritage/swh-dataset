@@ -14,7 +14,7 @@ from swh.dataset.utils import ZSTFile
 from swh.model.hashutil import MultiHash, hash_to_bytes
 
 DATE = {
-    "timestamp": {"seconds": 1234567891, "microseconds": 0,},
+    "timestamp": {"seconds": 1234567891, "microseconds": 0},
     "offset": 120,
     "negative_utc": False,
 }
@@ -228,6 +228,14 @@ def test_export_snapshot_no_pull_requests(exporter):
                 "target": binhash("rev3"),
                 "target_type": "revision",
             },
+            b"refs/tags/v1.0.0": {
+                "target": binhash("rev4"),
+                "target_type": "revision",
+            },
+            b"refs/patch/123456abc": {
+                "target": binhash("rev5"),
+                "target_type": "revision",
+            },
         },
     }
 
@@ -236,6 +244,8 @@ def test_export_snapshot_no_pull_requests(exporter):
         call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}\n"),
         call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev2')}\n"),
         call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev3')}\n"),
+        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev4')}\n"),
+        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev5')}\n"),
     ]
 
     node_writer, edge_writer = exporter(
@@ -243,6 +253,7 @@ def test_export_snapshot_no_pull_requests(exporter):
     )
     assert edge_writer.mock_calls == [
         call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}\n"),
+        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev4')}\n"),
     ]
 
 
