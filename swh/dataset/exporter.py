@@ -216,6 +216,7 @@ class ParallelExporter:
             offset_ranges=self.offsets,
             assignment=assignment,
             progress_queue=queue,
+            **{"message.max.bytes": str(500 * 1024 * 1024)},
         )
         client.process(callback)
 
