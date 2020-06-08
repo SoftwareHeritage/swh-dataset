@@ -184,13 +184,22 @@ def sort_graph_nodes(export_path, config):
        function) ;
      - deflate the edges ;
      - count the number of edges and write it in graph.edges.count.txt ;
+     - count the number of occurrences of each edge type and write them
+       in graph.edges.stats.txt ;
      - concatenate all the (deflated) nodes from the export with the
        destination edges, and sort the output to get the list of unique graph
        nodes ;
      - count the number of unique graph nodes and write it in
        graph.nodes.count.txt ;
+     - count the number of occurrences of each node type and write them
+       in graph.nodes.stats.txt ;
      - compress and write the resulting nodes in graph.nodes.csv.zst.
     """
+
+    # Use awk as a replacement of `sort | uniq -c` to avoid buffering everything
+    # in memory
+    counter_command = "awk '{ t[$0]++ } END { for (i in t) print i,t[i] }'"
+
     # Use bytes for the sorting algorithm (faster than being locale-specific)
     env = {
         **os.environ.copy(),
@@ -212,15 +221,20 @@ def sort_graph_nodes(export_path, config):
                     "tee {export_path}/graph.edges.csv.zst |"
                     "zstdcat |"
                     "tee >( wc -l > {export_path}/graph.edges.count.txt ) |"
+                    "tee >( cut -d: -f3,6 | {counter_command} | sort "
+                    "           > {export_path}/graph.edges.stats.txt ) |"
                     "cut -d' ' -f2 | "
                     "cat - <( zstdcat {export_path}/*/*.nodes.csv.zst ) | "
                     "sort -u -S{sort_buffer_size} -T{buffer_path} | "
                     "tee >( wc -l > {export_path}/graph.nodes.count.txt ) |"
+                    "tee >( cut -d: -f3 | {counter_command} | sort "
+                    "           > {export_path}/graph.nodes.stats.txt ) |"
                     "zstdmt > {export_path}/graph.nodes.csv.zst"
                 ).format(
                     export_path=shlex.quote(str(export_path)),
                     buffer_path=shlex.quote(str(buffer_path)),
                     sort_buffer_size=shlex.quote(sort_buffer_size),
+                    counter_command=counter_command,
                 ),
             ],
             env=env,

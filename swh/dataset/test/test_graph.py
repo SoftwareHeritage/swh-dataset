@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import collections
 import hashlib
 from typing import Tuple
 
@@ -484,9 +485,32 @@ def test_sort_pipeline(tmp_path):
     output_nodes = list(filter(bool, output_nodes))
     output_edges = list(filter(bool, output_edges))
 
-    expected_nodes = set(input_nodes) | set(l.split()[1] for l in input_edges)
+    expected_nodes = set(input_nodes) | set(e.split()[1] for e in input_edges)
     assert output_nodes == sorted(expected_nodes)
     assert int((tmp_path / "graph.nodes.count.txt").read_text()) == len(expected_nodes)
 
     assert sorted(output_edges) == sorted(input_edges)
     assert int((tmp_path / "graph.edges.count.txt").read_text()) == len(input_edges)
+
+    actual_node_stats = (tmp_path / "graph.nodes.stats.txt").read_text().strip()
+    expected_node_stats = "\n".join(
+        sorted(
+            "{} {}".format(k, v)
+            for k, v in collections.Counter(
+                node.split(":")[2] for node in expected_nodes
+            ).items()
+        )
+    )
+    assert actual_node_stats == expected_node_stats
+
+    actual_edge_stats = (tmp_path / "graph.edges.stats.txt").read_text().strip()
+    expected_edge_stats = "\n".join(
+        sorted(
+            "{} {}".format(k, v)
+            for k, v in collections.Counter(
+                "{}:{}".format(edge.split(":")[2], edge.split(":")[5])
+                for edge in input_edges
+            ).items()
+        )
+    )
+    assert actual_edge_stats == expected_edge_stats
