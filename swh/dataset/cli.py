@@ -3,12 +3,11 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+# WARNING: do not import unnecessary things here to keep cli startup time under
+# control
 import click
-import uuid
 
-from swh.core import config
 from swh.core.cli import CONTEXT_SETTINGS
-from swh.dataset.graph import export_edges, sort_graph_nodes
 
 
 @click.group(name="dataset", context_settings=CONTEXT_SETTINGS)
@@ -22,8 +21,9 @@ from swh.dataset.graph import export_edges, sort_graph_nodes
 @click.pass_context
 def cli(ctx, config_file):
     """Software Heritage Dataset Tools"""
-    ctx.ensure_object(dict)
+    from swh.core import config
 
+    ctx.ensure_object(dict)
     conf = config.read(config_file)
     ctx.obj["config"] = conf
 
@@ -42,9 +42,13 @@ def graph(ctx):
 @click.pass_context
 def export_graph(ctx, export_path, export_id, processes):
     """Export the Software Heritage graph as an edge dataset."""
+    import uuid
+
     config = ctx.obj["config"]
     if not export_id:
         export_id = str(uuid.uuid4())
+
+    from swh.dataset.graph import export_edges
 
     export_edges(config, export_path, export_id, processes)
 
@@ -54,4 +58,6 @@ def export_graph(ctx, export_path, export_id, processes):
 @click.pass_context
 def sort_graph(ctx, export_path):
     config = ctx.obj["config"]
+    from swh.dataset.graph import sort_graph_nodes
+
     sort_graph_nodes(export_path, config)
