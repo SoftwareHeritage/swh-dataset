@@ -4,12 +4,13 @@
 # See top-level LICENSE file for more information
 
 import concurrent.futures
+from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor
 import multiprocessing
 import time
-import tqdm
 from typing import Mapping, Sequence, Tuple
-from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor
+
 from confluent_kafka import TopicPartition
+import tqdm
 
 from swh.journal.client import JournalClient
 

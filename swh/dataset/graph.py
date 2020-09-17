@@ -14,7 +14,7 @@ import tempfile
 import uuid
 
 from swh.dataset.exporter import ParallelExporter
-from swh.dataset.utils import ZSTFile, SQLiteSet
+from swh.dataset.utils import SQLiteSet, ZSTFile
 from swh.model.identifiers import origin_identifier, persistent_identifier
 from swh.storage.fixer import fix_objects
 

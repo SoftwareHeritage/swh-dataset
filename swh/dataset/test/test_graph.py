@@ -6,9 +6,9 @@
 import collections
 import hashlib
 from typing import Tuple
+from unittest.mock import Mock, call
 
 import pytest
-from unittest.mock import Mock, call
 
 from swh.dataset.graph import process_messages, sort_graph_nodes
 from swh.dataset.utils import ZSTFile
@@ -418,8 +418,8 @@ def test_export_duplicate_visit(exporter):
 
 def zstwrite(fp, lines):
     with ZSTFile(fp, "w") as writer:
-        for l in lines:
-            writer.write(l + "\n")
+        for line in lines:
+            writer.write(line + "\n")
 
 
 def zstread(fp):

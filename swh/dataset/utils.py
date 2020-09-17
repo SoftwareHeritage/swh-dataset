@@ -3,9 +3,9 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import subprocess
-import sqlite3
 import os
+import sqlite3
+import subprocess
 
 
 class ZSTFile:
