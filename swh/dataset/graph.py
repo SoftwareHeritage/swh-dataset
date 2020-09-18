@@ -15,7 +15,7 @@ import uuid
 
 from swh.dataset.exporter import ParallelExporter
 from swh.dataset.utils import SQLiteSet, ZSTFile
-from swh.model.identifiers import origin_identifier, persistent_identifier
+from swh.model.identifiers import origin_identifier, swhid
 from swh.storage.fixer import fix_objects
 
 
@@ -32,17 +32,17 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
         node_type, node_id = node
         if node_id is None:
             return
-        node_pid = persistent_identifier(object_type=node_type, object_id=node_id)
-        node_writer.write("{}\n".format(node_pid))
+        node_swhid = swhid(object_type=node_type, object_id=node_id)
+        node_writer.write("{}\n".format(node_swhid))
 
     def write_edge(src, dst):
         src_type, src_id = src
         dst_type, dst_id = dst
         if src_id is None or dst_id is None:
             return
-        src_pid = persistent_identifier(object_type=src_type, object_id=src_id)
-        dst_pid = persistent_identifier(object_type=dst_type, object_id=dst_id)
-        edge_writer.write("{} {}\n".format(src_pid, dst_pid))
+        src_swhid = swhid(object_type=src_type, object_id=src_id)
+        dst_swhid = swhid(object_type=dst_type, object_id=dst_id)
+        edge_writer.write("{} {}\n".format(src_swhid, dst_swhid))
 
     messages = {k: fix_objects(k, v) for k, v in messages.items()}
 
@@ -121,7 +121,7 @@ class GraphEdgeExporter(ParallelExporter):
     Implementation of ParallelExporter which writes all the graph edges
     of a specific type in a Zstandard-compressed CSV file.
 
-    Each row of the CSV is in the format: `<SRC PID> <DST PID>
+    Each row of the CSV is in the format: `<SRC SWHID> <DST SWHID>
     """
 
     def export_worker(self, export_path, **kwargs):
