@@ -48,7 +48,7 @@ setup(
     tests_require=parse_requirements("test"),
     entry_points="""
         [swh.cli.subcommands]
-        dataset=swh.dataset.cli:cli
+        dataset=swh.dataset.cli
     """,
     setup_requires=["vcversioner"],
     extras_require={"testing": parse_requirements("test")},

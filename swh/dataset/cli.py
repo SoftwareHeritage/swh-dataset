@@ -7,10 +7,10 @@
 # control
 import click
 
-from swh.core.cli import CONTEXT_SETTINGS
+from swh.core.cli import CONTEXT_SETTINGS, swh as swh_cli_group
 
 
-@click.group(name="dataset", context_settings=CONTEXT_SETTINGS)
+@swh_cli_group.group(name="dataset", context_settings=CONTEXT_SETTINGS)
 @click.option(
     "--config-file",
     "-C",
@@ -19,7 +19,7 @@ from swh.core.cli import CONTEXT_SETTINGS
     help="Configuration file.",
 )
 @click.pass_context
-def cli(ctx, config_file):
+def dataset_cli_group(ctx, config_file):
     """Software Heritage Dataset Tools"""
     from swh.core import config
 
@@ -28,7 +28,7 @@ def cli(ctx, config_file):
     ctx.obj["config"] = conf
 
 
-@cli.group("graph")
+@dataset_cli_group.group("graph")
 @click.pass_context
 def graph(ctx):
     """Manage graph edges export"""

@@ -1,4 +1,4 @@
 # Add here internal Software Heritage dependencies, one per line.
-swh.core[http]
+swh.core[http] >= 0.3
 swh.journal
 swh.model
