@@ -50,9 +50,9 @@ setup(
         [swh.cli.subcommands]
         dataset=swh.dataset.cli
     """,
-    setup_requires=["vcversioner"],
+    setup_requires=["setuptools-scm"],
     extras_require={"testing": parse_requirements("test")},
-    vcversioner={},
+    use_scm_version=True,
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
