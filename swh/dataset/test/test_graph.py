@@ -58,14 +58,13 @@ TEST_RELEASE = {
 TEST_ORIGIN = {"url": "https://somewhere.org/den/fox"}
 TEST_ORIGIN_2 = {"url": "https://somewhere.org/den/fox/2"}
 
-TEST_ORIGIN_VISIT = {
+TEST_ORIGIN_VISIT_STATUS = {
     "origin": TEST_ORIGIN["url"],
     "visit": 1,
     "date": "2013-05-07 04:20:39.369271+00:00",
     "snapshot": None,  # TODO
     "status": "ongoing",  # TODO
     "metadata": {"foo": "bar"},
-    "type": "git",
 }
 
 
@@ -112,18 +111,18 @@ def hexhash(s):
     return hashlib.sha1(s.encode()).hexdigest()
 
 
-def test_export_origin_visits(exporter):
+def test_export_origin_visit_status(exporter):
     node_writer, edge_writer = exporter(
         {
-            "origin_visit": [
+            "origin_visit_status": [
                 {
-                    **TEST_ORIGIN_VISIT,
-                    "origin": {"url": "ori1"},
+                    **TEST_ORIGIN_VISIT_STATUS,
+                    "origin": "ori1",
                     "snapshot": binhash("snp1"),
                 },
                 {
-                    **TEST_ORIGIN_VISIT,
-                    "origin": {"url": "ori2"},
+                    **TEST_ORIGIN_VISIT_STATUS,
+                    "origin": "ori2",
                     "snapshot": binhash("snp2"),
                 },
             ]
@@ -396,14 +395,14 @@ def test_export_duplicate_node(exporter):
 def test_export_duplicate_visit(exporter):
     node_writer, edge_writer = exporter(
         {
-            "origin_visit": [
-                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori1"}, "visit": 1},
-                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori2"}, "visit": 1},
-                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori1"}, "visit": 1},
-                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori2"}, "visit": 1},
-                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori1"}, "visit": 2},
-                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori2"}, "visit": 2},
-                {**TEST_ORIGIN_VISIT, "origin": {"url": "ori2"}, "visit": 2},
+            "origin_visit_status": [
+                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori1", "visit": 1},
+                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori2", "visit": 1},
+                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori1", "visit": 1},
+                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori2", "visit": 1},
+                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori1", "visit": 2},
+                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori2", "visit": 2},
+                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori2", "visit": 2},
             ],
         },
     )
@@ -429,7 +428,7 @@ def zstread(fp):
 
 def test_sort_pipeline(tmp_path):
     short_type_mapping = {
-        "origin_visit": "ori",
+        "origin_visit_status": "ori",
         "snapshot": "snp",
         "release": "rel",
         "revision": "rev",

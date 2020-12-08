@@ -46,13 +46,13 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
 
     messages = {k: fix_objects(k, v) for k, v in messages.items()}
 
-    for visit in messages.get("origin_visit", []):
-        origin_id = origin_identifier({"url": visit["origin"]})
-        visit_id = visit["visit"]
+    for visit_status in messages.get("origin_visit_status", []):
+        origin_id = origin_identifier({"url": visit_status["origin"]})
+        visit_id = visit_status["visit"]
         if not node_set.add("{}:{}".format(origin_id, visit_id).encode()):
             continue
         write_node(("origin", origin_id))
-        write_edge(("origin", origin_id), ("snapshot", visit["snapshot"]))
+        write_edge(("origin", origin_id), ("snapshot", visit_status["snapshot"]))
 
     for snapshot in messages.get("snapshot", []):
         if not node_set.add(snapshot["id"]):
@@ -150,7 +150,7 @@ class GraphEdgeExporter(ParallelExporter):
 def export_edges(config, export_path, export_id, processes):
     """Run the edge exporter for each edge type."""
     object_types = [
-        "origin_visit",
+        "origin_visit_status",
         "snapshot",
         "release",
         "revision",
