@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+from base64 import b64encode
 import collections
 import hashlib
 from typing import Tuple
@@ -111,6 +112,10 @@ def hexhash(s):
     return hashlib.sha1(s.encode()).hexdigest()
 
 
+def b64e(s: str) -> str:
+    return b64encode(s.encode()).decode()
+
+
 def test_export_origin_visit_status(exporter):
     node_writer, edge_writer = exporter(
         {
@@ -179,14 +184,38 @@ def test_export_snapshot_simple(exporter):
         call(f"swh:1:snp:{hexhash('snp3')}\n"),
     ]
     assert edge_writer.mock_calls == [
-        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}\n"),
-        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}\n"),
-        call(f"swh:1:snp:{hexhash('snp2')} swh:1:rev:{hexhash('rev1')}\n"),
-        call(f"swh:1:snp:{hexhash('snp2')} swh:1:rev:{hexhash('rev2')}\n"),
-        call(f"swh:1:snp:{hexhash('snp2')} swh:1:cnt:{hexhash('cnt1')}\n"),
-        call(f"swh:1:snp:{hexhash('snp2')} swh:1:dir:{hexhash('dir1')}\n"),
-        call(f"swh:1:snp:{hexhash('snp2')} swh:1:rel:{hexhash('rel1')}\n"),
-        call(f"swh:1:snp:{hexhash('snp2')} swh:1:snp:{hexhash('snp1')}\n"),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('refs/heads/master')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('HEAD')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp2')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('refs/heads/master')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp2')} swh:1:rev:{hexhash('rev2')}"
+            f" {b64e('HEAD')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp2')} swh:1:cnt:{hexhash('cnt1')}"
+            f" {b64e('bcnt')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp2')} swh:1:dir:{hexhash('dir1')}"
+            f" {b64e('bdir')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp2')} swh:1:rel:{hexhash('rel1')}"
+            f" {b64e('brel')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp2')} swh:1:snp:{hexhash('snp1')}"
+            f" {b64e('bsnp')}\n"
+        ),
     ]
 
 
@@ -210,9 +239,24 @@ def test_export_snapshot_aliases(exporter):
         }
     )
     assert node_writer.mock_calls == [call(f"swh:1:snp:{hexhash('snp1')}\n")]
-    assert edge_writer.mock_calls == (
-        [call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}\n")] * 4
-    )
+    assert edge_writer.mock_calls == [
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('origin_branch')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('alias1')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('alias2')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('alias3')}\n"
+        ),
+    ]
 
 
 def test_export_snapshot_no_pull_requests(exporter):
@@ -241,19 +285,40 @@ def test_export_snapshot_no_pull_requests(exporter):
 
     node_writer, edge_writer = exporter({"snapshot": [snp]})
     assert edge_writer.mock_calls == [
-        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}\n"),
-        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev2')}\n"),
-        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev3')}\n"),
-        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev4')}\n"),
-        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev5')}\n"),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('refs/heads/master')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev2')}"
+            f" {b64e('refs/pull/42')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev3')}"
+            f" {b64e('refs/merge-requests/lol')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev4')}"
+            f" {b64e('refs/tags/v1.0.0')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev5')}"
+            f" {b64e('refs/patch/123456abc')}\n"
+        ),
     ]
 
     node_writer, edge_writer = exporter(
         {"snapshot": [snp]}, config={"remove_pull_requests": True}
     )
     assert edge_writer.mock_calls == [
-        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}\n"),
-        call(f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev4')}\n"),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('refs/heads/master')}\n"
+        ),
+        call(
+            f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev4')}"
+            f" {b64e('refs/tags/v1.0.0')}\n"
+        ),
     ]
 
 
@@ -340,9 +405,24 @@ def test_export_directory(exporter):
                 {
                     "id": binhash("dir1"),
                     "entries": [
-                        {"type": "file", "target": binhash("cnt1")},
-                        {"type": "dir", "target": binhash("dir2")},
-                        {"type": "rev", "target": binhash("rev1")},
+                        {
+                            "type": "file",
+                            "target": binhash("cnt1"),
+                            "name": b"cnt1",
+                            "perms": 0o644,
+                        },
+                        {
+                            "type": "dir",
+                            "target": binhash("dir2"),
+                            "name": b"dir2",
+                            "perms": 0o755,
+                        },
+                        {
+                            "type": "rev",
+                            "target": binhash("rev1"),
+                            "name": b"rev1",
+                            "perms": 0o160000,
+                        },
                     ],
                 },
                 {"id": binhash("dir2"), "entries": [],},
@@ -354,9 +434,18 @@ def test_export_directory(exporter):
         call(f"swh:1:dir:{hexhash('dir2')}\n"),
     ]
     assert edge_writer.mock_calls == [
-        call(f"swh:1:dir:{hexhash('dir1')} swh:1:cnt:{hexhash('cnt1')}\n"),
-        call(f"swh:1:dir:{hexhash('dir1')} swh:1:dir:{hexhash('dir2')}\n"),
-        call(f"swh:1:dir:{hexhash('dir1')} swh:1:rev:{hexhash('rev1')}\n"),
+        call(
+            f"swh:1:dir:{hexhash('dir1')} swh:1:cnt:{hexhash('cnt1')}"
+            f" {b64e('cnt1')} {0o644}\n"
+        ),
+        call(
+            f"swh:1:dir:{hexhash('dir1')} swh:1:dir:{hexhash('dir2')}"
+            f" {b64e('dir2')} {0o755}\n"
+        ),
+        call(
+            f"swh:1:dir:{hexhash('dir1')} swh:1:rev:{hexhash('rev1')}"
+            f" {b64e('rev1')} {0o160000}\n"
+        ),
     ]
 
 
@@ -447,10 +536,10 @@ def test_sort_pipeline(tmp_path):
         f"swh:1:ori:{hexhash('ori2')} swh:1:snp:{hexhash('snp2')}",
         f"swh:1:ori:{hexhash('ori3')} swh:1:snp:{hexhash('snp3')}",
         f"swh:1:ori:{hexhash('ori4')} swh:1:snp:{hexhash('snpX')}",  # missing dest
-        f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}",  # dup
-        f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}",  # dup
-        f"swh:1:snp:{hexhash('snp3')} swh:1:cnt:{hexhash('cnt1')}",
-        f"swh:1:snp:{hexhash('snp4')} swh:1:rel:{hexhash('rel1')}",
+        f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')} {b64e('dup1')}",
+        f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')} {b64e('dup2')}",
+        f"swh:1:snp:{hexhash('snp3')} swh:1:cnt:{hexhash('cnt1')} {b64e('c1')}",
+        f"swh:1:snp:{hexhash('snp4')} swh:1:rel:{hexhash('rel1')} {b64e('r1')}",
         f"swh:1:rel:{hexhash('rel1')} swh:1:rel:{hexhash('rel2')}",
         f"swh:1:rel:{hexhash('rel2')} swh:1:rev:{hexhash('rev1')}",
         f"swh:1:rel:{hexhash('rel3')} swh:1:rev:{hexhash('rev2')}",
@@ -461,9 +550,9 @@ def test_sort_pipeline(tmp_path):
         f"swh:1:rev:{hexhash('rev2')} swh:1:rev:{hexhash('revX')}",  # missing dest
         f"swh:1:rev:{hexhash('rev3')} swh:1:rev:{hexhash('rev2')}",
         f"swh:1:rev:{hexhash('rev4')} swh:1:dir:{hexhash('dir1')}",
-        f"swh:1:dir:{hexhash('dir1')} swh:1:cnt:{hexhash('cnt1')}",
-        f"swh:1:dir:{hexhash('dir1')} swh:1:dir:{hexhash('dir1')}",
-        f"swh:1:dir:{hexhash('dir1')} swh:1:rev:{hexhash('rev1')}",
+        f"swh:1:dir:{hexhash('dir1')} swh:1:cnt:{hexhash('cnt1')} {b64e('c1')} 42",
+        f"swh:1:dir:{hexhash('dir1')} swh:1:dir:{hexhash('dir1')} {b64e('d1')} 1337",
+        f"swh:1:dir:{hexhash('dir1')} swh:1:rev:{hexhash('rev1')} {b64e('r1')} 0",
     ]
 
     for obj_type, short_obj_type in short_type_mapping.items():
@@ -481,8 +570,10 @@ def test_sort_pipeline(tmp_path):
 
     output_nodes = zstread(tmp_path / "graph.nodes.csv.zst").split("\n")
     output_edges = zstread(tmp_path / "graph.edges.csv.zst").split("\n")
+    output_labels = zstread(tmp_path / "graph.labels.csv.zst").split("\n")
     output_nodes = list(filter(bool, output_nodes))
     output_edges = list(filter(bool, output_edges))
+    output_labels = list(filter(bool, output_labels))
 
     expected_nodes = set(input_nodes) | set(e.split()[1] for e in input_edges)
     assert output_nodes == sorted(expected_nodes)
@@ -490,6 +581,9 @@ def test_sort_pipeline(tmp_path):
 
     assert sorted(output_edges) == sorted(input_edges)
     assert int((tmp_path / "graph.edges.count.txt").read_text()) == len(input_edges)
+
+    expected_labels = set(e[2] for e in [e.split() for e in input_edges] if len(e) > 2)
+    assert output_labels == sorted(expected_labels)
 
     actual_node_stats = (tmp_path / "graph.nodes.stats.txt").read_text().strip()
     expected_node_stats = "\n".join(

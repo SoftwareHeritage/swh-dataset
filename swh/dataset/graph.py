@@ -3,6 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import base64
 import contextlib
 import functools
 import os
@@ -35,14 +36,15 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
         node_swhid = swhid(object_type=node_type, object_id=node_id)
         node_writer.write("{}\n".format(node_swhid))
 
-    def write_edge(src, dst):
+    def write_edge(src, dst, *, labels=None):
         src_type, src_id = src
         dst_type, dst_id = dst
         if src_id is None or dst_id is None:
             return
         src_swhid = swhid(object_type=src_type, object_id=src_id)
         dst_swhid = swhid(object_type=dst_type, object_id=dst_id)
-        edge_writer.write("{} {}\n".format(src_swhid, dst_swhid))
+        edge_line = " ".join([src_swhid, dst_swhid] + (labels if labels else []))
+        edge_writer.write("{}\n".format(edge_line))
 
     messages = {k: fix_objects(k, v) for k, v in messages.items()}
 
@@ -59,6 +61,7 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
             continue
         write_node(("snapshot", snapshot["id"]))
         for branch_name, branch in snapshot["branches"].items():
+            original_branch_name = branch_name
             while branch and branch.get("target_type") == "alias":
                 branch_name = branch["target"]
                 branch = snapshot["branches"][branch_name]
@@ -76,7 +79,9 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
             ):
                 continue
             write_edge(
-                ("snapshot", snapshot["id"]), (branch["target_type"], branch["target"])
+                ("snapshot", snapshot["id"]),
+                (branch["target_type"], branch["target"]),
+                labels=[base64.b64encode(original_branch_name).decode(),],
             )
 
     for release in messages.get("release", []):
@@ -108,6 +113,7 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
             write_edge(
                 ("directory", directory["id"]),
                 (entry_type_mapping[entry["type"]], entry["target"]),
+                labels=[base64.b64encode(entry["name"]).decode(), str(entry["perms"]),],
             )
 
     for content in messages.get("content", []):
@@ -200,6 +206,25 @@ def sort_graph_nodes(export_path, config):
     # in memory
     counter_command = "awk '{ t[$0]++ } END { for (i in t) print i,t[i] }'"
 
+    sort_script = """
+    pv {export_path}/*/*.edges.csv.zst |
+        tee {export_path}/graph.edges.csv.zst |
+        zstdcat |
+        tee >( wc -l > {export_path}/graph.edges.count.txt ) |
+        tee >( cut -d: -f3,6 | {counter_command} | sort \
+                   > {export_path}/graph.edges.stats.txt ) |
+        tee >( cut -d' ' -f3 | grep . | \
+                   sort -u -S{sort_buffer_size} -T{buffer_path} | \
+                   zstdmt > {export_path}/graph.labels.csv.zst ) |
+        cut -d' ' -f2 |
+        cat - <( zstdcat {export_path}/*/*.nodes.csv.zst ) |
+        sort -u -S{sort_buffer_size} -T{buffer_path} |
+        tee >( wc -l > {export_path}/graph.nodes.count.txt ) |
+        tee >( cut -d: -f3 | {counter_command} | sort \
+                   > {export_path}/graph.nodes.stats.txt ) |
+        zstdmt > {export_path}/graph.nodes.csv.zst
+    """
+
     # Use bytes for the sorting algorithm (faster than being locale-specific)
     env = {
         **os.environ.copy(),
@@ -216,21 +241,7 @@ def sort_graph_nodes(export_path, config):
             [
                 "bash",
                 "-c",
-                (
-                    "pv {export_path}/*/*.edges.csv.zst | "
-                    "tee {export_path}/graph.edges.csv.zst |"
-                    "zstdcat |"
-                    "tee >( wc -l > {export_path}/graph.edges.count.txt ) |"
-                    "tee >( cut -d: -f3,6 | {counter_command} | sort "
-                    "           > {export_path}/graph.edges.stats.txt ) |"
-                    "cut -d' ' -f2 | "
-                    "cat - <( zstdcat {export_path}/*/*.nodes.csv.zst ) | "
-                    "sort -u -S{sort_buffer_size} -T{buffer_path} | "
-                    "tee >( wc -l > {export_path}/graph.nodes.count.txt ) |"
-                    "tee >( cut -d: -f3 | {counter_command} | sort "
-                    "           > {export_path}/graph.nodes.stats.txt ) |"
-                    "zstdmt > {export_path}/graph.nodes.csv.zst"
-                ).format(
+                sort_script.format(
                     export_path=shlex.quote(str(export_path)),
                     buffer_path=shlex.quote(str(buffer_path)),
                     sort_buffer_size=shlex.quote(sort_buffer_size),
