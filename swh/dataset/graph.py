@@ -4,8 +4,6 @@
 # See top-level LICENSE file for more information
 
 import base64
-import contextlib
-import functools
 import os
 import os.path
 import pathlib
@@ -14,29 +12,48 @@ import subprocess
 import tempfile
 import uuid
 
-from swh.dataset.exporter import ParallelExporter
-from swh.dataset.utils import SQLiteSet, ZSTFile
+from swh.dataset.exporter import ExporterDispatch
+from swh.dataset.journalprocessor import ParallelJournalProcessor
+from swh.dataset.utils import ZSTFile
 from swh.model.identifiers import origin_identifier, swhid
-from swh.storage.fixer import fix_objects
 
 
-def process_messages(messages, config, node_writer, edge_writer, node_set):
+class GraphEdgesExporter(ExporterDispatch):
     """
-    Args:
-        messages: A sequence of messages to process
-        config: The exporter configuration
-        node_writer: A file-like object where to write nodes
-        edge_writer: A file-like object where to write edges
+    Implementation of an exporter which writes all the graph edges
+    of a specific type in a Zstandard-compressed CSV file.
+
+    Each row of the CSV is in the format: `<SRC SWHID> <DST SWHID>
     """
 
-    def write_node(node):
+    def __init__(self, config, export_path, **kwargs):
+        super().__init__(config)
+        self.export_path = export_path
+
+    def __enter__(self):
+        dataset_path = pathlib.Path(self.export_path)
+        dataset_path.mkdir(exist_ok=True, parents=True)
+        unique_id = str(uuid.uuid4())
+        nodes_file = dataset_path / ("graph-{}.nodes.csv.zst".format(unique_id))
+        edges_file = dataset_path / ("graph-{}.edges.csv.zst".format(unique_id))
+        self.node_writer = ZSTFile(nodes_file, "w")
+        self.edge_writer = ZSTFile(edges_file, "w")
+        self.node_writer.__enter__()
+        self.edge_writer.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.node_writer.__exit__(exc_type, exc_value, traceback)
+        self.edge_writer.__exit__(exc_type, exc_value, traceback)
+
+    def write_node(self, node):
         node_type, node_id = node
         if node_id is None:
             return
         node_swhid = swhid(object_type=node_type, object_id=node_id)
-        node_writer.write("{}\n".format(node_swhid))
+        self.node_writer.write("{}\n".format(node_swhid))
 
-    def write_edge(src, dst, *, labels=None):
+    def write_edge(self, src, dst, *, labels=None):
         src_type, src_id = src
         dst_type, dst_id = dst
         if src_id is None or dst_id is None:
@@ -44,22 +61,21 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
         src_swhid = swhid(object_type=src_type, object_id=src_id)
         dst_swhid = swhid(object_type=dst_type, object_id=dst_id)
         edge_line = " ".join([src_swhid, dst_swhid] + (labels if labels else []))
-        edge_writer.write("{}\n".format(edge_line))
+        self.edge_writer.write("{}\n".format(edge_line))
 
-    messages = {k: fix_objects(k, v) for k, v in messages.items()}
+    def process_origin(self, origin):
+        origin_id = origin_identifier({"url": origin["url"]})
+        self.write_node(("origin", origin_id))
 
-    for visit_status in messages.get("origin_visit_status", []):
+    def process_origin_visit_status(self, visit_status):
         origin_id = origin_identifier({"url": visit_status["origin"]})
-        visit_id = visit_status["visit"]
-        if not node_set.add("{}:{}".format(origin_id, visit_id).encode()):
-            continue
-        write_node(("origin", origin_id))
-        write_edge(("origin", origin_id), ("snapshot", visit_status["snapshot"]))
+        self.write_edge(("origin", origin_id), ("snapshot", visit_status["snapshot"]))
 
-    for snapshot in messages.get("snapshot", []):
-        if not node_set.add(snapshot["id"]):
-            continue
-        write_node(("snapshot", snapshot["id"]))
+    def process_snapshot(self, snapshot):
+        if self.config.get("remove_pull_requests"):
+            self.remove_pull_requests(snapshot)
+
+        self.write_node(("snapshot", snapshot["id"]))
         for branch_name, branch in snapshot["branches"].items():
             original_branch_name = branch_name
             while branch and branch.get("target_type") == "alias":
@@ -67,95 +83,67 @@ def process_messages(messages, config, node_writer, edge_writer, node_set):
                 branch = snapshot["branches"][branch_name]
             if branch is None or not branch_name:
                 continue
-            # Heuristic to filter out pull requests in snapshots: remove all
-            # branches that start with refs/ but do not start with refs/heads or
-            # refs/tags.
-            if config.get("remove_pull_requests") and (
-                branch_name.startswith(b"refs/")
-                and not (
-                    branch_name.startswith(b"refs/heads")
-                    or branch_name.startswith(b"refs/tags")
-                )
-            ):
-                continue
-            write_edge(
+            self.write_edge(
                 ("snapshot", snapshot["id"]),
                 (branch["target_type"], branch["target"]),
                 labels=[base64.b64encode(original_branch_name).decode(),],
             )
 
-    for release in messages.get("release", []):
-        if not node_set.add(release["id"]):
-            continue
-        write_node(("release", release["id"]))
-        write_edge(
+    def process_release(self, release):
+        self.write_node(("release", release["id"]))
+        self.write_edge(
             ("release", release["id"]), (release["target_type"], release["target"])
         )
 
-    for revision in messages.get("revision", []):
-        if not node_set.add(revision["id"]):
-            continue
-        write_node(("revision", revision["id"]))
-        write_edge(("revision", revision["id"]), ("directory", revision["directory"]))
+    def process_revision(self, revision):
+        self.write_node(("revision", revision["id"]))
+        self.write_edge(
+            ("revision", revision["id"]), ("directory", revision["directory"])
+        )
         for parent in revision["parents"]:
-            write_edge(("revision", revision["id"]), ("revision", parent))
+            self.write_edge(("revision", revision["id"]), ("revision", parent))
 
-    for directory in messages.get("directory", []):
-        if not node_set.add(directory["id"]):
-            continue
-        write_node(("directory", directory["id"]))
+    def process_directory(self, directory):
+        self.write_node(("directory", directory["id"]))
         for entry in directory["entries"]:
             entry_type_mapping = {
                 "file": "content",
                 "dir": "directory",
                 "rev": "revision",
             }
-            write_edge(
+            self.write_edge(
                 ("directory", directory["id"]),
                 (entry_type_mapping[entry["type"]], entry["target"]),
                 labels=[base64.b64encode(entry["name"]).decode(), str(entry["perms"]),],
             )
 
-    for content in messages.get("content", []):
-        if not node_set.add(content["sha1_git"]):
-            continue
-        write_node(("content", content["sha1_git"]))
+    def process_content(self, content):
+        self.write_node(("content", content["sha1_git"]))
 
-
-class GraphEdgeExporter(ParallelExporter):
-    """
-    Implementation of ParallelExporter which writes all the graph edges
-    of a specific type in a Zstandard-compressed CSV file.
-
-    Each row of the CSV is in the format: `<SRC SWHID> <DST SWHID>
-    """
-
-    def export_worker(self, export_path, **kwargs):
-        dataset_path = pathlib.Path(export_path)
-        dataset_path.mkdir(exist_ok=True, parents=True)
-        unique_id = str(uuid.uuid4())
-        nodes_file = dataset_path / ("graph-{}.nodes.csv.zst".format(unique_id))
-        edges_file = dataset_path / ("graph-{}.edges.csv.zst".format(unique_id))
-        node_set_file = dataset_path / (".set-nodes-{}.sqlite3".format(unique_id))
-
-        with contextlib.ExitStack() as stack:
-            node_writer = stack.enter_context(ZSTFile(nodes_file, "w"))
-            edge_writer = stack.enter_context(ZSTFile(edges_file, "w"))
-            node_set = stack.enter_context(SQLiteSet(node_set_file))
-
-            process_fn = functools.partial(
-                process_messages,
-                config=self.config,
-                node_writer=node_writer,
-                edge_writer=edge_writer,
-                node_set=node_set,
-            )
-            self.process(process_fn, **kwargs)
+    def remove_pull_requests(self, snapshot):
+        """
+        Heuristic to filter out pull requests in snapshots: remove all branches
+        that start with refs/ but do not start with refs/heads or refs/tags.
+        """
+        # Copy the items with list() to remove items during iteration
+        for branch_name, branch in list(snapshot["branches"].items()):
+            original_branch_name = branch_name
+            while branch and branch.get("target_type") == "alias":
+                branch_name = branch["target"]
+                branch = snapshot["branches"][branch_name]
+            if branch is None or not branch_name:
+                continue
+            if branch_name.startswith(b"refs/") and not (
+                branch_name.startswith(b"refs/heads")
+                or branch_name.startswith(b"refs/tags")
+            ):
+                snapshot["branches"].pop(original_branch_name)
 
 
 def export_edges(config, export_path, export_id, processes):
     """Run the edge exporter for each edge type."""
     object_types = [
+        "origin",
         "origin_visit_status",
         "snapshot",
         "release",
@@ -165,8 +153,18 @@ def export_edges(config, export_path, export_id, processes):
     ]
     for obj_type in object_types:
         print("{} edges:".format(obj_type))
-        exporter = GraphEdgeExporter(config, export_id, obj_type, processes)
-        exporter.run(os.path.join(export_path, obj_type))
+        exporters = [
+            (GraphEdgesExporter, {"export_path": os.path.join(export_path, obj_type)}),
+        ]
+        parallel_exporter = ParallelJournalProcessor(
+            config,
+            exporters,
+            export_id,
+            obj_type,
+            node_sets_path=pathlib.Path(export_path) / ".node_sets",
+            processes=processes,
+        )
+        parallel_exporter.run()
 
 
 def sort_graph_nodes(export_path, config):

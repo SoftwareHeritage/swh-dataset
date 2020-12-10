@@ -14,13 +14,13 @@ class ZSTFile:
     command to compress and deflate the objects.
     """
 
-    def __init__(self, path, mode="r"):
+    def __init__(self, path: str, mode: str = "r"):
         if mode not in ("r", "rb", "w", "wb"):
             raise ValueError(f"ZSTFile mode {mode} is invalid.")
         self.path = path
         self.mode = mode
 
-    def __enter__(self):
+    def __enter__(self) -> "ZSTFile":
         is_text = not (self.mode in ("rb", "wb"))
         writing = self.mode in ("w", "wb")
         if writing:
@@ -50,17 +50,20 @@ class SQLiteSet:
     deduplicate objects when processing large queues with duplicates.
     """
 
-    def __init__(self, db_path: os.PathLike):
+    def __init__(self, db_path: os.PathLike[str]):
         self.db_path = db_path
 
     def __enter__(self):
         self.db = sqlite3.connect(str(self.db_path))
         self.db.execute(
-            "CREATE TABLE tmpset (val TEXT NOT NULL PRIMARY KEY) WITHOUT ROWID"
+            "CREATE TABLE IF NOT EXISTS"
+            " tmpset (val TEXT NOT NULL PRIMARY KEY)"
+            " WITHOUT ROWID"
         )
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.db.commit()
         self.db.close()
 
     def add(self, v: bytes) -> bool:

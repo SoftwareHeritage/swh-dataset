@@ -11,7 +11,7 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from swh.dataset.graph import process_messages, sort_graph_nodes
+from swh.dataset.graph import GraphEdgesExporter, sort_graph_nodes
 from swh.dataset.utils import ZSTFile
 from swh.model.hashutil import MultiHash, hash_to_bytes
 
@@ -89,17 +89,13 @@ def exporter():
     def wrapped(messages, config=None) -> Tuple[Mock, Mock]:
         if config is None:
             config = {}
-        node_writer = Mock()
-        edge_writer = Mock()
-        node_set = FakeDiskSet()
-        process_messages(
-            messages,
-            config=config,
-            node_writer=node_writer,
-            edge_writer=edge_writer,
-            node_set=node_set,
-        )
-        return node_writer.write, edge_writer.write
+        exporter = GraphEdgesExporter(config, "/dummy_path")
+        exporter.node_writer = Mock()
+        exporter.edge_writer = Mock()
+        for object_type, objects in messages.items():
+            for obj in objects:
+                exporter.process_object(object_type, obj)
+        return exporter.node_writer.write, exporter.edge_writer.write
 
     return wrapped
 
@@ -114,6 +110,17 @@ def hexhash(s):
 
 def b64e(s: str) -> str:
     return b64encode(s.encode()).decode()
+
+
+def test_export_origin(exporter):
+    node_writer, edge_writer = exporter(
+        {"origin": [{"origin": "ori1"}, {"origin": "ori2"},]}
+    )
+    assert node_writer.mock_calls == [
+        call(f"swh:1:ori:{hexhash('ori1')}\n"),
+        call(f"swh:1:ori:{hexhash('ori2')}\n"),
+    ]
+    assert edge_writer.mock_calls == []
 
 
 def test_export_origin_visit_status(exporter):
@@ -133,10 +140,7 @@ def test_export_origin_visit_status(exporter):
             ]
         }
     )
-    assert node_writer.mock_calls == [
-        call(f"swh:1:ori:{hexhash('ori1')}\n"),
-        call(f"swh:1:ori:{hexhash('ori2')}\n"),
-    ]
+    assert node_writer.mock_calls == []
     assert edge_writer.mock_calls == [
         call(f"swh:1:ori:{hexhash('ori1')} swh:1:snp:{hexhash('snp1')}\n"),
         call(f"swh:1:ori:{hexhash('ori2')} swh:1:snp:{hexhash('snp2')}\n"),
@@ -461,45 +465,6 @@ def test_export_content(exporter):
     assert node_writer.mock_calls == [
         call(f"swh:1:cnt:{hexhash('cnt1')}\n"),
         call(f"swh:1:cnt:{hexhash('cnt2')}\n"),
-    ]
-    assert edge_writer.mock_calls == []
-
-
-def test_export_duplicate_node(exporter):
-    node_writer, edge_writer = exporter(
-        {
-            "content": [
-                {**TEST_CONTENT, "sha1_git": binhash("cnt1")},
-                {**TEST_CONTENT, "sha1_git": binhash("cnt1")},
-                {**TEST_CONTENT, "sha1_git": binhash("cnt1")},
-            ],
-        },
-    )
-    assert node_writer.mock_calls == [
-        call(f"swh:1:cnt:{hexhash('cnt1')}\n"),
-    ]
-    assert edge_writer.mock_calls == []
-
-
-def test_export_duplicate_visit(exporter):
-    node_writer, edge_writer = exporter(
-        {
-            "origin_visit_status": [
-                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori1", "visit": 1},
-                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori2", "visit": 1},
-                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori1", "visit": 1},
-                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori2", "visit": 1},
-                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori1", "visit": 2},
-                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori2", "visit": 2},
-                {**TEST_ORIGIN_VISIT_STATUS, "origin": "ori2", "visit": 2},
-            ],
-        },
-    )
-    assert node_writer.mock_calls == [
-        call(f"swh:1:ori:{hexhash('ori1')}\n"),
-        call(f"swh:1:ori:{hexhash('ori2')}\n"),
-        call(f"swh:1:ori:{hexhash('ori1')}\n"),
-        call(f"swh:1:ori:{hexhash('ori2')}\n"),
     ]
     assert edge_writer.mock_calls == []
 
