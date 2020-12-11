@@ -171,12 +171,22 @@ class ParallelJournalProcessor:
             partitions = topics[topic_name].partitions
 
             self.offsets = {}
-            for partition_id in tqdm.tqdm(
-                partitions.keys(), desc="  - Partition offsets"
-            ):
+
+            def fetch_insert_partition_id(partition_id):
                 tp = TopicPartition(topic_name, partition_id)
                 (lo, hi) = client.consumer.get_watermark_offsets(tp)
                 self.offsets[partition_id] = (lo, hi)
+
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=self.processes
+            ) as executor:
+                list(
+                    tqdm.tqdm(
+                        executor.map(fetch_insert_partition_id, partitions.keys()),
+                        total=len(partitions),
+                        desc="  - Partition offsets",
+                    )
+                )
         return self.offsets
 
     def run(self):
