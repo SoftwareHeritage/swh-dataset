@@ -144,8 +144,8 @@ class ParallelJournalProcessor:
             export_id: a unique identifier for the export that will be used
                 as part of a Kafka consumer group ID.
             obj_type: The type of SWH object to export.
-            processes: The number of processes to run.
             node_sets_path: A directory where to store the node sets.
+            processes: The number of processes to run.
         """
         self.config = config
         self.exporters = exporters
@@ -332,7 +332,7 @@ class JournalProcessorWorker:
             fixed_objects_by_partition = collections.defaultdict(list)
             for message in message_list:
                 fixed_objects_by_partition[message.partition()].extend(
-                    fix_objects(object_type, (kafka_to_value(message.value()),))
+                    fix_objects(object_type, [kafka_to_value(message.value())])
                 )
             for partition, objects in fixed_objects_by_partition.items():
                 for object in objects:

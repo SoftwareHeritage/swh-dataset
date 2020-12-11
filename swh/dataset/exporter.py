@@ -8,6 +8,21 @@ from typing import Any, Dict, Optional, Type
 
 
 class Exporter:
+    """
+    Base class for all the exporters.
+
+    Each export can have multiple exporters, so we can read the journal a single
+    time, then export the objects we read in different formats without having to
+    re-read them every time.
+
+    Override this class with the behavior for an export in a specific export
+    format. You have to overwrite process_object() to make it write to the
+    appropriate export files.
+
+    You can also put setup and teardown logic in __enter__ and __exit__, and it
+    will be called automatically.
+    """
+
     def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
         self.config: Dict[str, Any] = config
 
@@ -26,14 +41,15 @@ class Exporter:
         """
         Process a SWH object to export.
 
-        Override this with your custom worker.
+        Override this with your custom exporter.
         """
         raise NotImplementedError
 
 
 class ExporterDispatch(Exporter):
     """
-    Like Exporter, but dispatches each object type to a different function.
+    Like Exporter, but dispatches each object type to a different function
+    (e.g you can override `process_origin(self, object)` to process origins.)
     """
 
     def process_object(self, object_type: str, object: Dict[str, Any]) -> None:

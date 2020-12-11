@@ -21,7 +21,7 @@ from swh.model.identifiers import origin_identifier, swhid
 class GraphEdgesExporter(ExporterDispatch):
     """
     Implementation of an exporter which writes all the graph edges
-    of a specific type in a Zstandard-compressed CSV file.
+    of a specific type to a Zstandard-compressed CSV file.
 
     Each row of the CSV is in the format: `<SRC SWHID> <DST SWHID>
     """
