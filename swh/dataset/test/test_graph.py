@@ -113,9 +113,7 @@ def b64e(s: str) -> str:
 
 
 def test_export_origin(exporter):
-    node_writer, edge_writer = exporter(
-        {"origin": [{"origin": "ori1"}, {"origin": "ori2"},]}
-    )
+    node_writer, edge_writer = exporter({"origin": [{"url": "ori1"}, {"url": "ori2"},]})
     assert node_writer.mock_calls == [
         call(f"swh:1:ori:{hexhash('ori1')}\n"),
         call(f"swh:1:ori:{hexhash('ori2')}\n"),
