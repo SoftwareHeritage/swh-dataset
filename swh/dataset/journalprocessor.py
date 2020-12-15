@@ -360,10 +360,18 @@ class JournalProcessorWorker:
         It uses an on-disk set to make sure that each object is only ever
         processed once.
         """
-        if object_type == "origin_visit_status":
+        if object_type == "origin_visit":
             origin_id = origin_identifier({"url": object["origin"]})
             visit = object["visit"]
-            node_id = sha1("{}:{}".format(origin_id, visit).encode()).digest()
+            node_id = sha1(f"{origin_id}:{visit}".encode()).digest()
+        elif object_type == "origin_visit_status":
+            if object["status"] not in ("partial", "full"):
+                # Temporary visit object, not useful for the exports
+                return
+            origin_id = origin_identifier({"url": object["origin"]})
+            visit = object["visit"]
+            ts = object["date"].timestamp()
+            node_id = sha1(f"{origin_id}:{visit}:{ts}".encode()).digest()
         elif object_type == "origin":
             node_id = sha1(object["url"].encode()).digest()
         elif object_type == "content":
