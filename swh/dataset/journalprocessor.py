@@ -284,7 +284,7 @@ class JournalProcessorWorker:
 
         self.node_sets_path = node_sets_path
         self.node_sets_path.mkdir(exist_ok=True, parents=True)
-        self.node_sets: Dict[int, SQLiteSet] = {}
+        self.node_sets: Dict[Tuple[int, str], SQLiteSet] = {}
 
         self.exporters = [
             exporter_class(config, **kwargs) for exporter_class, kwargs in exporters
@@ -300,22 +300,31 @@ class JournalProcessorWorker:
     def __exit__(self, exc_type, exc_value, traceback):
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
 
-    def get_node_set_for_partition(self, partition_id: int):
+    def get_node_set_for_object(self, partition_id: int, object_id: bytes):
         """
         Return an on-disk set object, which stores the nodes that have
         already been processed.
 
-        Node sets are sharded by partition ID, as each object is guaranteed to
-        be assigned to a deterministic Kafka partition.
+        Node sets are sharded by partition ID (as each object is guaranteed to
+        be assigned to a deterministic Kafka partition) then by object ID
+        prefix. The sharding path of each file looks like:
+
+            .node_sets/{origin..content}/part-{0..256}/nodes-{0..f}.sqlite
         """
-        if partition_id not in self.node_sets:
-            node_set_file = self.node_sets_path / "nodes-part-{}.sqlite".format(
-                partition_id
+        obj_id_prefix = "{:x}".format(object_id[0] % 16)
+        shard_id = (partition_id, obj_id_prefix)
+        if shard_id not in self.node_sets:
+            node_set_dir = (
+                self.node_sets_path
+                / self.obj_type
+                / ("part-{}".format(str(partition_id)))
             )
+            node_set_dir.mkdir(exist_ok=True, parents=True)
+            node_set_file = node_set_dir / "nodes-{}.sqlite".format(obj_id_prefix)
             node_set = SQLiteSet(node_set_file)
             self.exit_stack.enter_context(node_set)
-            self.node_sets[partition_id] = node_set
-        return self.node_sets[partition_id]
+            self.node_sets[shard_id] = node_set
+        return self.node_sets[shard_id]
 
     def run(self):
         """
@@ -356,8 +365,6 @@ class JournalProcessorWorker:
         It uses an on-disk set to make sure that each object is only ever
         processed once.
         """
-        node_set = self.get_node_set_for_partition(partition)
-
         if object_type == "origin_visit_status":
             origin_id = origin_identifier({"url": object["origin"]})
             visit = object["visit"]
@@ -368,6 +375,8 @@ class JournalProcessorWorker:
             node_id = object["sha1_git"]
         else:
             node_id = object["id"]
+
+        node_set = self.get_node_set_for_object(partition, node_id)
         if not node_set.add(node_id):
             # Node already processed, skipping.
             return
