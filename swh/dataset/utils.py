@@ -3,7 +3,6 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import os
 import sqlite3
 import subprocess
 
@@ -50,7 +49,7 @@ class SQLiteSet:
     deduplicate objects when processing large queues with duplicates.
     """
 
-    def __init__(self, db_path: os.PathLike[str]):
+    def __init__(self, db_path):
         self.db_path = db_path
 
     def __enter__(self):
@@ -60,6 +59,8 @@ class SQLiteSet:
             " tmpset (val TEXT NOT NULL PRIMARY KEY)"
             " WITHOUT ROWID"
         )
+        self.db.execute("PRAGMA synchronous = OFF")
+        self.db.execute("PRAGMA journal_mode = OFF")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

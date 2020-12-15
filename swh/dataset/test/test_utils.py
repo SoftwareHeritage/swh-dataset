@@ -11,5 +11,9 @@ def test_sqliteset(tmp_path):
 
     with SQLiteSet(f) as s:
         assert s.add(b"a")
-        assert not s.add(b"a")
         assert s.add(b"b")
+        assert not s.add(b"a")
+        assert s.add(b"c")
+        assert not s.add(b"b")
+        assert not s.add(b"c")
+        assert not s.add(b"c")
