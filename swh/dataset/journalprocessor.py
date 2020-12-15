@@ -111,13 +111,8 @@ class JournalClientOffsetRanges(JournalClient):
         We also return the raw objects instead of deserializing them because we
         will need the partition ID later.
         """
-        # XXX: this is a bad hack that we have to do because of how the
-        # journal API works. Ideally it would be better to change the API so
-        # that journal clients can know the partition of the message they are
-        # handling.
         self.handle_offset(message.partition(), message.offset())
         self.count += 1
-        # return super().deserialize_message(message)
         return message
 
 
