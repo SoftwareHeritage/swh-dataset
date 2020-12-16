@@ -83,3 +83,23 @@ class SQLiteSet:
             return False
         else:
             return True
+
+
+def remove_pull_requests(snapshot):
+    """
+    Heuristic to filter out pull requests in snapshots: remove all branches
+    that start with refs/ but do not start with refs/heads or refs/tags.
+    """
+    # Copy the items with list() to remove items during iteration
+    for branch_name, branch in list(snapshot["branches"].items()):
+        original_branch_name = branch_name
+        while branch and branch.get("target_type") == "alias":
+            branch_name = branch["target"]
+            branch = snapshot["branches"][branch_name]
+        if branch is None or not branch_name:
+            continue
+        if branch_name.startswith(b"refs/") and not (
+            branch_name.startswith(b"refs/heads")
+            or branch_name.startswith(b"refs/tags")
+        ):
+            snapshot["branches"].pop(original_branch_name)

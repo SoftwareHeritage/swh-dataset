@@ -374,7 +374,7 @@ class JournalProcessorWorker:
             node_id = sha1(f"{origin_id}:{visit}:{ts}".encode()).digest()
         elif object_type == "origin":
             node_id = sha1(obj["url"].encode()).digest()
-        elif object_type == "content":
+        elif object_type in ("content", "skipped_content"):
             node_id = obj["sha1_git"]
         else:
             node_id = obj["id"]

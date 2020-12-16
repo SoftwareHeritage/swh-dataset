@@ -11,7 +11,7 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from swh.dataset.graph import GraphEdgesExporter, sort_graph_nodes
+from swh.dataset.exporters.edges import GraphEdgesExporter, sort_graph_nodes
 from swh.dataset.utils import ZSTFile
 from swh.model.hashutil import MultiHash, hash_to_bytes
 
@@ -45,7 +45,7 @@ TEST_RELEASE = {
     "id": hash_to_bytes("d81cc0710eb6cf9efd5b920a8453e1e07157b6cd"),
     "name": b"v0.0.1",
     "date": {
-        "timestamp": {"seconds": 1234567890, "microseconds": 0,},
+        "timestamp": {"seconds": 1234567890, "microseconds": 0},
         "offset": 120,
         "negative_utc": False,
     },
@@ -377,7 +377,7 @@ def test_export_revision(exporter):
                     **TEST_REVISION,
                     "id": binhash("rev1"),
                     "directory": binhash("dir1"),
-                    "parents": [binhash("rev2"), binhash("rev3"),],
+                    "parents": [binhash("rev2"), binhash("rev3")],
                 },
                 {
                     **TEST_REVISION,
@@ -427,7 +427,7 @@ def test_export_directory(exporter):
                         },
                     ],
                 },
-                {"id": binhash("dir2"), "entries": [],},
+                {"id": binhash("dir2"), "entries": []},
             ]
         }
     )
@@ -455,8 +455,8 @@ def test_export_content(exporter):
     node_writer, edge_writer = exporter(
         {
             "content": [
-                {**TEST_CONTENT, "sha1_git": binhash("cnt1"),},
-                {**TEST_CONTENT, "sha1_git": binhash("cnt2"),},
+                {**TEST_CONTENT, "sha1_git": binhash("cnt1")},
+                {**TEST_CONTENT, "sha1_git": binhash("cnt2")},
             ]
         }
     )

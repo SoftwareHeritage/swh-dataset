@@ -13,7 +13,6 @@ import tempfile
 import uuid
 
 from swh.dataset.exporter import ExporterDispatch
-from swh.dataset.journalprocessor import ParallelJournalProcessor
 from swh.dataset.utils import ZSTFile
 from swh.model.identifiers import origin_identifier, swhid
 
@@ -114,7 +113,7 @@ class GraphEdgesExporter(ExporterDispatch):
             self.write_edge(
                 ("directory", directory["id"]),
                 (entry_type_mapping[entry["type"]], entry["target"]),
-                labels=[base64.b64encode(entry["name"]).decode(), str(entry["perms"]),],
+                labels=[base64.b64encode(entry["name"]).decode(), str(entry["perms"])],
             )
 
     def process_content(self, content):
@@ -138,33 +137,6 @@ class GraphEdgesExporter(ExporterDispatch):
                 or branch_name.startswith(b"refs/tags")
             ):
                 snapshot["branches"].pop(original_branch_name)
-
-
-def export_edges(config, export_path, export_id, processes):
-    """Run the edge exporter for each edge type."""
-    object_types = [
-        "origin",
-        "origin_visit_status",
-        "snapshot",
-        "release",
-        "revision",
-        "directory",
-        "content",
-    ]
-    for obj_type in object_types:
-        print("{} edges:".format(obj_type))
-        exporters = [
-            (GraphEdgesExporter, {"export_path": os.path.join(export_path, obj_type)}),
-        ]
-        parallel_exporter = ParallelJournalProcessor(
-            config,
-            exporters,
-            export_id,
-            obj_type,
-            node_sets_path=pathlib.Path(export_path) / ".node_sets",
-            processes=processes,
-        )
-        parallel_exporter.run()
 
 
 def sort_graph_nodes(export_path, config):
