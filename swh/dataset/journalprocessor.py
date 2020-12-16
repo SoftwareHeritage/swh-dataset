@@ -216,7 +216,7 @@ class ParallelJournalProcessor:
                     f.result()
                     raise exc
 
-    def progress_worker(self, *args, queue=None):
+    def progress_worker(self, queue=None):
         """
         An additional worker process that reports the current progress of the
         export between all the different parallel consumers and across all the
@@ -349,10 +349,10 @@ class JournalProcessorWorker:
                     fix_objects(object_type, [kafka_to_value(message.value())])
                 )
             for partition, objects in fixed_objects_by_partition.items():
-                for object in objects:
-                    self.process_message(object_type, partition, object)
+                for obj in objects:
+                    self.process_message(object_type, partition, obj)
 
-    def process_message(self, object_type, partition, object):
+    def process_message(self, object_type, partition, obj):
         """
         Process a single incoming Kafka message if the object it refers to has
         not been processed yet.
@@ -361,23 +361,23 @@ class JournalProcessorWorker:
         processed once.
         """
         if object_type == "origin_visit":
-            origin_id = origin_identifier({"url": object["origin"]})
-            visit = object["visit"]
+            origin_id = origin_identifier({"url": obj["origin"]})
+            visit = obj["visit"]
             node_id = sha1(f"{origin_id}:{visit}".encode()).digest()
         elif object_type == "origin_visit_status":
-            if object["status"] not in ("partial", "full"):
+            if obj["status"] not in ("partial", "full"):
                 # Temporary visit object, not useful for the exports
                 return
-            origin_id = origin_identifier({"url": object["origin"]})
-            visit = object["visit"]
-            ts = object["date"].timestamp()
+            origin_id = origin_identifier({"url": obj["origin"]})
+            visit = obj["visit"]
+            ts = obj["date"].timestamp()
             node_id = sha1(f"{origin_id}:{visit}:{ts}".encode()).digest()
         elif object_type == "origin":
-            node_id = sha1(object["url"].encode()).digest()
+            node_id = sha1(obj["url"].encode()).digest()
         elif object_type == "content":
-            node_id = object["sha1_git"]
+            node_id = obj["sha1_git"]
         else:
-            node_id = object["id"]
+            node_id = obj["id"]
 
         node_set = self.get_node_set_for_object(partition, node_id)
         if not node_set.add(node_id):
@@ -385,4 +385,4 @@ class JournalProcessorWorker:
             return
 
         for exporter in self.exporters:
-            exporter.process_object(object_type, object)
+            exporter.process_object(object_type, obj)

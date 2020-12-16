@@ -37,7 +37,7 @@ class Exporter:
     ) -> Optional[bool]:
         pass
 
-    def process_object(self, object_type: str, object: Dict[str, Any]) -> None:
+    def process_object(self, object_type: str, obj: Dict[str, Any]) -> None:
         """
         Process a SWH object to export.
 
@@ -52,7 +52,7 @@ class ExporterDispatch(Exporter):
     (e.g you can override `process_origin(self, object)` to process origins.)
     """
 
-    def process_object(self, object_type: str, object: Dict[str, Any]) -> None:
+    def process_object(self, object_type: str, obj: Dict[str, Any]) -> None:
         method_name = "process_" + object_type
         if hasattr(self, method_name):
-            getattr(self, method_name)(object)
+            getattr(self, method_name)(obj)
