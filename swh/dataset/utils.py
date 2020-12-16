@@ -95,7 +95,7 @@ def remove_pull_requests(snapshot):
         original_branch_name = branch_name
         while branch and branch.get("target_type") == "alias":
             branch_name = branch["target"]
-            branch = snapshot["branches"][branch_name]
+            branch = snapshot["branches"].get(branch_name)
         if branch is None or not branch_name:
             continue
         if branch_name.startswith(b"refs/") and not (

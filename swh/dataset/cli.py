@@ -13,6 +13,7 @@ import click
 from swh.core.cli import CONTEXT_SETTINGS
 from swh.core.cli import swh as swh_cli_group
 from swh.dataset.exporters.edges import GraphEdgesExporter
+from swh.dataset.exporters.orc import ORCExporter
 from swh.dataset.journalprocessor import ParallelJournalProcessor
 
 
@@ -43,6 +44,7 @@ def graph(ctx):
 
 AVAILABLE_EXPORTERS = {
     "edges": GraphEdgesExporter,
+    "orc": ORCExporter,
 }
 
 
