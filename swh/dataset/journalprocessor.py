@@ -8,6 +8,7 @@ import concurrent.futures
 from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor
 import contextlib
 from hashlib import sha1
+import logging
 import multiprocessing
 from pathlib import Path
 import time
@@ -385,4 +386,11 @@ class JournalProcessorWorker:
             return
 
         for exporter in self.exporters:
-            exporter.process_object(object_type, obj)
+            try:
+                exporter.process_object(object_type, obj)
+            except Exception:
+                logging.exception(
+                    "Exporter %s: error while exporting the object: %s",
+                    exporter.__class__.__name__,
+                    str(obj),
+                )
