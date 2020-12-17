@@ -13,7 +13,7 @@ import tempfile
 import uuid
 
 from swh.dataset.exporter import ExporterDispatch
-from swh.dataset.utils import ZSTFile
+from swh.dataset.utils import ZSTFile, remove_pull_requests
 from swh.model.identifiers import origin_identifier, swhid
 
 
@@ -72,14 +72,14 @@ class GraphEdgesExporter(ExporterDispatch):
 
     def process_snapshot(self, snapshot):
         if self.config.get("remove_pull_requests"):
-            self.remove_pull_requests(snapshot)
+            remove_pull_requests(snapshot)
 
         self.write_node(("snapshot", snapshot["id"]))
         for branch_name, branch in snapshot["branches"].items():
             original_branch_name = branch_name
             while branch and branch.get("target_type") == "alias":
                 branch_name = branch["target"]
-                branch = snapshot["branches"][branch_name]
+                branch = snapshot["branches"].get(branch_name)
             if branch is None or not branch_name:
                 continue
             self.write_edge(
@@ -118,25 +118,6 @@ class GraphEdgesExporter(ExporterDispatch):
 
     def process_content(self, content):
         self.write_node(("content", content["sha1_git"]))
-
-    def remove_pull_requests(self, snapshot):
-        """
-        Heuristic to filter out pull requests in snapshots: remove all branches
-        that start with refs/ but do not start with refs/heads or refs/tags.
-        """
-        # Copy the items with list() to remove items during iteration
-        for branch_name, branch in list(snapshot["branches"].items()):
-            original_branch_name = branch_name
-            while branch and branch.get("target_type") == "alias":
-                branch_name = branch["target"]
-                branch = snapshot["branches"][branch_name]
-            if branch is None or not branch_name:
-                continue
-            if branch_name.startswith(b"refs/") and not (
-                branch_name.startswith(b"refs/heads")
-                or branch_name.startswith(b"refs/tags")
-            ):
-                snapshot["branches"].pop(original_branch_name)
 
 
 def sort_graph_nodes(export_path, config):
