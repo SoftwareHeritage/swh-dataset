@@ -6,7 +6,6 @@
 import base64
 import os
 import os.path
-import pathlib
 import shlex
 import subprocess
 import tempfile
@@ -25,32 +24,35 @@ class GraphEdgesExporter(ExporterDispatch):
     Each row of the CSV is in the format: `<SRC SWHID> <DST SWHID>
     """
 
-    def __init__(self, config, export_path, **kwargs):
-        super().__init__(config)
-        self.export_path = export_path
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.writers = {}
 
-    def __enter__(self):
-        dataset_path = pathlib.Path(self.export_path)
-        dataset_path.mkdir(exist_ok=True, parents=True)
-        unique_id = str(uuid.uuid4())
-        nodes_file = dataset_path / ("graph-{}.nodes.csv.zst".format(unique_id))
-        edges_file = dataset_path / ("graph-{}.edges.csv.zst".format(unique_id))
-        self.node_writer = ZSTFile(nodes_file, "w")
-        self.edge_writer = ZSTFile(edges_file, "w")
-        self.node_writer.__enter__()
-        self.edge_writer.__enter__()
-        return self
+    def get_writers_for(self, obj_type: str):
+        if obj_type not in self.writers:
+            dataset_path = self.export_path / obj_type
+            dataset_path.mkdir(exist_ok=True)
+            unique_id = str(uuid.uuid4())
+            nodes_file = dataset_path / ("graph-{}.nodes.csv.zst".format(unique_id))
+            edges_file = dataset_path / ("graph-{}.edges.csv.zst".format(unique_id))
+            node_writer = self.exit_stack.enter_context(ZSTFile(str(nodes_file), "w"))
+            edge_writer = self.exit_stack.enter_context(ZSTFile(str(edges_file), "w"))
+            self.writers[obj_type] = (node_writer, edge_writer)
+        return self.writers[obj_type]
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.node_writer.__exit__(exc_type, exc_value, traceback)
-        self.edge_writer.__exit__(exc_type, exc_value, traceback)
+    def get_node_writer_for(self, obj_type: str):
+        return self.get_writers_for(obj_type)[0]
+
+    def get_edge_writer_for(self, obj_type: str):
+        return self.get_writers_for(obj_type)[1]
 
     def write_node(self, node):
         node_type, node_id = node
         if node_id is None:
             return
         node_swhid = swhid(object_type=node_type, object_id=node_id)
-        self.node_writer.write("{}\n".format(node_swhid))
+        node_writer = self.get_node_writer_for(node_type)
+        node_writer.write("{}\n".format(node_swhid))
 
     def write_edge(self, src, dst, *, labels=None):
         src_type, src_id = src
@@ -60,7 +62,8 @@ class GraphEdgesExporter(ExporterDispatch):
         src_swhid = swhid(object_type=src_type, object_id=src_id)
         dst_swhid = swhid(object_type=dst_type, object_id=dst_id)
         edge_line = " ".join([src_swhid, dst_swhid] + (labels if labels else []))
-        self.edge_writer.write("{}\n".format(edge_line))
+        edge_writer = self.get_edge_writer_for(src_type)
+        edge_writer.write("{}\n".format(edge_line))
 
     def process_origin(self, origin):
         origin_id = origin_identifier({"url": origin["url"]})

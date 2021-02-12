@@ -3,9 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import contextlib
 from datetime import datetime, timezone
-import pathlib
 import uuid
 
 from pyorc import BigInt, Binary, Int, SmallInt, String, Struct, Timestamp, Writer
@@ -118,19 +116,9 @@ class ORCExporter(ExporterDispatch):
     (e.g BigQuery, Amazon Athena, Azure).
     """
 
-    def __init__(self, config, export_path, **kwargs):
-        super().__init__(config)
-        self.export_path = pathlib.Path(export_path)
-        self.export_path.mkdir(exist_ok=True, parents=True)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.writers = {}
-        self.exit_stack = contextlib.ExitStack()
-
-    def __enter__(self):
-        self.exit_stack.__enter__()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.exit_stack.__exit__(exc_type, exc_value, traceback)
 
     def get_writer_for(self, table_name: str):
         if table_name not in self.writers:

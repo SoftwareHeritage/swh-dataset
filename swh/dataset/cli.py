@@ -98,10 +98,7 @@ def export_graph(ctx, export_path, export_id, formats, exclude, processes):
         if obj_type in exclude_obj_types:
             continue
         exporters = [
-            (
-                AVAILABLE_EXPORTERS[f],
-                {"export_path": os.path.join(export_path, f, obj_type)},
-            )
+            (AVAILABLE_EXPORTERS[f], {"export_path": os.path.join(export_path, f)},)
             for f in export_formats
         ]
         parallel_exporter = ParallelJournalProcessor(

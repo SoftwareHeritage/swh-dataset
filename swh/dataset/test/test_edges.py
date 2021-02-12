@@ -90,12 +90,13 @@ def exporter():
         if config is None:
             config = {}
         exporter = GraphEdgesExporter(config, "/dummy_path")
-        exporter.node_writer = Mock()
-        exporter.edge_writer = Mock()
+        node_writer = Mock()
+        edge_writer = Mock()
+        exporter.get_writers_for = lambda *a, **k: (node_writer, edge_writer)
         for object_type, objects in messages.items():
             for obj in objects:
                 exporter.process_object(object_type, obj)
-        return exporter.node_writer.write, exporter.edge_writer.write
+        return node_writer.write, edge_writer.write
 
     return wrapped
 

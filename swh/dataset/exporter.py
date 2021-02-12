@@ -3,6 +3,8 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import contextlib
+import pathlib
 from types import TracebackType
 from typing import Any, Dict, Optional, Type
 
@@ -23,10 +25,16 @@ class Exporter:
     will be called automatically.
     """
 
-    def __init__(self, config: Dict[str, Any], *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self, config: Dict[str, Any], export_path, *args: Any, **kwargs: Any
+    ) -> None:
         self.config: Dict[str, Any] = config
+        self.export_path = pathlib.Path(export_path)
+        self.exit_stack = contextlib.ExitStack()
 
     def __enter__(self) -> "Exporter":
+        self.export_path.mkdir(exist_ok=True, parents=True)
+        self.exit_stack.__enter__()
         return self
 
     def __exit__(
@@ -35,7 +43,7 @@ class Exporter:
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
-        pass
+        return self.exit_stack.__exit__(exc_type, exc_value, traceback)
 
     def process_object(self, object_type: str, obj: Dict[str, Any]) -> None:
         """
