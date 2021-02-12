@@ -4,7 +4,7 @@
 # See top-level LICENSE file for more information
 
 import contextlib
-from datetime import datetime
+from datetime import datetime, timezone
 import pathlib
 import uuid
 
@@ -102,7 +102,7 @@ def swh_date_to_datetime(obj):
         return None
     return datetime.fromtimestamp(
         obj["timestamp"]["seconds"] + (obj["timestamp"]["microseconds"] / 1e6)
-    )
+    ).replace(tzinfo=timezone.utc)
 
 
 def swh_date_to_offset(obj):
