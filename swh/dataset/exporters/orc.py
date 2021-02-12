@@ -3,7 +3,7 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from datetime import datetime, timezone
+import datetime
 import uuid
 
 from pyorc import BigInt, Binary, Int, SmallInt, String, Struct, Timestamp, Writer
@@ -98,9 +98,12 @@ def hash_to_hex_or_none(hash):
 def swh_date_to_datetime(obj):
     if obj is None or obj["timestamp"] is None:
         return None
-    return datetime.fromtimestamp(
-        obj["timestamp"]["seconds"] + (obj["timestamp"]["microseconds"] / 1e6)
-    ).replace(tzinfo=timezone.utc)
+    return datetime.datetime(
+        1970, 1, 1, tzinfo=datetime.timezone.utc
+    ) + datetime.timedelta(
+        seconds=obj["timestamp"]["seconds"],
+        microseconds=obj["timestamp"]["microseconds"],
+    )
 
 
 def swh_date_to_offset(obj):
