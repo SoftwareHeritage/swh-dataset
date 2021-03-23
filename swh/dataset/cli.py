@@ -74,7 +74,7 @@ def export_graph(ctx, export_path, export_id, formats, exclude, processes):
     if not export_id:
         export_id = str(uuid.uuid4())
 
-    exclude_obj_types = {o.strip() for o in exclude.split(",")}
+    exclude_obj_types = {o.strip() for o in (exclude.split(",") if exclude else [])}
     export_formats = [c.strip() for c in formats.split(",")]
     for f in export_formats:
         if f not in AVAILABLE_EXPORTERS:

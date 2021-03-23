@@ -6,6 +6,12 @@
 import sqlite3
 import subprocess
 
+try:
+    # Plyvel shouldn't be a hard dependency if we want to use sqlite instead
+    import plyvel
+except ImportError:
+    plyvel = None
+
 
 class ZSTFile:
     """
@@ -82,6 +88,41 @@ class SQLiteSet:
         except sqlite3.IntegrityError:
             return False
         else:
+            return True
+
+
+class LevelDBSet:
+    """
+    On-disk Set object for hashes using LevelDB as an indexer backend. Used to
+    deduplicate objects when processing large queues with duplicates.
+    """
+
+    def __init__(self, db_path):
+        self.db_path = db_path
+        if plyvel is None:
+            raise ImportError("Plyvel library not found, required for LevelDBSet")
+
+    def __enter__(self):
+        self.db = plyvel.DB(str(self.db_path), create_if_missing=True)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.db.close()
+
+    def add(self, v: bytes) -> bool:
+        """
+        Add an item to the set.
+
+        Args:
+            v: The value to add to the set.
+
+        Returns:
+              True if the value was added to the set, False if it was already present.
+        """
+        if self.db.get(v):
+            return False
+        else:
+            self.db.put(v, b"T")
             return True
 
 

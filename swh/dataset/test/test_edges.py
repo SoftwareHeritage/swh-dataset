@@ -72,7 +72,7 @@ TEST_ORIGIN_VISIT_STATUS = {
 class FakeDiskSet(set):
     """
     A set with an add() method that returns whether the item has been added
-    or was already there. Used to replace SQLiteSet in unittests.
+    or was already there. Used to replace disk sets in unittests.
     """
 
     def add(self, v):

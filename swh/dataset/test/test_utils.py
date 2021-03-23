@@ -3,13 +3,19 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-from swh.dataset.utils import SQLiteSet
+import pytest
+
+from swh.dataset.utils import LevelDBSet, SQLiteSet
 
 
-def test_sqliteset(tmp_path):
-    f = tmp_path / "test.sqlite3"
+@pytest.fixture(params=[SQLiteSet, LevelDBSet])
+def diskset(request, tmp_path):
+    backend = request.param
+    return backend(tmp_path / "test")
 
-    with SQLiteSet(f) as s:
+
+def test_diskset(diskset):
+    with diskset as s:
         assert s.add(b"a")
         assert s.add(b"b")
         assert not s.add(b"a")

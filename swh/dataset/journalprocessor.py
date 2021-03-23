@@ -18,7 +18,7 @@ from confluent_kafka import TopicPartition
 import tqdm
 
 from swh.dataset.exporter import Exporter
-from swh.dataset.utils import SQLiteSet
+from swh.dataset.utils import LevelDBSet
 from swh.journal.client import JournalClient
 from swh.journal.serializers import kafka_to_value
 from swh.model.identifiers import origin_identifier
@@ -280,7 +280,7 @@ class JournalProcessorWorker:
 
         self.node_sets_path = node_sets_path
         self.node_sets_path.mkdir(exist_ok=True, parents=True)
-        self.node_sets: Dict[Tuple[int, str], SQLiteSet] = {}
+        self.node_sets: Dict[Tuple[int, str], LevelDBSet] = {}
 
         self.exporters = [
             exporter_class(config, **kwargs) for exporter_class, kwargs in exporters
@@ -316,8 +316,8 @@ class JournalProcessorWorker:
                 / ("part-{}".format(str(partition_id)))
             )
             node_set_dir.mkdir(exist_ok=True, parents=True)
-            node_set_file = node_set_dir / "nodes-{}.sqlite".format(obj_id_prefix)
-            node_set = SQLiteSet(node_set_file)
+            node_set_file = node_set_dir / "nodes-{}.db".format(obj_id_prefix)
+            node_set = LevelDBSet(node_set_file)
             self.exit_stack.enter_context(node_set)
             self.node_sets[shard_id] = node_set
         return self.node_sets[shard_id]
