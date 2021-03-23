@@ -307,7 +307,8 @@ class JournalProcessorWorker:
 
             .node_sets/{origin..content}/part-{0..256}/nodes-{0..f}.sqlite
         """
-        obj_id_prefix = "{:x}".format(object_id[0] % 16)
+        # obj_id_prefix = "{:x}".format(object_id[0] % 16)
+        obj_id_prefix = "all"  # disable sharding for now
         shard_id = (partition_id, obj_id_prefix)
         if shard_id not in self.node_sets:
             node_set_dir = (
