@@ -185,7 +185,7 @@ class ORCExporter(ExporterDispatch):
                 release["message"],
                 hash_to_hex_or_none(release["target"]),
                 release["target_type"],
-                release["author"]["fullname"],
+                (release.get("author") or {}).get("fullname"),
                 swh_date_to_datetime(release["date"]),
                 swh_date_to_offset(release["date"]),
             )

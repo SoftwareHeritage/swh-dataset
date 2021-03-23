@@ -88,9 +88,9 @@ def test_export_release(exporter):
             obj.message,
             hash_to_hex_or_none(obj.target),
             obj.target_type.value,
-            obj.author.fullname,
-            swh_date_to_datetime(obj.date.to_dict()),
-            swh_date_to_offset(obj.date.to_dict()),
+            obj.author.fullname if obj.author else None,
+            swh_date_to_datetime(obj.date.to_dict()) if obj.date else None,
+            swh_date_to_offset(obj.date.to_dict()) if obj.date else None,
         ) in output[obj_type]
 
 
