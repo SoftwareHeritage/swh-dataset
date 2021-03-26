@@ -62,6 +62,7 @@ class JournalClientOffsetRanges(JournalClient):
     def subscribe(self):
         self.topic_name = self.subscription[0]
         time.sleep(0.1)  # https://github.com/edenhill/librdkafka/issues/1983
+        logging.debug("Changing assignment to %s", str(self.assignment))
         self.consumer.assign(
             [TopicPartition(self.topic_name, pid) for pid in self.assignment]
         )
@@ -99,8 +100,11 @@ class JournalClientOffsetRanges(JournalClient):
             self.progress_queue.put({partition_id: offset})
 
         if offset >= self.offset_ranges[partition_id][1] - 1:
-            self.assignment = [pid for pid in self.assignment if pid != partition_id]
-            self.subscribe()
+            if partition_id in self.assignment:
+                self.assignment = [
+                    pid for pid in self.assignment if pid != partition_id
+                ]
+                self.subscribe()
 
         if not self.assignment:
             raise EOFError
