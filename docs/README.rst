@@ -1,5 +1,3 @@
-.. _swh-dataset:
-
 Software Heritage Datasets
 ==========================
 

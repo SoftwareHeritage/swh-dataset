@@ -1,3 +1,5 @@
+.. _swh-dataset:
+
 .. include:: README.rst
 
 :ref:`The Software Heritage Graph Dataset <swh-graph-dataset>`
