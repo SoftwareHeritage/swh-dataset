@@ -9,95 +9,82 @@ A simplified view of the corresponding database schema is shown here:
 
 This page documents the details of the schema.
 
+**Note**: To limit abuse, some columns containing personal information are
+pseudonimized in the dataset using a hash algorithm. Individual authors may be
+retrieved by querying the Software Heritage API.
+
 -  **content**: contains information on the contents stored in
    the archive.
 
-  - ``sha1`` (bytes): the SHA-1 of the content
-  - ``sha1_git`` (bytes): the Git SHA-1 of the content
+  - ``sha1`` (string): the SHA-1 of the content (hexadecimal)
+  - ``sha1_git`` (string): the Git SHA-1 of the content (hexadecimal)
+  - ``sha256`` (string): the SHA-256 of the content (hexadecimal)
+  - ``blake2s256`` (bytes): the BLAKE2s-256 of the content (hexadecimal)
   - ``length`` (integer): the length of the content
+  - ``status`` (string): the visibility status of the content
 
--  **skipped_content**: contains information on the contents that were not archived for
-   various reasons.
+-  **skipped_content**: contains information on the contents that were not
+  archived for various reasons.
 
-  - ``sha1`` (bytes): the SHA-1 of the missing content
-  - ``sha1_git`` (bytes): the Git SHA-1 of the missing content
-  - ``length`` (integer): the length of the missing content
+  - ``sha1`` (string): the SHA-1 of the skipped content (hexadecimal)
+  - ``sha1_git`` (string): the Git SHA-1 of the skipped content (hexadecimal)
+  - ``sha256`` (string): the SHA-256 of the skipped content (hexadecimal)
+  - ``blake2s256`` (bytes): the BLAKE2s-256 of the skipped content
+        (hexadecimal)
+  - ``length`` (integer): the length of the skipped content
+  - ``status`` (string): the visibility status of the skipped content
+  - ``reason`` (string): the reason why the content was skipped
 
 - **directory**: contains the directories stored in the archive.
 
-  - ``id`` (bytes): the intrinsic identifier of the directory, recursively
-    computed with the Git SHA-1 algorithm
-  - ``dir_entries`` (array of integers): the list of directories contained in
-    this directory, as references to an entry in the ``directory_entry_dir``
-    table.
-  - ``file_entries`` (array of integers): the list of files contained in
-    this directory, as references to an entry in the ``directory_entry_file``
-    table.
-  - ``rev_entries`` (array of integers): the list of revisions contained in
-    this directory, as references to an entry in the ``directory_entry_rev``
-    table.
+  - ``id`` (string): the intrinsic hash of the directory (hexadecimal),
+    recursively computed with the Git SHA-1 algorithm
 
-- **directory_entry_file**: contains information about file entries in
-  directories.
+- **directory_entry**: contains the entries in directories.
 
-  - ``id`` (integer): unique identifier for the entry
-  - ``target`` (bytes): the Git SHA-1 of the content this entry points to
+  - ``directory_id`` (string): the Git SHA-1 of the directory
+        containing the entry (hexadecimal).
   - ``name`` (bytes): the name of the file (basename of its path)
-  - ``perms`` (integer): the permissions of the file
+  - ``type`` (string): the type of object the branch points to (either
+        ``revision``, ``directory`` or ``content``).
+  - ``target`` (string): the Git SHA-1 of the object this
+        entry points to (hexadecimal).
+  - ``perms`` (integer): the permissions of the object
 
-- **directory_entry_dir**: contains information about directory entries in
-  directories.
-
-  - ``id`` (integer): unique identifier for the entry
-  - ``target`` (bytes): the Git SHA-1 of the directory this entry points to
-  - ``name`` (bytes): the name of the directory
-  - ``perms`` (integer): the permissions of the directory
-
-- **directory_entry_rev**: contains information about revision entries in
-  directories.
-
-  - ``id`` (integer): unique identifier for the entry
-  - ``target`` (bytes): the Git SHA-1 of the revision this entry points to
-  - ``name`` (bytes): the name of the directory that contains this revision
-  - ``perms`` (integer): the permissions of the revision
-
-- **person**: deduplicates commit authors by their names and e-mail addresses.
-  For pseudonymization purposes and in order to prevent abuse, these columns
-  were removed from the dataset, and this table only contains the ID of the
-  author. Individual authors may be retrieved using this ID from the Software
-  Heritage api.
-
-  - ``id`` (integer): the identifier of the person
 
 - **revision**: contains the revisions stored in the archive.
 
-  - ``id`` (bytes): the intrinsic identifier of the revision, recursively
-    computed with the Git SHA-1 algorithm. For Git repositories, this
-    corresponds to the revision hash.
-  - ``date`` (timestamp): the date the revision was authored
-  - ``committer_date`` (timestamp): the date the revision was committed
-  - ``author`` (integer): the author of the revision
-  - ``committer`` (integer): the committer of the revision
+  - ``id`` (string): the intrinsic hash of the revision (hexadecimal),
+        recursively computed with the Git SHA-1 algorithm. For Git
+        repositories, this corresponds to the commit hash.
   - ``message`` (bytes): the revision message
-  - ``directory`` (bytes): the Git SHA-1 of the directory the revision points
-    to. Every revision points to the root directory of the project source
-    tree to which it corresponds.
+  - ``author`` (string): an anonymized hash of the author of the revision.
+  - ``date`` (timestamp): the date the revision was authored
+  - ``date_offset`` (integer): the offset of the timezone of ``date``
+  - ``committer`` (string): an anonymized hash of the committer of the revision.
+  - ``committer_date`` (timestamp): the date the revision was committed
+  - ``committer_date_offset`` (integer): the offset of the timezone of
+        ``committer_date``
+  - ``directory`` (string): the Git SHA-1 of the directory the revision points
+        to (hexadecimal). Every revision points to the root directory of the
+        project source tree to which it corresponds.
 
 - **revision_history**: contains the ordered set of parents of each revision.
   Each revision has an ordered set of parents (0 for the initial commit of a
   repository, 1 for a regular commit, 2 for a regular merge commit and 3 or
   more for octopus-style merge commits).
 
-  - ``id`` (bytes): the Git SHA-1 identifier of the revision
-  - ``parent_id`` (bytes): the Git SHA-1 identifier of the parent
-  - ``parent_rank`` (integer): the rank of the parent which defines the total
-    order of the parents of the revision
+  - ``id`` (string): the Git SHA-1 identifier of the revision (hexadecimal)
+  - ``parent_id`` (string): the Git SHA-1 identifier of the parent (hexadecimal)
+  - ``parent_rank`` (integer): the rank of the parent, which defines the
+    ordering between the parents of the revision
 
 - **release**: contains the releases stored in the archive.
 
-  - ``id`` (bytes): the intrinsic identifier of the release, recursively
-    computed with the Git SHA-1 algorithm.
-  - ``target`` (bytes): the Git SHA-1 of the object the release points to.
+  - ``id`` (string): the intrinsic hash of the release (hexadecimal),
+        recursively computed with the Git SHA-1 algorithm.
+  - ``target`` (string): the Git SHA-1 of the object the release points to
+        (hexadecimal).
   - ``date`` (timestamp): the date the release was created
   - ``author`` (integer): the author of the revision
   - ``name`` (bytes): the release name
@@ -105,38 +92,43 @@ This page documents the details of the schema.
 
 - **snapshot**: contains the list of snapshots stored in the archive.
 
-  - ``id`` (bytes): the intrinsic identifier of the snapshot, recursively
-    computed with the Git SHA-1 algorithm.
-  - ``object_id`` (integer): the primary key of the snapshot
+  - ``id`` (string): the intrinsic hash of the snapshot (hexadecimal),
+        recursively computed with the Git SHA-1 algorithm.
 
-- **snapshot_branches**: contains the identifiers of branches associated with
-  each snapshot. This is an intermediary table through which is represented the
-  many-to-many relationship between snapshots and branches.
+- **snapshot_branch**: contains the list of branches associated with
+  each snapshot.
 
-  - ``snapshot_id`` (integer): the integer identifier of the snapshot
-  - ``branch_id`` (integer): the identifier of the branch
-
-- **snapshot_branch**: contains the list of branches.
-
-  - ``object_id`` (integer): the identifier of the branch
+  - ``snapshot_id`` (string): the intrinsic hash of the snapshot (hexadecimal)
   - ``name`` (bytes): the name of the branch
-  - ``target`` (bytes): the Git SHA-1 of the object the branch points to
+  - ``target`` (string): the intrinsic hash of the object the branch points to
+        (hexadecimal)
   - ``target_type`` (string): the type of object the branch points to (either
-    ``release``, ``revision``, ``directory`` or ``content``).
+        ``release``, ``revision``, ``directory`` or ``content``).
 
 - **origin**: the software origins from which the projects in the dataset were
   archived.
 
-  - ``id`` (integer): the identifier of the origin
   - ``url`` (bytes): the URL of the origin
-  - ``type`` (string): the type of origin (e.g ``git``, ``pypi``, ``hg``,
-    ``svn``, ``git``, ``ftp``, ``deb``, ...)
 
 - **origin_visit**: the different visits of each origin. Since Software
   Heritage archives software continuously, software origins are crawled more
   than once. Each of these "visits" is an entry in this table.
 
-  - ``origin``: (integer) the identifier of the origin visited
+  - ``origin``: (string) the URL of the origin visited
+  - ``visit``: (integer) an integer identifier of the visit
   - ``date``: (timestamp) the date at which the origin was visited
-  - ``snapshot_id`` (integer): the integer identifier of the snapshot archived
-    in this visit.
+  - ``type`` (string): the type of origin visited (e.g ``git``, ``pypi``, ``hg``,
+    ``svn``, ``git``, ``ftp``, ``deb``, ...)
+
+- **origin_visit_status**: the status of each visit.
+
+  - ``origin``: (string) the URL of the origin visited
+  - ``visit``: (integer) an integer identifier of the visit
+  - ``date``: (timestamp) the date at which the origin was visited
+  - ``type`` (string): the type of origin visited (e.g ``git``, ``pypi``, ``hg``,
+    ``svn``, ``git``, ``ftp``, ``deb``, ...)
+  - ``snapshot_id`` (string): the intrinsic hash of the snapshot archived in
+        this visit (hexadecimal).
+  - ``status`` (string): the integer identifier of the snapshot archived
+        in this visit, either ``partial`` for partial visits or ``full`` for
+        full visits.
