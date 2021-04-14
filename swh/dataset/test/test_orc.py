@@ -108,7 +108,13 @@ def test_export_revision(exporter):
             swh_date_to_datetime(obj.committer_date.to_dict()),
             swh_date_to_offset(obj.committer_date.to_dict()),
             hash_to_hex_or_none(obj.directory),
-        ) in output[obj_type]
+        ) in output["revision"]
+        for i, parent in enumerate(obj.parents):
+            assert (
+                hash_to_hex_or_none(obj.id),
+                hash_to_hex_or_none(parent),
+                i,
+            ) in output["revision_history"]
 
 
 def test_export_directory(exporter):

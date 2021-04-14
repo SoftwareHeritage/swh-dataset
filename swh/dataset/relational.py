@@ -51,6 +51,11 @@ TABLES = {
         ("committer_offset", "smallint"),
         ("directory", "string"),
     ],
+    "revision_history": [
+        ("id", "string"),
+        ("parent_id", "string"),
+        ("parent_rank", "int"),
+    ],
     "directory": [
         ("id", "string"),
     ],

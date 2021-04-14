@@ -149,6 +149,16 @@ class ORCExporter(ExporterDispatch):
             )
         )
 
+        revision_history_writer = self.get_writer_for("revision_history")
+        for i, parent_id in enumerate(revision["parents"]):
+            revision_history_writer.write(
+                (
+                    hash_to_hex_or_none(revision["id"]),
+                    hash_to_hex_or_none(parent_id),
+                    i,
+                )
+            )
+
     def process_directory(self, directory):
         directory_writer = self.get_writer_for("directory")
         directory_writer.write((hash_to_hex_or_none(directory["id"]),))
