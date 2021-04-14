@@ -9,86 +9,28 @@ import uuid
 from pyorc import BigInt, Binary, Int, SmallInt, String, Struct, Timestamp, Writer
 
 from swh.dataset.exporter import ExporterDispatch
+from swh.dataset.relational import TABLES
 from swh.dataset.utils import remove_pull_requests
 from swh.model.hashutil import hash_to_hex
 
-# fmt: off
-EXPORT_SCHEMA = {
-    'origin': Struct(
-        url=String()
-    ),
-    'origin_visit': Struct(
-        origin=String(),
-        visit=BigInt(),
-        date=Timestamp(),
-        type=String(),
-    ),
-    'origin_visit_status': Struct(
-        origin=String(),
-        visit=BigInt(),
-        date=Timestamp(),
-        status=String(),
-        snapshot=String(),
-    ),
-    'snapshot': Struct(
-        id=String(),
-    ),
-    'snapshot_branch': Struct(
-        snapshot_id=String(),
-        name=Binary(),
-        target=String(),
-        target_type=String(),
-    ),
-    'release': Struct(
-        id=String(),
-        name=Binary(),
-        message=Binary(),
-        target=String(),
-        target_type=String(),
-        author=Binary(),
-        date=Timestamp(),
-        date_offset=SmallInt(),
-    ),
-    'revision': Struct(
-        id=String(),
-        message=Binary(),
-        author=Binary(),
-        date=Timestamp(),
-        date_offset=SmallInt(),
-        committer=Binary(),
-        committer_date=Timestamp(),
-        committer_offset=SmallInt(),
-        directory=String(),
-    ),
-    'directory': Struct(
-        id=String(),
-    ),
-    'directory_entry': Struct(
-        directory_id=String(),
-        name=Binary(),
-        type=String(),
-        target=String(),
-        perms=Int(),
-    ),
-    'content': Struct(
-        sha1=String(),
-        sha1_git=String(),
-        sha256=String(),
-        blake2s256=String(),
-        length=BigInt(),
-        status=String(),
-    ),
-    'skipped_content': Struct(
-        sha1=String(),
-        sha1_git=String(),
-        sha256=String(),
-        blake2s256=String(),
-        length=BigInt(),
-        status=String(),
-        reason=String(),
-    ),
+ORC_TYPE_MAP = {
+    "string": String,
+    "smallint": SmallInt,
+    "int": Int,
+    "bigint": BigInt,
+    "timestamp": Timestamp,
+    "binary": Binary,
 }
-# fmt: on
+
+EXPORT_SCHEMA = {
+    table_name: Struct(
+        **{
+            column_name: ORC_TYPE_MAP[column_type]()
+            for column_name, column_type in columns
+        }
+    )
+    for table_name, columns in TABLES.items()
+}
 
 
 def hash_to_hex_or_none(hash):
