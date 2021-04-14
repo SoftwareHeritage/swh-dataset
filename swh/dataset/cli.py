@@ -7,6 +7,7 @@
 # control
 import os
 import pathlib
+import sys
 
 import click
 
@@ -121,3 +122,59 @@ def sort_graph(ctx, export_path):
     from swh.dataset.exporters.edges import sort_graph_nodes
 
     sort_graph_nodes(export_path, config)
+
+
+@dataset_cli_group.group("athena")
+@click.pass_context
+def athena(ctx):
+    """Manage remote AWS Athena database"""
+    pass
+
+
+@athena.command("create")
+@click.option(
+    "--database-name", "-d", default="swh", help="Name of the database to create"
+)
+@click.option(
+    "--location-prefix",
+    "-l",
+    required=True,
+    help="S3 prefix where the dataset can be found",
+)
+@click.option(
+    "-o", "--output-location", help="S3 prefix where results should be stored"
+)
+@click.option(
+    "-r", "--replace-tables", is_flag=True, help="Replace the tables that already exist"
+)
+def athena_create(
+    database_name, location_prefix, output_location=None, replace_tables=False
+):
+    """Create tables on AWS Athena pointing to a given graph dataset on S3."""
+    from swh.dataset.athena import create_tables
+
+    create_tables(
+        database_name,
+        location_prefix,
+        output_location=output_location,
+        replace=replace_tables,
+    )
+
+
+@athena.command("query")
+@click.option(
+    "--database-name", "-d", default="swh", help="Name of the database to query"
+)
+@click.option(
+    "-o", "--output-location", help="S3 prefix where results should be stored"
+)
+@click.argument("query_file", type=click.File("r"), default=sys.stdin)
+def athena_query(
+    database_name, query_file, output_location=None,
+):
+    """Query the AWS Athena database with a given command"""
+    from swh.dataset.athena import run_query_get_results
+
+    run_query_get_results(
+        database_name, query_file.read(), output_location=output_location,
+    )
