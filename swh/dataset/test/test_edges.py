@@ -92,7 +92,10 @@ def exporter():
         exporter = GraphEdgesExporter(config, "/dummy_path")
         node_writer = Mock()
         edge_writer = Mock()
-        exporter.get_writers_for = lambda *a, **k: (node_writer, edge_writer)
+        exporter.get_writers_for = lambda *a, **k: (  # type: ignore
+            node_writer,
+            edge_writer,
+        )
         for object_type, objects in messages.items():
             for obj in objects:
                 exporter.process_object(object_type, obj)
