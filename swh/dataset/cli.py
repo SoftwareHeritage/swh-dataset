@@ -127,7 +127,7 @@ def sort_graph(ctx, export_path):
 @dataset_cli_group.group("athena")
 @click.pass_context
 def athena(ctx):
-    """Manage remote AWS Athena database"""
+    """Manage and query a remote AWS Athena database"""
     pass
 
 
@@ -175,6 +175,9 @@ def athena_query(
     """Query the AWS Athena database with a given command"""
     from swh.dataset.athena import run_query_get_results
 
-    run_query_get_results(
-        database_name, query_file.read(), output_location=output_location,
-    )
+    print(
+        run_query_get_results(
+            database_name, query_file.read(), output_location=output_location,
+        ),
+        end="",
+    )  # CSV already ends with \n

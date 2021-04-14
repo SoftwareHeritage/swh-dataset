@@ -1,4 +1,12 @@
-#!/usr/bin/env python3
+# Copyright (C) 2021  The Software Heritage developers
+# See the AUTHORS file at the top-level directory of this distribution
+# License: GNU General Public License version 3, or any later version
+# See top-level LICENSE file for more information
+
+"""
+This module implements the "athena" subcommands for the CLI. It can install and
+query a remote AWS Athena database.
+"""
 
 import datetime
 import logging
@@ -90,6 +98,13 @@ def query(client, query_string, *, desc="Querying", delay_secs=0.5, silent=False
 
 
 def create_tables(database_name, dataset_location, output_location=None, replace=False):
+    """
+    Create the Software Heritage Dataset tables on AWS Athena.
+
+    Athena works on external columnar data stored in S3, but requires a schema
+    for each table to run queries. This creates all the necessary tables
+    remotely by using the relational schemas in swh.dataset.relational.
+    """
     client = boto3.client("athena")
     client.output_location = output_location
     query(
@@ -121,7 +136,7 @@ def create_tables(database_name, dataset_location, output_location=None, replace
         )
 
 
-def human_size(n, units=["bytes", "KB", "MB", "GB", "TB", "PB", "EB"]):
+def human_size(n, units=["bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"]):
     """ Returns a human readable string representation of bytes """
     return f"{n} " + units[0] if n < 1024 else human_size(n >> 10, units[1:])
 
@@ -129,6 +144,9 @@ def human_size(n, units=["bytes", "KB", "MB", "GB", "TB", "PB", "EB"]):
 def run_query_get_results(
     database_name, query_string, output_location=None,
 ):
+    """
+    Run a query on AWS Athena and return the resulting data in CSV format.
+    """
     athena = boto3.client("athena")
     athena.output_location = output_location
     athena.database_name = database_name
@@ -146,5 +164,4 @@ def run_query_get_results(
 
     loc = result["ResultConfiguration"]["OutputLocation"][len("s3://") :]
     bucket, path = loc.split("/", 1)
-    result = s3.get_object(Bucket=bucket, Key=path)["Body"].read().decode()
-    print(result, end="")  # CSV already ends with \n
+    return s3.get_object(Bucket=bucket, Key=path)["Body"].read().decode()
