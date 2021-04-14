@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+
+# Copyright (C) 2021  The Software Heritage developers
+# See the AUTHORS file at the top-level directory of this distribution
+# License: GNU General Public License version 3, or any later version
+# See top-level LICENSE file for more information
+
+"""Print the contents of an ORC file."""
+
+import argparse
+
+import pyorc
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("files", type=argparse.FileType(mode="rb"), nargs="+")
+    args = parser.parse_args()
+
+    for orc_file in args.files:
+        reader = pyorc.Reader(orc_file)
+        for row in reader:
+            print(row)
