@@ -30,7 +30,7 @@ class GraphEdgesExporter(ExporterDispatch):
     Implementation of an exporter which writes all the graph edges
     of a specific type to a Zstandard-compressed CSV file.
 
-    Each row of the CSV is in the format: `<SRC SWHID> <DST SWHID>
+    Each row of the CSV is in the format: ``<SRC SWHID> <DST SWHID>``.
     """
 
     def __init__(self, *args, **kwargs):
