@@ -107,6 +107,7 @@ def create_tables(database_name, dataset_location, output_location=None, replace
     """
     client = boto3.client("athena")
     client.output_location = output_location
+    client.database_name = database_name
     query(
         client,
         create_database(database_name),
