@@ -13,8 +13,8 @@ This page documents the details of the schema.
 pseudonimized in the dataset using a hash algorithm. Individual authors may be
 retrieved by querying the Software Heritage API.
 
--  **content**: contains information on the contents stored in
-   the archive.
+- **content**: contains information on the contents stored in
+  the archive.
 
   - ``sha1`` (string): the SHA-1 of the content (hexadecimal)
   - ``sha1_git`` (string): the Git SHA-1 of the content (hexadecimal)
@@ -23,14 +23,14 @@ retrieved by querying the Software Heritage API.
   - ``length`` (integer): the length of the content
   - ``status`` (string): the visibility status of the content
 
--  **skipped_content**: contains information on the contents that were not
+- **skipped_content**: contains information on the contents that were not
   archived for various reasons.
 
   - ``sha1`` (string): the SHA-1 of the skipped content (hexadecimal)
   - ``sha1_git`` (string): the Git SHA-1 of the skipped content (hexadecimal)
   - ``sha256`` (string): the SHA-256 of the skipped content (hexadecimal)
   - ``blake2s256`` (bytes): the BLAKE2s-256 of the skipped content
-        (hexadecimal)
+    (hexadecimal)
   - ``length`` (integer): the length of the skipped content
   - ``status`` (string): the visibility status of the skipped content
   - ``reason`` (string): the reason why the content was skipped
@@ -43,20 +43,20 @@ retrieved by querying the Software Heritage API.
 - **directory_entry**: contains the entries in directories.
 
   - ``directory_id`` (string): the Git SHA-1 of the directory
-        containing the entry (hexadecimal).
+    containing the entry (hexadecimal).
   - ``name`` (bytes): the name of the file (basename of its path)
   - ``type`` (string): the type of object the branch points to (either
-        ``revision``, ``directory`` or ``content``).
+    ``revision``, ``directory`` or ``content``).
   - ``target`` (string): the Git SHA-1 of the object this
-        entry points to (hexadecimal).
+    entry points to (hexadecimal).
   - ``perms`` (integer): the permissions of the object
 
 
 - **revision**: contains the revisions stored in the archive.
 
   - ``id`` (string): the intrinsic hash of the revision (hexadecimal),
-        recursively computed with the Git SHA-1 algorithm. For Git
-        repositories, this corresponds to the commit hash.
+    recursively computed with the Git SHA-1 algorithm. For Git repositories,
+    this corresponds to the commit hash.
   - ``message`` (bytes): the revision message
   - ``author`` (string): an anonymized hash of the author of the revision.
   - ``date`` (timestamp): the date the revision was authored
@@ -64,10 +64,10 @@ retrieved by querying the Software Heritage API.
   - ``committer`` (string): an anonymized hash of the committer of the revision.
   - ``committer_date`` (timestamp): the date the revision was committed
   - ``committer_date_offset`` (integer): the offset of the timezone of
-        ``committer_date``
+    ``committer_date``
   - ``directory`` (string): the Git SHA-1 of the directory the revision points
-        to (hexadecimal). Every revision points to the root directory of the
-        project source tree to which it corresponds.
+    to (hexadecimal). Every revision points to the root directory of the
+    project source tree to which it corresponds.
 
 - **revision_history**: contains the ordered set of parents of each revision.
   Each revision has an ordered set of parents (0 for the initial commit of a
@@ -82,9 +82,9 @@ retrieved by querying the Software Heritage API.
 - **release**: contains the releases stored in the archive.
 
   - ``id`` (string): the intrinsic hash of the release (hexadecimal),
-        recursively computed with the Git SHA-1 algorithm.
+    recursively computed with the Git SHA-1 algorithm
   - ``target`` (string): the Git SHA-1 of the object the release points to
-        (hexadecimal).
+    (hexadecimal)
   - ``date`` (timestamp): the date the release was created
   - ``author`` (integer): the author of the revision
   - ``name`` (bytes): the release name
@@ -93,7 +93,7 @@ retrieved by querying the Software Heritage API.
 - **snapshot**: contains the list of snapshots stored in the archive.
 
   - ``id`` (string): the intrinsic hash of the snapshot (hexadecimal),
-        recursively computed with the Git SHA-1 algorithm.
+    recursively computed with the Git SHA-1 algorithm.
 
 - **snapshot_branch**: contains the list of branches associated with
   each snapshot.
@@ -101,9 +101,9 @@ retrieved by querying the Software Heritage API.
   - ``snapshot_id`` (string): the intrinsic hash of the snapshot (hexadecimal)
   - ``name`` (bytes): the name of the branch
   - ``target`` (string): the intrinsic hash of the object the branch points to
-        (hexadecimal)
+    (hexadecimal)
   - ``target_type`` (string): the type of object the branch points to (either
-        ``release``, ``revision``, ``directory`` or ``content``).
+    ``release``, ``revision``, ``directory`` or ``content``).
 
 - **origin**: the software origins from which the projects in the dataset were
   archived.
@@ -128,7 +128,7 @@ retrieved by querying the Software Heritage API.
   - ``type`` (string): the type of origin visited (e.g ``git``, ``pypi``, ``hg``,
     ``svn``, ``git``, ``ftp``, ``deb``, ...)
   - ``snapshot_id`` (string): the intrinsic hash of the snapshot archived in
-        this visit (hexadecimal).
-  - ``status`` (string): the integer identifier of the snapshot archived
-        in this visit, either ``partial`` for partial visits or ``full`` for
-        full visits.
+    this visit (hexadecimal).
+  - ``status`` (string): the integer identifier of the snapshot archived in
+    this visit, either ``partial`` for partial visits or ``full`` for full
+    visits.
