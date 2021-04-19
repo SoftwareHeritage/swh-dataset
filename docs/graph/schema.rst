@@ -5,7 +5,7 @@ The Merkle DAG of the Software Heritage archive is encoded in the dataset as a
 set of relational tables.
 A simplified view of the corresponding database schema is shown here:
 
-.. image:: _images/db-schema.svg
+.. image:: _images/dataset-schema.svg
 
 This page documents the details of the schema.
 
