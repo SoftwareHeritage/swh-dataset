@@ -2,3 +2,4 @@
 swh.core[http] >= 0.3
 swh.journal
 swh.model >= 1.0.0
+swh.storage
