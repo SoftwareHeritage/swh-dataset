@@ -149,7 +149,7 @@ class ParallelJournalProcessor:
         """
         self.config = config
         self.exporters = exporters
-        self.export_id = "swh-dataset-export-{}".format(export_id)
+        self.group_id = "swh-dataset-export-{}".format(export_id)
         self.obj_type = obj_type
         self.processes = processes
         self.node_sets_path = node_sets_path
@@ -164,7 +164,7 @@ class ParallelJournalProcessor:
             client = JournalClient(
                 **self.config["journal"],
                 object_types=[self.obj_type],
-                group_id=self.export_id,
+                group_id=self.group_id,
             )
             topic_name = client.subscription[0]
             topics = client.consumer.list_topics(topic_name).topics
@@ -247,7 +247,7 @@ class ParallelJournalProcessor:
         worker = JournalProcessorWorker(
             self.config,
             self.exporters,
-            self.export_id,
+            self.group_id,
             self.obj_type,
             self.offsets,
             assignment,
@@ -268,7 +268,7 @@ class JournalProcessorWorker:
         self,
         config,
         exporters: Sequence[Tuple[Type[Exporter], Dict[str, Any]]],
-        export_id: str,
+        group_id: str,
         obj_type: str,
         offsets: Dict[int, Tuple[int, int]],
         assignment: Sequence[int],
@@ -276,7 +276,7 @@ class JournalProcessorWorker:
         node_sets_path: Path,
     ):
         self.config = config
-        self.export_id = export_id
+        self.group_id = group_id
         self.obj_type = obj_type
         self.offsets = offsets
         self.assignment = assignment
@@ -335,7 +335,7 @@ class JournalProcessorWorker:
         client = JournalClientOffsetRanges(
             **self.config["journal"],
             object_types=[self.obj_type],
-            group_id=self.export_id,
+            group_id=self.group_id,
             debug="cgrp,broker",
             offset_ranges=self.offsets,
             assignment=self.assignment,
