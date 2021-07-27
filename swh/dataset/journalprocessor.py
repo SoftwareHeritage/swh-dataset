@@ -232,7 +232,8 @@ class ParallelJournalProcessor:
         d = {}
         active_workers = self.processes
         offset_diff = sum((hi - lo) for lo, hi in self.offsets.values())
-        with tqdm.tqdm(total=offset_diff, desc="  - Journal export") as pbar:
+        desc = f"  - Journal export ({self.obj_type})"
+        with tqdm.tqdm(total=offset_diff, desc=desc) as pbar:
             while active_workers:
                 item = queue.get()
                 if item is None:
