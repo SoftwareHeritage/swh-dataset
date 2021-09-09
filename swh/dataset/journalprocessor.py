@@ -194,6 +194,7 @@ class ParallelJournalProcessor:
                         desc="  - Partition offsets",
                     )
                 )
+            client.close()
         return self.offsets
 
     def run(self):
