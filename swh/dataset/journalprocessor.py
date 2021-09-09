@@ -68,12 +68,12 @@ class JournalClientOffsetRanges(JournalClient):
             [TopicPartition(self.topic_name, pid) for pid in self.assignment]
         )
 
-    def process(self, *args, **kwargs):
+    def process(self, worker_fn):
         self.count = 0
         try:
             self.handle_committed_offsets()
             if self.assignment:
-                super().process(*args, **kwargs)
+                super().process(worker_fn)
         finally:
             self.progress_queue.put(None)
 
