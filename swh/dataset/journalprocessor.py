@@ -89,6 +89,7 @@ class JournalClientOffsetRanges(JournalClient):
 
         if offset >= self.offset_ranges[partition_id][1] - 1:
             if partition_id in self.assignment:
+                self.progress_queue.put({partition_id: offset})
                 self.assignment = [
                     pid for pid in self.assignment if pid != partition_id
                 ]
@@ -248,7 +249,7 @@ class ParallelJournalProcessor:
                     active_workers -= 1
                     continue
                 d.update(item)
-                progress = sum(n - self.offsets[p][0] for p, n in d.items())
+                progress = sum(n + 1 - self.offsets[p][0] for p, n in d.items())
                 pbar.set_postfix(
                     active_workers=active_workers, total_workers=self.processes
                 )
