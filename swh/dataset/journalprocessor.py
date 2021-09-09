@@ -205,7 +205,7 @@ class ParallelJournalProcessor:
         offsets = self.get_offsets()
         to_assign = list(offsets.keys())
         if not to_assign:
-            print("  - Journal export ({self.obj_type}): skipped (nothing to export)")
+            print("  - Export ({self.obj_type}): skipped (nothing to export)")
             return
         manager = multiprocessing.Manager()
         q = manager.Queue()
@@ -241,7 +241,7 @@ class ParallelJournalProcessor:
         d = {}
         active_workers = self.processes
         offset_diff = sum((hi - lo) for lo, hi in self.offsets.values())
-        desc = f"  - Journal export ({self.obj_type})"
+        desc = f"  - Export ({self.obj_type})"
         with tqdm.tqdm(total=offset_diff, desc=desc) as pbar:
             while active_workers:
                 item = queue.get()
@@ -250,9 +250,7 @@ class ParallelJournalProcessor:
                     continue
                 d.update(item)
                 progress = sum(n + 1 - self.offsets[p][0] for p, n in d.items())
-                pbar.set_postfix(
-                    active_workers=active_workers, total_workers=self.processes
-                )
+                pbar.set_postfix(workers=f"{active_workers}/{self.processes}",)
                 pbar.update(progress - pbar.n)
 
     def export_worker(self, assignment, progress_queue):
