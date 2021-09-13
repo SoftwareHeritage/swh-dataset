@@ -205,7 +205,7 @@ class ParallelJournalProcessor:
         offsets = self.get_offsets()
         to_assign = list(offsets.keys())
         if not to_assign:
-            print("  - Export ({self.obj_type}): skipped (nothing to export)")
+            print(f"  - Export ({self.obj_type}): skipped (nothing to export)")
             return
         manager = multiprocessing.Manager()
         q = manager.Queue()
