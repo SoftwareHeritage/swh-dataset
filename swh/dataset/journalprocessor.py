@@ -12,7 +12,7 @@ import logging
 import multiprocessing
 from pathlib import Path
 import time
-from typing import Any, Dict, Mapping, Sequence, Tuple, Type
+from typing import Any, Container, Dict, Mapping, Optional, Sequence, Tuple, Type
 
 from confluent_kafka import TopicPartition
 import tqdm
@@ -56,7 +56,7 @@ class JournalClientOffsetRanges(JournalClient):
         self.refresh_every = refresh_every
         self.assignment = assignment
         self.count = None
-        self.topic_name = None
+        self.topic_name: Optional[str] = None
         kwargs["stop_on_eof"] = True  # Stop when the assignment is empty
         super().__init__(*args, **kwargs)
 
@@ -64,6 +64,13 @@ class JournalClientOffsetRanges(JournalClient):
         self.topic_name = self.subscription[0]
         time.sleep(0.1)  # https://github.com/edenhill/librdkafka/issues/1983
         logging.debug("Changing assignment to %s", str(self.assignment))
+        self.consumer.assign(
+            [TopicPartition(self.topic_name, pid) for pid in self.assignment]
+        )
+
+    def unsubscribe(self, partitions: Container[int]):
+        assert self.assignment is not None
+        self.assignment = [pid for pid in self.assignment if pid not in partitions]
         self.consumer.assign(
             [TopicPartition(self.topic_name, pid) for pid in self.assignment]
         )
@@ -90,10 +97,7 @@ class JournalClientOffsetRanges(JournalClient):
         if offset >= self.offset_ranges[partition_id][1] - 1:
             if partition_id in self.assignment:
                 self.progress_queue.put({partition_id: offset})
-                self.assignment = [
-                    pid for pid in self.assignment if pid != partition_id
-                ]
-                self.subscribe()  # Actually, unsubscribes from the partition_id
+                self.unsubscribe([partition_id])
 
     def deserialize_message(self, message):
         """
