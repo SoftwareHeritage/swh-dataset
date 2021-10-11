@@ -21,7 +21,8 @@ from swh.dataset.exporter import Exporter
 from swh.dataset.utils import LevelDBSet
 from swh.journal.client import JournalClient
 from swh.journal.serializers import kafka_to_value
-from swh.model.identifiers import origin_identifier
+from swh.model.hashutil import hash_to_hex
+from swh.model.model import Origin
 from swh.storage.fixer import fix_objects
 
 
@@ -406,14 +407,14 @@ class JournalProcessorWorker:
         processed once.
         """
         if object_type == "origin_visit":
-            origin_id = origin_identifier({"url": obj["origin"]})
+            origin_id = hash_to_hex(Origin(url=obj["origin"]).id)
             visit = obj["visit"]
             node_id = sha1(f"{origin_id}:{visit}".encode()).digest()
         elif object_type == "origin_visit_status":
             if obj["status"] not in ("partial", "full"):
                 # Temporary visit object, not useful for the exports
                 return
-            origin_id = origin_identifier({"url": obj["origin"]})
+            origin_id = hash_to_hex(Origin(url=obj["origin"]).id)
             visit = obj["visit"]
             ts = obj["date"].timestamp()
             node_id = sha1(f"{origin_id}:{visit}:{ts}".encode()).digest()

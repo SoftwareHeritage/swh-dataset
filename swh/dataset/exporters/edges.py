@@ -14,8 +14,9 @@ import uuid
 
 from swh.dataset.exporter import ExporterDispatch
 from swh.dataset.utils import ZSTFile, remove_pull_requests
-from swh.model.hashutil import hash_to_bytes, hash_to_hex
-from swh.model.identifiers import ExtendedObjectType, origin_identifier
+from swh.model.hashutil import hash_to_hex
+from swh.model.model import Origin
+from swh.model.swhids import ExtendedObjectType
 
 
 def swhid(object_type, object_id):
@@ -81,11 +82,11 @@ class GraphEdgesExporter(ExporterDispatch):
         edge_writer.write("{}\n".format(edge_line))
 
     def process_origin(self, origin):
-        origin_id = hash_to_bytes(origin_identifier({"url": origin["url"]}))
+        origin_id = Origin(url=origin["url"]).id
         self.write_node((ExtendedObjectType.ORIGIN, origin_id))
 
     def process_origin_visit_status(self, visit_status):
-        origin_id = hash_to_bytes(origin_identifier({"url": visit_status["origin"]}))
+        origin_id = Origin(url=visit_status["origin"]).id
         self.write_edge(
             (ExtendedObjectType.ORIGIN, origin_id),
             (ExtendedObjectType.SNAPSHOT, visit_status["snapshot"]),
