@@ -105,7 +105,7 @@ class JournalClientOffsetRanges(JournalClient):
                 self._messages_to_commit.append(message)
                 self.unsubscribe([partition_id])
 
-    def deserialize_message(self, message):
+    def deserialize_message(self, message, object_type=None):
         """
         Override of the message deserialization to hook the handling of the
         message offset.
