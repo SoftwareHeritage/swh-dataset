@@ -51,7 +51,15 @@ AVAILABLE_EXPORTERS = {
 
 @graph.command("export")
 @click.argument("export-path", type=click.Path())
-@click.option("--export-id", "-e", help="Unique ID of the export run.")
+@click.option(
+    "--export-id",
+    "-e",
+    help=(
+        "Unique ID of the export run. This is appended to the kafka "
+        "group_id config file option. If group_id is not set in the "
+        "'journal' section of the config file, defaults to 'swh-dataset-export-'."
+    ),
+)
 @click.option(
     "--formats",
     "-f",
