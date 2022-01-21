@@ -181,3 +181,37 @@ def athena_query(
         ),
         end="",
     )  # CSV already ends with \n
+
+
+@athena.command("gensubdataset")
+@click.option("--database", "-d", default="swh", help="Name of the base database")
+@click.option(
+    "--subdataset-database", required=True,
+    help="Name of the subdataset database to create"
+)
+@click.option(
+    "--subdataset-location",
+    required=True,
+    help="S3 prefix where the subdataset should be stored",
+)
+@click.option(
+    "--swhids",
+    required=True,
+    help="File containing the list of SWHIDs to include in the subdataset",
+)
+def athena_gensubdataset(database, subdataset_database, subdataset_location, swhids):
+    """
+    Generate a subdataset with Athena, from an existing database and a list
+    of SWHIDs. Athena will generate a new dataset with the same tables as in
+    the base dataset, but only containing the objects present in the SWHID
+    list.
+    """
+    from swh.dataset.athena import generate_subdataset
+
+    generate_subdataset(
+        database,
+        subdataset_database,
+        subdataset_location,
+        swhids,
+        os.path.join(subdataset_location, "queries"),
+    )
