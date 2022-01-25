@@ -6,7 +6,17 @@
 import datetime
 import uuid
 
-from pyorc import BigInt, Binary, Int, SmallInt, String, Struct, Timestamp, Writer
+from pyorc import (
+    BigInt,
+    Binary,
+    CompressionKind,
+    Int,
+    SmallInt,
+    String,
+    Struct,
+    Timestamp,
+    Writer,
+)
 
 from swh.dataset.exporter import ExporterDispatch
 from swh.dataset.relational import TABLES
@@ -73,7 +83,11 @@ class ORCExporter(ExporterDispatch):
             export_file = object_type_dir / ("graph-{}.orc".format(unique_id))
             export_obj = self.exit_stack.enter_context(export_file.open("wb"))
             self.writers[table_name] = self.exit_stack.enter_context(
-                Writer(export_obj, EXPORT_SCHEMA[table_name])
+                Writer(
+                    export_obj,
+                    EXPORT_SCHEMA[table_name],
+                    compression=CompressionKind.ZSTD,
+                )
             )
         return self.writers[table_name]
 
