@@ -7,6 +7,7 @@ from datetime import datetime
 import math
 from typing import Any, Optional, Tuple, Type, cast
 
+from pkg_resources import get_distribution
 from pyorc import (
     BigInt,
     Binary,
@@ -130,6 +131,13 @@ class ORCExporter(ExporterDispatch):
                         )
                     },
                 )
+            )
+            self.writers[table_name].set_user_metadata(
+                swh_object_type=table_name.encode(),
+                swh_uuid=unique_id.encode(),
+                swh_model_version=get_distribution("swh.model").version.encode(),
+                swh_dataset_version=get_distribution("swh.dataset").version.encode(),
+                # maybe put a copy of the config (redacted) also?
             )
         return self.writers[table_name]
 
