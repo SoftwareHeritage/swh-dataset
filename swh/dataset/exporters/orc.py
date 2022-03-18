@@ -243,6 +243,16 @@ class ORCExporter(ExporterDispatch):
                 )
             )
 
+        revision_header_writer = self.get_writer_for(
+            "revision_extra_headers",
+            directory_name="revision",
+            unique_id=self.uuids["revision"],
+        )
+        for key, value in revision["extra_headers"]:
+            revision_header_writer.write(
+                (hash_to_hex_or_none(revision["id"]), key, value)
+            )
+
     def process_directory(self, directory):
         directory_writer = self.get_writer_for("directory")
         directory_writer.write((hash_to_hex_or_none(directory["id"]),))

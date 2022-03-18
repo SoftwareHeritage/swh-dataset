@@ -61,6 +61,11 @@ TABLES = {
         ("parent_id", "string"),
         ("parent_rank", "int"),
     ],
+    "revision_extra_headers": [
+        ("id", "string"),
+        ("key", "binary"),
+        ("value", "binary"),
+    ],
     "directory": [
         ("id", "string"),
     ],
