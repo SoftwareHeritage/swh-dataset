@@ -29,7 +29,7 @@ def orc_export(messages, config=None):
 
 
 def orc_load(rootdir):
-    res = collections.defaultdict(set)
+    res = collections.defaultdict(list)
     for obj_type_dir in rootdir.iterdir():
         for orc_file in obj_type_dir.iterdir():
             with orc_file.open("rb") as orc_obj:
@@ -37,7 +37,8 @@ def orc_load(rootdir):
                     orc_obj,
                     converters={pyorc.TypeKind.TIMESTAMP: SWHTimestampConverter},
                 )
-                res[obj_type_dir.name] |= set(reader)
+                obj_type = reader.user_metadata["swh_object_type"].decode()
+                res[obj_type].extend(reader)
     return res
 
 

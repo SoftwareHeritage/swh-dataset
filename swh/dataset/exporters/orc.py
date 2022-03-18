@@ -112,13 +112,17 @@ class ORCExporter(ExporterDispatch):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.writers = {}
+        self.uuids = {}
 
-    def get_writer_for(self, table_name: str):
+    def get_writer_for(self, table_name: str, directory_name=None, unique_id=None):
         if table_name not in self.writers:
-            object_type_dir = self.export_path / table_name
+            if directory_name is None:
+                directory_name = table_name
+            object_type_dir = self.export_path / directory_name
             object_type_dir.mkdir(exist_ok=True)
-            unique_id = self.get_unique_file_id()
-            export_file = object_type_dir / ("graph-{}.orc".format(unique_id))
+            if unique_id is None:
+                unique_id = unique_id = self.get_unique_file_id()
+            export_file = object_type_dir / (f"{table_name}-{unique_id}.orc")
             export_obj = self.exit_stack.enter_context(export_file.open("wb"))
             self.writers[table_name] = self.exit_stack.enter_context(
                 Writer(
@@ -139,6 +143,8 @@ class ORCExporter(ExporterDispatch):
                 swh_dataset_version=get_distribution("swh.dataset").version.encode(),
                 # maybe put a copy of the config (redacted) also?
             )
+            self.uuids[table_name] = unique_id
+
         return self.writers[table_name]
 
     def process_origin(self, origin):
@@ -174,7 +180,13 @@ class ORCExporter(ExporterDispatch):
         snapshot_writer = self.get_writer_for("snapshot")
         snapshot_writer.write((hash_to_hex_or_none(snapshot["id"]),))
 
-        snapshot_branch_writer = self.get_writer_for("snapshot_branch")
+        # we want to store branches in the same directory as snapshot objects,
+        # and have both files have the same UUID.
+        snapshot_branch_writer = self.get_writer_for(
+            "snapshot_branch",
+            directory_name="snapshot",
+            unique_id=self.uuids["snapshot"],
+        )
         for branch_name, branch in snapshot["branches"].items():
             if branch is None:
                 continue
@@ -215,7 +227,11 @@ class ORCExporter(ExporterDispatch):
             )
         )
 
-        revision_history_writer = self.get_writer_for("revision_history")
+        revision_history_writer = self.get_writer_for(
+            "revision_history",
+            directory_name="revision",
+            unique_id=self.uuids["revision"],
+        )
         for i, parent_id in enumerate(revision["parents"]):
             revision_history_writer.write(
                 (
@@ -229,7 +245,11 @@ class ORCExporter(ExporterDispatch):
         directory_writer = self.get_writer_for("directory")
         directory_writer.write((hash_to_hex_or_none(directory["id"]),))
 
-        directory_entry_writer = self.get_writer_for("directory_entry")
+        directory_entry_writer = self.get_writer_for(
+            "directory_entry",
+            directory_name="directory",
+            unique_id=self.uuids["directory"],
+        )
         for entry in directory["entries"]:
             directory_entry_writer.write(
                 (
