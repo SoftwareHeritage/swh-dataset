@@ -211,6 +211,7 @@ class ORCExporter(ExporterDispatch):
                 release["target_type"],
                 (release.get("author") or {}).get("fullname"),
                 *swh_date_to_tuple(release["date"]),
+                release.get("raw_manifest"),
             )
         )
 
@@ -226,6 +227,7 @@ class ORCExporter(ExporterDispatch):
                 *swh_date_to_tuple(revision["committer_date"]),
                 hash_to_hex_or_none(revision["directory"]),
                 revision["type"],
+                revision.get("raw_manifest"),
             )
         )
 
@@ -255,7 +257,12 @@ class ORCExporter(ExporterDispatch):
 
     def process_directory(self, directory):
         directory_writer = self.get_writer_for("directory")
-        directory_writer.write((hash_to_hex_or_none(directory["id"]),))
+        directory_writer.write(
+            (
+                hash_to_hex_or_none(directory["id"]),
+                directory.get("raw_manifest"),
+            )
+        )
 
         directory_entry_writer = self.get_writer_for(
             "directory_entry",

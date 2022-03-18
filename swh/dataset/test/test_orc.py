@@ -105,6 +105,7 @@ def test_export_release():
             obj.target_type.value,
             obj.author.fullname if obj.author else None,
             *swh_date_to_tuple(obj.date.to_dict() if obj.date is not None else None),
+            obj.raw_manifest,
         ) in output[obj_type]
 
 
@@ -123,6 +124,7 @@ def test_export_revision():
             ),
             hash_to_hex_or_none(obj.directory),
             obj.type.value,
+            obj.raw_manifest,
         ) in output["revision"]
         for i, parent in enumerate(obj.parents):
             assert (
@@ -136,7 +138,7 @@ def test_export_directory():
     obj_type = "directory"
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
-        assert (hash_to_hex_or_none(obj.id),) in output["directory"]
+        assert (hash_to_hex_or_none(obj.id), obj.raw_manifest) in output["directory"]
         for entry in obj.entries:
             assert (
                 hash_to_hex_or_none(obj.id),

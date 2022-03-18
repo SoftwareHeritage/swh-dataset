@@ -41,6 +41,7 @@ TABLES = {
         ("date", "timestamp"),
         ("date_offset", "smallint"),
         ("date_raw_offset_bytes", "binary"),
+        ("raw_manifest", "binary"),
     ],
     "revision": [
         ("id", "string"),
@@ -55,6 +56,7 @@ TABLES = {
         ("committer_date_raw_offset_bytes", "binary"),
         ("directory", "string"),
         ("type", "string"),
+        ("raw_manifest", "binary"),
     ],
     "revision_history": [
         ("id", "string"),
@@ -68,6 +70,7 @@ TABLES = {
     ],
     "directory": [
         ("id", "string"),
+        ("raw_manifest", "binary"),
     ],
     "directory_entry": [
         ("directory_id", "string"),
