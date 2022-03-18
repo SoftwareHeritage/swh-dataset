@@ -7,9 +7,10 @@ import pytest
 
 from swh.dataset.exporters.orc import (
     ORCExporter,
+    SWHTimestampConverter,
+    datetime_to_tuple,
     hash_to_hex_or_none,
-    swh_date_to_datetime,
-    swh_date_to_offset,
+    swh_date_to_tuple,
 )
 from swh.model.tests.swh_model_data import TEST_OBJECTS
 
@@ -29,7 +30,14 @@ def exporter():
             for obj_type_dir in tmppath.iterdir():
                 for orc_file in obj_type_dir.iterdir():
                     with orc_file.open("rb") as orc_obj:
-                        res[obj_type_dir.name] |= set(pyorc.Reader(orc_obj))
+                        res[obj_type_dir.name] |= set(
+                            pyorc.Reader(
+                                orc_obj,
+                                converters={
+                                    pyorc.TypeKind.TIMESTAMP: SWHTimestampConverter
+                                },
+                            )
+                        )
             return res
 
     return wrapped
@@ -46,7 +54,9 @@ def test_export_origin_visit(exporter):
     obj_type = "origin_visit"
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
-        assert (obj.origin, obj.visit, obj.date, obj.type) in output[obj_type]
+        assert (obj.origin, obj.visit, datetime_to_tuple(obj.date), obj.type) in output[
+            obj_type
+        ]
 
 
 def test_export_origin_visit_status(exporter):
@@ -56,7 +66,7 @@ def test_export_origin_visit_status(exporter):
         assert (
             obj.origin,
             obj.visit,
-            obj.date,
+            datetime_to_tuple(obj.date),
             obj.status,
             hash_to_hex_or_none(obj.snapshot),
         ) in output[obj_type]
@@ -89,8 +99,7 @@ def test_export_release(exporter):
             hash_to_hex_or_none(obj.target),
             obj.target_type.value,
             obj.author.fullname if obj.author else None,
-            swh_date_to_datetime(obj.date.to_dict()) if obj.date else None,
-            swh_date_to_offset(obj.date.to_dict()) if obj.date else None,
+            *swh_date_to_tuple(obj.date.to_dict() if obj.date is not None else None),
         ) in output[obj_type]
 
 
@@ -102,11 +111,11 @@ def test_export_revision(exporter):
             hash_to_hex_or_none(obj.id),
             obj.message,
             obj.author.fullname,
-            swh_date_to_datetime(obj.date.to_dict()),
-            swh_date_to_offset(obj.date.to_dict()),
+            *swh_date_to_tuple(obj.date.to_dict() if obj.date is not None else None),
             obj.committer.fullname,
-            swh_date_to_datetime(obj.committer_date.to_dict()),
-            swh_date_to_offset(obj.committer_date.to_dict()),
+            *swh_date_to_tuple(
+                obj.committer_date.to_dict() if obj.committer_date is not None else None
+            ),
             hash_to_hex_or_none(obj.directory),
         ) in output["revision"]
         for i, parent in enumerate(obj.parents):
@@ -159,3 +168,31 @@ def test_export_skipped_content(exporter):
             obj.status,
             obj.reason,
         ) in output[obj_type]
+
+
+def test_date_to_tuple():
+    ts = {"seconds": 123456, "microseconds": 1515}
+    assert swh_date_to_tuple({"timestamp": ts, "offset_bytes": b"+0100"}) == (
+        (123456, 1515),
+        60,
+        b"+0100",
+    )
+
+    assert swh_date_to_tuple(
+        {
+            "timestamp": ts,
+            "offset": 120,
+            "negative_utc": False,
+            "offset_bytes": b"+0100",
+        }
+    ) == ((123456, 1515), 60, b"+0100")
+
+    assert swh_date_to_tuple(
+        {"timestamp": ts, "offset": 120, "negative_utc": False,}
+    ) == ((123456, 1515), 120, b"+0200")
+
+    assert swh_date_to_tuple({"timestamp": ts, "offset": 0, "negative_utc": True,}) == (
+        (123456, 1515),
+        0,
+        b"-0000",
+    )

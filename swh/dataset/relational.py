@@ -39,6 +39,7 @@ TABLES = {
         ("author", "binary"),
         ("date", "timestamp"),
         ("date_offset", "smallint"),
+        ("date_raw_offset_bytes", "binary"),
     ],
     "revision": [
         ("id", "string"),
@@ -46,9 +47,11 @@ TABLES = {
         ("author", "binary"),
         ("date", "timestamp"),
         ("date_offset", "smallint"),
+        ("date_raw_offset_bytes", "binary"),
         ("committer", "binary"),
         ("committer_date", "timestamp"),
         ("committer_offset", "smallint"),
+        ("committer_date_raw_offset_bytes", "binary"),
         ("directory", "string"),
     ],
     "revision_history": [
