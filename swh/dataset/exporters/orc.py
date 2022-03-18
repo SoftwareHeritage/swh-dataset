@@ -171,6 +171,7 @@ class ORCExporter(ExporterDispatch):
                 datetime_to_tuple(visit_status["date"]),
                 visit_status["status"],
                 hash_to_hex_or_none(visit_status["snapshot"]),
+                visit_status["type"],
             )
         )
 
@@ -224,6 +225,7 @@ class ORCExporter(ExporterDispatch):
                 revision["committer"]["fullname"],
                 *swh_date_to_tuple(revision["committer_date"]),
                 hash_to_hex_or_none(revision["directory"]),
+                revision["type"],
             )
         )
 

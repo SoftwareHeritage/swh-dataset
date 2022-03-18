@@ -73,6 +73,7 @@ def test_export_origin_visit_status():
             datetime_to_tuple(obj.date),
             obj.status,
             hash_to_hex_or_none(obj.snapshot),
+            obj.type,
         ) in output[obj_type]
 
 
@@ -121,6 +122,7 @@ def test_export_revision():
                 obj.committer_date.to_dict() if obj.committer_date is not None else None
             ),
             hash_to_hex_or_none(obj.directory),
+            obj.type.value,
         ) in output["revision"]
         for i, parent in enumerate(obj.parents):
             assert (

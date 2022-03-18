@@ -20,6 +20,7 @@ TABLES = {
         ("date", "timestamp"),
         ("status", "string"),
         ("snapshot", "string"),
+        ("type", "string"),
     ],
     "snapshot": [
         ("id", "string"),
@@ -53,6 +54,7 @@ TABLES = {
         ("committer_offset", "smallint"),
         ("committer_date_raw_offset_bytes", "binary"),
         ("directory", "string"),
+        ("type", "string"),
     ],
     "revision_history": [
         ("id", "string"),
