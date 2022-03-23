@@ -1,9 +1,16 @@
+# Copyright (C) 2020-2022  The Software Heritage developers
+# See the AUTHORS file at the top-level directory of this distribution
+# License: GNU General Public License version 3, or any later version
+# See top-level LICENSE file for more information
+
 import collections
 from contextlib import contextmanager
+import math
 from pathlib import Path
 import tempfile
 
 import pyorc
+import pytest
 
 from swh.dataset.exporters.orc import (
     ORCExporter,
@@ -12,24 +19,35 @@ from swh.dataset.exporters.orc import (
     hash_to_hex_or_none,
     swh_date_to_tuple,
 )
+from swh.dataset.relational import MAIN_TABLES, RELATION_TABLES
 from swh.model.tests.swh_model_data import TEST_OBJECTS
 
 
 @contextmanager
-def orc_export(messages, config=None):
-    with tempfile.TemporaryDirectory() as tmpname:
-        tmppath = Path(tmpname)
+def orc_tmpdir(tmpdir):
+    if tmpdir:
+        yield Path(tmpdir)
+    else:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+
+
+@contextmanager
+def orc_export(messages, config=None, tmpdir=None):
+
+    with orc_tmpdir(tmpdir) as tmpdir:
         if config is None:
             config = {}
-        with ORCExporter(config, tmppath) as exporter:
+        with ORCExporter(config, tmpdir) as exporter:
             for object_type, objects in messages.items():
                 for obj in objects:
                     exporter.process_object(object_type, obj.to_dict())
-        yield tmppath
+        yield tmpdir
 
 
 def orc_load(rootdir):
     res = collections.defaultdict(list)
+    res["rootdir"] = rootdir
     for obj_type_dir in rootdir.iterdir():
         for orc_file in obj_type_dir.iterdir():
             with orc_file.open("rb") as orc_obj:
@@ -42,8 +60,8 @@ def orc_load(rootdir):
     return res
 
 
-def exporter(messages, config=None):
-    with orc_export(messages, config) as exportdir:
+def exporter(messages, config=None, tmpdir=None):
+    with orc_export(messages, config, tmpdir) as exportdir:
         return orc_load(exportdir)
 
 
@@ -204,3 +222,67 @@ def test_date_to_tuple():
         0,
         b"-0000",
     )
+
+
+# mapping of related tables for each main table (if any)
+RELATED = {
+    "snapshot": ["snapshot_branch"],
+    "revision": ["revision_history", "revision_extra_headers"],
+    "directory": ["directory_entry"],
+}
+
+
+@pytest.mark.parametrize(
+    "obj_type", MAIN_TABLES.keys(),
+)
+@pytest.mark.parametrize("max_rows", (None, 1, 2, 10000))
+def test_export_related_files(max_rows, obj_type, tmpdir):
+    config = {}
+    if max_rows is not None:
+        config["max_rows"] = {obj_type: max_rows}
+    exporter({obj_type: TEST_OBJECTS[obj_type]}, config=config, tmpdir=tmpdir)
+    # check there are as many ORC files as objects
+    orcfiles = [fname for fname in (tmpdir / obj_type).listdir(f"{obj_type}-*.orc")]
+    if max_rows is None:
+        assert len(orcfiles) == 1
+    else:
+        assert len(orcfiles) == math.ceil(len(TEST_OBJECTS[obj_type]) / max_rows)
+    # check the number of related ORC files
+    for related in RELATED.get(obj_type, ()):
+        related_orcfiles = [
+            fname for fname in (tmpdir / obj_type).listdir(f"{related}-*.orc")
+        ]
+        assert len(related_orcfiles) == len(orcfiles)
+
+    # for each ORC file, check related files only reference objects in the
+    # corresponding main table
+    for orc_file in orcfiles:
+        with orc_file.open("rb") as orc_obj:
+            reader = pyorc.Reader(
+                orc_obj, converters={pyorc.TypeKind.TIMESTAMP: SWHTimestampConverter},
+            )
+            uuid = reader.user_metadata["swh_uuid"].decode()
+            assert orc_file.basename == f"{obj_type}-{uuid}.orc"
+            rows = list(reader)
+            obj_ids = [row[0] for row in rows]
+
+        # check the related tables
+        for related in RELATED.get(obj_type, ()):
+            orc_file = tmpdir / obj_type / f"{related}-{uuid}.orc"
+            with orc_file.open("rb") as orc_obj:
+                reader = pyorc.Reader(
+                    orc_obj,
+                    converters={pyorc.TypeKind.TIMESTAMP: SWHTimestampConverter},
+                )
+                assert reader.user_metadata["swh_uuid"].decode() == uuid
+                rows = list(reader)
+                # check branches in this file only concern current snapshot (obj_id)
+                for row in rows:
+                    assert row[0] in obj_ids
+
+
+@pytest.mark.parametrize("table_name", RELATION_TABLES.keys())
+def test_export_invalid_max_rows(table_name):
+    config = {"max_rows": {table_name: 10}}
+    with pytest.raises(ValueError):
+        exporter({}, config=config)

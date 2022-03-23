@@ -4,7 +4,7 @@
 # See top-level LICENSE file for more information
 
 # fmt: off
-TABLES = {
+MAIN_TABLES = {
     "origin": [
         ("url", "string"),
     ],
@@ -25,12 +25,7 @@ TABLES = {
     "snapshot": [
         ("id", "string"),
     ],
-    "snapshot_branch": [
-        ("snapshot_id", "string"),
-        ("name", "binary"),
-        ("target", "string"),
-        ("target_type", "string"),
-    ],
+    # snapshot_branches is in RELATED_TABLES
     "release": [
         ("id", "string"),
         ("name", "binary"),
@@ -58,27 +53,13 @@ TABLES = {
         ("type", "string"),
         ("raw_manifest", "binary"),
     ],
-    "revision_history": [
-        ("id", "string"),
-        ("parent_id", "string"),
-        ("parent_rank", "int"),
-    ],
-    "revision_extra_headers": [
-        ("id", "string"),
-        ("key", "binary"),
-        ("value", "binary"),
-    ],
+    # revision_history is in RELATED_TABLES
+    # revision_extra_headers is in RELATED_TABLES
     "directory": [
         ("id", "string"),
         ("raw_manifest", "binary"),
     ],
-    "directory_entry": [
-        ("directory_id", "string"),
-        ("name", "binary"),
-        ("type", "string"),
-        ("target", "string"),
-        ("perms", "int"),
-    ],
+    # direcory_entry is in RELATED_TABLES
     "content": [
         ("sha1", "string"),
         ("sha1_git", "string"),
@@ -97,4 +78,33 @@ TABLES = {
         ("reason", "string"),
     ],
 }
+
+RELATION_TABLES = {
+    "snapshot_branch": [
+        ("snapshot_id", "string"),
+        ("name", "binary"),
+        ("target", "string"),
+        ("target_type", "string"),
+    ],
+    "revision_history": [
+        ("id", "string"),
+        ("parent_id", "string"),
+        ("parent_rank", "int"),
+    ],
+    "revision_extra_headers": [
+        ("id", "string"),
+        ("key", "binary"),
+        ("value", "binary"),
+    ],
+    "directory_entry": [
+        ("directory_id", "string"),
+        ("name", "binary"),
+        ("type", "string"),
+        ("target", "string"),
+        ("perms", "int"),
+    ],
+}
+
+TABLES = {**MAIN_TABLES, **RELATION_TABLES}
+
 # fmt: on

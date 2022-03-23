@@ -1,10 +1,12 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2022  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 from datetime import datetime
+import logging
 import math
+from types import TracebackType
 from typing import Any, Optional, Tuple, Type, cast
 
 from pkg_resources import get_distribution
@@ -23,7 +25,7 @@ from pyorc import (
 from pyorc.converters import ORCConverter
 
 from swh.dataset.exporter import ExporterDispatch
-from swh.dataset.relational import TABLES
+from swh.dataset.relational import MAIN_TABLES, TABLES
 from swh.dataset.utils import remove_pull_requests
 from swh.model.hashutil import hash_to_hex
 from swh.model.model import TimestampWithTimezone
@@ -46,6 +48,9 @@ EXPORT_SCHEMA = {
     )
     for table_name, columns in TABLES.items()
 }
+
+
+logger = logging.getLogger(__name__)
 
 
 def hash_to_hex_or_none(hash):
@@ -111,31 +116,87 @@ class ORCExporter(ExporterDispatch):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.max_rows = self.config.get("max_rows", {})
+        invalid_tables = [
+            table_name for table_name in self.max_rows
+            if table_name not in MAIN_TABLES
+        ]
+        if invalid_tables:
+            raise ValueError(
+                "Limiting the number of secondary table (%s) is not supported "
+                "for now.",
+                invalid_tables
+            )
+        self._reset()
+
+    def _reset(self):
         self.writers = {}
+        self.writer_files = {}
         self.uuids = {}
+        self.uuid_main_table = {}
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> Optional[bool]:
+        for writer in self.writers.values():
+            writer.close()
+        for fileobj in self.writer_files.values():
+            fileobj.close()
+        self._reset()
+        return super().__exit__(exc_type, exc_value, traceback)
+
+    def maybe_close_writer_for(self, table_name: str):
+        uuid = self.uuids.get(table_name)
+        if (
+            uuid is not None
+            and table_name in self.max_rows
+            and self.writers[table_name].current_row >= self.max_rows[table_name]
+        ):
+            main_table = self.uuid_main_table[uuid]
+            if table_name != main_table:
+                logger.warning(
+                    "Limiting the number of secondary table (%s) is not supported "
+                    "for now (size limit ignored).",
+                    table_name,
+                )
+            else:
+                # sync/close all tables having the current uuid (aka main and
+                # related tables)
+                for table in [
+                    tname for tname, tuuid in self.uuids.items() if tuuid == uuid
+                ]:
+                    # close the writer and remove from the writers dict
+                    self.writers.pop(table).close()
+                    self.writer_files.pop(table).close()
+                    # and clean uuids dicts
+                    self.uuids.pop(table)
+                    self.uuid_main_table.pop(uuid, None)
 
     def get_writer_for(self, table_name: str, directory_name=None, unique_id=None):
+        self.maybe_close_writer_for(table_name)
         if table_name not in self.writers:
             if directory_name is None:
                 directory_name = table_name
             object_type_dir = self.export_path / directory_name
             object_type_dir.mkdir(exist_ok=True)
             if unique_id is None:
-                unique_id = unique_id = self.get_unique_file_id()
+                unique_id = self.get_unique_file_id()
+                self.uuid_main_table[unique_id] = table_name
             export_file = object_type_dir / (f"{table_name}-{unique_id}.orc")
-            export_obj = self.exit_stack.enter_context(export_file.open("wb"))
-            self.writers[table_name] = self.exit_stack.enter_context(
-                Writer(
-                    export_obj,
-                    EXPORT_SCHEMA[table_name],
-                    compression=CompressionKind.ZSTD,
-                    converters={
-                        TypeKind.TIMESTAMP: cast(
-                            Type[ORCConverter], SWHTimestampConverter
-                        )
-                    },
-                )
+            export_obj = export_file.open("wb")
+            self.writer_files[table_name] = export_obj
+            self.writers[table_name] = Writer(
+                export_obj,
+                EXPORT_SCHEMA[table_name],
+                compression=CompressionKind.ZSTD,
+                converters={
+                    TypeKind.TIMESTAMP: cast(Type[ORCConverter], SWHTimestampConverter)
+                },
             )
+
             self.writers[table_name].set_user_metadata(
                 swh_object_type=table_name.encode(),
                 swh_uuid=unique_id.encode(),
@@ -258,10 +319,7 @@ class ORCExporter(ExporterDispatch):
     def process_directory(self, directory):
         directory_writer = self.get_writer_for("directory")
         directory_writer.write(
-            (
-                hash_to_hex_or_none(directory["id"]),
-                directory.get("raw_manifest"),
-            )
+            (hash_to_hex_or_none(directory["id"]), directory.get("raw_manifest"),)
         )
 
         directory_entry_writer = self.get_writer_for(
