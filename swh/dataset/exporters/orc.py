@@ -29,6 +29,8 @@ from swh.dataset.relational import MAIN_TABLES, TABLES
 from swh.dataset.utils import remove_pull_requests
 from swh.model.hashutil import hash_to_hex
 from swh.model.model import TimestampWithTimezone
+from swh.objstorage.factory import get_objstorage
+from swh.objstorage.objstorage import ID_HASH_ALGO, ObjNotFoundError
 
 ORC_TYPE_MAP = {
     "string": String,
@@ -127,6 +129,11 @@ class ORCExporter(ExporterDispatch):
                 "for now.",
                 invalid_tables,
             )
+        self.with_data = config.get("with_data", False)
+        self.objstorage = None
+        if self.with_data:
+            assert "objstorage" in config
+            self.objstorage = get_objstorage(**config["objstorage"])
         self._reset()
 
     def _reset(self):
@@ -330,6 +337,14 @@ class ORCExporter(ExporterDispatch):
 
     def process_content(self, content):
         content_writer = self.get_writer_for("content")
+        data = None
+        if self.with_data:
+            obj_id = content[ID_HASH_ALGO]
+            try:
+                data = self.objstorage.get(obj_id)
+            except ObjNotFoundError:
+                logger.warning(f"Missing object {hash_to_hex(obj_id)}")
+
         content_writer.write(
             (
                 hash_to_hex_or_none(content["sha1"]),
@@ -338,6 +353,7 @@ class ORCExporter(ExporterDispatch):
                 hash_to_hex_or_none(content["blake2s256"]),
                 content["length"],
                 content["status"],
+                data,
             )
         )
 

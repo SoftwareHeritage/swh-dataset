@@ -67,6 +67,7 @@ MAIN_TABLES = {
         ("blake2s256", "string"),
         ("length", "bigint"),
         ("status", "string"),
+        ("data", "binary")
     ],
     "skipped_content": [
         ("sha1", "string"),
