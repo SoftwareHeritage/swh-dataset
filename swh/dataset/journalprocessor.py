@@ -255,7 +255,7 @@ class ParallelJournalProcessor:
                     tqdm.tqdm(
                         executor.map(fetch_insert_partition_id, partitions.keys()),
                         total=len(partitions),
-                        desc="  - Partition offsets",
+                        desc="  - Offset",
                     )
                 )
             client.close()
@@ -304,8 +304,8 @@ class ParallelJournalProcessor:
         d = {}
         active_workers = self.processes
         offset_diff = sum((hi - lo) for lo, hi in self.offsets.values())
-        desc = f"  - Export ({self.obj_type})"
-        with tqdm.tqdm(total=offset_diff, desc=desc) as pbar:
+        desc = "  - Export"
+        with tqdm.tqdm(total=offset_diff, desc=desc, unit_scale=True) as pbar:
             while active_workers:
                 item = queue.get()
                 if item is None:
