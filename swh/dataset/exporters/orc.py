@@ -116,7 +116,8 @@ class ORCExporter(ExporterDispatch):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.max_rows = self.config.get("max_rows", {})
+        config = self.config.get("orc", {})
+        self.max_rows = config.get("max_rows", {})
         invalid_tables = [
             table_name for table_name in self.max_rows
             if table_name not in MAIN_TABLES
@@ -237,7 +238,7 @@ class ORCExporter(ExporterDispatch):
         )
 
     def process_snapshot(self, snapshot):
-        if self.config.get("remove_pull_requests"):
+        if self.config.get("orc", {}).get("remove_pull_requests"):
             remove_pull_requests(snapshot)
         snapshot_writer = self.get_writer_for("snapshot")
         snapshot_writer.write((hash_to_hex_or_none(snapshot["id"]),))

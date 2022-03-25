@@ -239,7 +239,7 @@ RELATED = {
 def test_export_related_files(max_rows, obj_type, tmpdir):
     config = {}
     if max_rows is not None:
-        config["max_rows"] = {obj_type: max_rows}
+        config["orc"] = {"max_rows": {obj_type: max_rows}}
     exporter({obj_type: TEST_OBJECTS[obj_type]}, config=config, tmpdir=tmpdir)
     # check there are as many ORC files as objects
     orcfiles = [fname for fname in (tmpdir / obj_type).listdir(f"{obj_type}-*.orc")]
@@ -283,6 +283,6 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
 
 @pytest.mark.parametrize("table_name", RELATION_TABLES.keys())
 def test_export_invalid_max_rows(table_name):
-    config = {"max_rows": {table_name: 10}}
+    config = {"orc": {"max_rows": {table_name: 10}}}
     with pytest.raises(ValueError):
         exporter({}, config=config)
