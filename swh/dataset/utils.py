@@ -29,7 +29,7 @@ class ZSTFile:
         is_text = not (self.mode in ("rb", "wb"))
         writing = self.mode in ("w", "wb")
         if writing:
-            cmd = ["zstd", "-q", "-o", self.path]
+            cmd = ["zstd", "-f", "-q", "-o", self.path]
         else:
             cmd = ["zstdcat", self.path]
         self.process = subprocess.Popen(

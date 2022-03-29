@@ -7,6 +7,7 @@ import contextlib
 import pathlib
 from types import TracebackType
 from typing import Any, Dict, Optional, Type
+import uuid
 
 
 class Exporter:
@@ -52,6 +53,14 @@ class Exporter:
         Override this with your custom exporter.
         """
         raise NotImplementedError
+
+    def get_unique_file_id(self) -> str:
+        """
+        Return a unique random file id for the current process.
+
+        If config['test_unique_file_id'] is set, it will be used instead.
+        """
+        return str(self.config.get("test_unique_file_id", uuid.uuid4()))
 
 
 class ExporterDispatch(Exporter):

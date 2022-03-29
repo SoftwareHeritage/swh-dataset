@@ -10,7 +10,6 @@ import shlex
 import subprocess
 import tempfile
 from typing import Tuple
-import uuid
 
 from swh.dataset.exporter import ExporterDispatch
 from swh.dataset.utils import ZSTFile, remove_pull_requests
@@ -42,7 +41,7 @@ class GraphEdgesExporter(ExporterDispatch):
         if obj_type not in self.writers:
             dataset_path = self.export_path / obj_type.name.lower()
             dataset_path.mkdir(exist_ok=True)
-            unique_id = str(uuid.uuid4())
+            unique_id = self.get_unique_file_id()
             nodes_file = dataset_path / ("graph-{}.nodes.csv.zst".format(unique_id))
             edges_file = dataset_path / ("graph-{}.edges.csv.zst".format(unique_id))
             node_writer = self.exit_stack.enter_context(ZSTFile(str(nodes_file), "w"))

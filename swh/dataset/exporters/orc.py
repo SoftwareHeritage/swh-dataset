@@ -6,7 +6,6 @@
 from datetime import datetime
 import math
 from typing import Any, Optional, Tuple, Type, cast
-import uuid
 
 from pyorc import (
     BigInt,
@@ -117,7 +116,7 @@ class ORCExporter(ExporterDispatch):
         if table_name not in self.writers:
             object_type_dir = self.export_path / table_name
             object_type_dir.mkdir(exist_ok=True)
-            unique_id = str(uuid.uuid4())
+            unique_id = self.get_unique_file_id()
             export_file = object_type_dir / ("graph-{}.orc".format(unique_id))
             export_obj = self.exit_stack.enter_context(export_file.open("wb"))
             self.writers[table_name] = self.exit_stack.enter_context(
