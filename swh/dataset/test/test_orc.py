@@ -237,9 +237,9 @@ RELATED = {
 )
 @pytest.mark.parametrize("max_rows", (None, 1, 2, 10000))
 def test_export_related_files(max_rows, obj_type, tmpdir):
-    config = {}
+    config = {"orc": {}}
     if max_rows is not None:
-        config["orc"] = {"max_rows": {obj_type: max_rows}}
+        config["orc"]["max_rows"] = {obj_type: max_rows}
     exporter({obj_type: TEST_OBJECTS[obj_type]}, config=config, tmpdir=tmpdir)
     # check there are as many ORC files as objects
     orcfiles = [fname for fname in (tmpdir / obj_type).listdir(f"{obj_type}-*.orc")]
@@ -250,7 +250,7 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
     # check the number of related ORC files
     for related in RELATED.get(obj_type, ()):
         related_orcfiles = [
-            fname for fname in (tmpdir / obj_type).listdir(f"{related}-*.orc")
+            fname for fname in (tmpdir / related).listdir(f"{related}-*.orc")
         ]
         assert len(related_orcfiles) == len(orcfiles)
 
@@ -268,7 +268,7 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
 
         # check the related tables
         for related in RELATED.get(obj_type, ()):
-            orc_file = tmpdir / obj_type / f"{related}-{uuid}.orc"
+            orc_file = tmpdir / related / f"{related}-{uuid}.orc"
             with orc_file.open("rb") as orc_obj:
                 reader = pyorc.Reader(
                     orc_obj,
@@ -279,6 +279,22 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
                 # check branches in this file only concern current snapshot (obj_id)
                 for row in rows:
                     assert row[0] in obj_ids
+
+
+@pytest.mark.parametrize(
+    "obj_type", MAIN_TABLES.keys(),
+)
+def test_export_related_files_separated(obj_type, tmpdir):
+    exporter({obj_type: TEST_OBJECTS[obj_type]}, tmpdir=tmpdir)
+    # check there are as many ORC files as objects
+    orcfiles = [fname for fname in (tmpdir / obj_type).listdir(f"{obj_type}-*.orc")]
+    assert len(orcfiles) == 1
+    # check related ORC files are in their own directory
+    for related in RELATED.get(obj_type, ()):
+        related_orcfiles = [
+            fname for fname in (tmpdir / related).listdir(f"{related}-*.orc")
+        ]
+        assert len(related_orcfiles) == len(orcfiles)
 
 
 @pytest.mark.parametrize("table_name", RELATION_TABLES.keys())

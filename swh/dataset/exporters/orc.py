@@ -119,14 +119,13 @@ class ORCExporter(ExporterDispatch):
         config = self.config.get("orc", {})
         self.max_rows = config.get("max_rows", {})
         invalid_tables = [
-            table_name for table_name in self.max_rows
-            if table_name not in MAIN_TABLES
+            table_name for table_name in self.max_rows if table_name not in MAIN_TABLES
         ]
         if invalid_tables:
             raise ValueError(
                 "Limiting the number of secondary table (%s) is not supported "
                 "for now.",
-                invalid_tables
+                invalid_tables,
             )
         self._reset()
 
@@ -176,12 +175,10 @@ class ORCExporter(ExporterDispatch):
                     self.uuids.pop(table)
                     self.uuid_main_table.pop(uuid, None)
 
-    def get_writer_for(self, table_name: str, directory_name=None, unique_id=None):
+    def get_writer_for(self, table_name: str, unique_id=None):
         self.maybe_close_writer_for(table_name)
         if table_name not in self.writers:
-            if directory_name is None:
-                directory_name = table_name
-            object_type_dir = self.export_path / directory_name
+            object_type_dir = self.export_path / table_name
             object_type_dir.mkdir(exist_ok=True)
             if unique_id is None:
                 unique_id = self.get_unique_file_id()
@@ -246,9 +243,7 @@ class ORCExporter(ExporterDispatch):
         # we want to store branches in the same directory as snapshot objects,
         # and have both files have the same UUID.
         snapshot_branch_writer = self.get_writer_for(
-            "snapshot_branch",
-            directory_name="snapshot",
-            unique_id=self.uuids["snapshot"],
+            "snapshot_branch", unique_id=self.uuids["snapshot"],
         )
         for branch_name, branch in snapshot["branches"].items():
             if branch is None:
@@ -294,9 +289,7 @@ class ORCExporter(ExporterDispatch):
         )
 
         revision_history_writer = self.get_writer_for(
-            "revision_history",
-            directory_name="revision",
-            unique_id=self.uuids["revision"],
+            "revision_history", unique_id=self.uuids["revision"],
         )
         for i, parent_id in enumerate(revision["parents"]):
             revision_history_writer.write(
@@ -308,9 +301,7 @@ class ORCExporter(ExporterDispatch):
             )
 
         revision_header_writer = self.get_writer_for(
-            "revision_extra_headers",
-            directory_name="revision",
-            unique_id=self.uuids["revision"],
+            "revision_extra_headers", unique_id=self.uuids["revision"],
         )
         for key, value in revision["extra_headers"]:
             revision_header_writer.write(
@@ -324,9 +315,7 @@ class ORCExporter(ExporterDispatch):
         )
 
         directory_entry_writer = self.get_writer_for(
-            "directory_entry",
-            directory_name="directory",
-            unique_id=self.uuids["directory"],
+            "directory_entry", unique_id=self.uuids["directory"],
         )
         for entry in directory["entries"]:
             directory_entry_writer.write(
