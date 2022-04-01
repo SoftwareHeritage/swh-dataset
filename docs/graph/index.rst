@@ -17,9 +17,9 @@ providing timestamps about when and where all archived source code
 artifacts have been observed in the wild.
 
 The Software Heritage graph dataset is available in multiple formats,
-including downloadable CSV dumps and Apache Parquet files for local use,
-as well as a public instance on Amazon Athena interactive query service
-for ready-to-use powerful analytical processing.
+including relational Apache ORC files for local use, as well as a public
+instance on Amazon Athena interactive query service for ready-to-use powerful
+analytical processing.
 
 By accessing the dataset, you agree with the Software Heritage `Ethical
 Charter for using the archive
