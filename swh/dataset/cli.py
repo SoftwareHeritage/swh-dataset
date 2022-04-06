@@ -13,9 +13,7 @@ import click
 
 from swh.core.cli import CONTEXT_SETTINGS
 from swh.core.cli import swh as swh_cli_group
-from swh.dataset.exporters.edges import GraphEdgesExporter
-from swh.dataset.exporters.orc import ORCExporter
-from swh.dataset.journalprocessor import ParallelJournalProcessor
+from swh.dataset.relational import MAIN_TABLES
 
 
 @swh_cli_group.group(name="dataset", context_settings=CONTEXT_SETTINGS)
@@ -28,7 +26,12 @@ from swh.dataset.journalprocessor import ParallelJournalProcessor
 )
 @click.pass_context
 def dataset_cli_group(ctx, config_file):
-    """Software Heritage Dataset Tools"""
+    """Dataset Tools.
+
+    A set of tools to export datasets from the Software Heritage Archive in
+    various formats.
+
+    """
     from swh.core import config
 
     ctx.ensure_object(dict)
@@ -44,8 +47,8 @@ def graph(ctx):
 
 
 AVAILABLE_EXPORTERS = {
-    "edges": GraphEdgesExporter,
-    "orc": ORCExporter,
+    "edges": "swh.dataset.exporters.edges:GraphEdgesExporter",
+    "orc": "swh.dataset.exporters.orc:ORCExporter",
 }
 
 
@@ -78,6 +81,8 @@ AVAILABLE_EXPORTERS = {
 def export_graph(ctx, export_path, export_id, formats, exclude, processes):
     """Export the Software Heritage graph as an edge dataset."""
     import uuid
+    from importlib import import_module
+    from swh.dataset.journalprocessor import ParallelJournalProcessor
 
     config = ctx.obj["config"]
     if not export_id:
@@ -91,23 +96,22 @@ def export_graph(ctx, export_path, export_id, formats, exclude, processes):
                 option_name="formats", message=f"{f} is not an available format."
             )
 
+    def importcls(clspath):
+        mod, cls = clspath.split(":")
+        m = import_module(mod)
+        return getattr(m, cls)
+
+    exporter_cls = dict(
+        (fmt, importcls(clspath))
+        for (fmt, clspath) in AVAILABLE_EXPORTERS.items()
+        if fmt in export_formats
+    )
     # Run the exporter for each edge type.
-    object_types = [
-        "origin",
-        "origin_visit",
-        "origin_visit_status",
-        "snapshot",
-        "release",
-        "revision",
-        "directory",
-        "content",
-        "skipped_content",
-    ]
-    for obj_type in object_types:
+    for obj_type in MAIN_TABLES:
         if obj_type in exclude_obj_types:
             continue
         exporters = [
-            (AVAILABLE_EXPORTERS[f], {"export_path": os.path.join(export_path, f)},)
+            (exporter_cls[f], {"export_path": os.path.join(export_path, f)},)
             for f in export_formats
         ]
         parallel_exporter = ParallelJournalProcessor(
