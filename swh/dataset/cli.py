@@ -80,8 +80,9 @@ AVAILABLE_EXPORTERS = {
 @click.pass_context
 def export_graph(ctx, export_path, export_id, formats, exclude, processes):
     """Export the Software Heritage graph as an edge dataset."""
-    import uuid
     from importlib import import_module
+    import uuid
+
     from swh.dataset.journalprocessor import ParallelJournalProcessor
 
     config = ctx.obj["config"]
@@ -111,7 +112,10 @@ def export_graph(ctx, export_path, export_id, formats, exclude, processes):
         if obj_type in exclude_obj_types:
             continue
         exporters = [
-            (exporter_cls[f], {"export_path": os.path.join(export_path, f)},)
+            (
+                exporter_cls[f],
+                {"export_path": os.path.join(export_path, f)},
+            )
             for f in export_formats
         ]
         parallel_exporter = ParallelJournalProcessor(
@@ -182,14 +186,18 @@ def athena_create(
 )
 @click.argument("query_file", type=click.File("r"), default=sys.stdin)
 def athena_query(
-    database_name, query_file, output_location=None,
+    database_name,
+    query_file,
+    output_location=None,
 ):
     """Query the AWS Athena database with a given command"""
     from swh.dataset.athena import run_query_get_results
 
     print(
         run_query_get_results(
-            database_name, query_file.read(), output_location=output_location,
+            database_name,
+            query_file.read(),
+            output_location=output_location,
         ),
         end="",
     )  # CSV already ends with \n
@@ -198,8 +206,9 @@ def athena_query(
 @athena.command("gensubdataset")
 @click.option("--database", "-d", default="swh", help="Name of the base database")
 @click.option(
-    "--subdataset-database", required=True,
-    help="Name of the subdataset database to create"
+    "--subdataset-database",
+    required=True,
+    help="Name of the subdataset database to create",
 )
 @click.option(
     "--subdataset-location",

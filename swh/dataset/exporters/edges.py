@@ -106,7 +106,9 @@ class GraphEdgesExporter(ExporterDispatch):
             self.write_edge(
                 (ExtendedObjectType.SNAPSHOT, snapshot["id"]),
                 (ExtendedObjectType[branch["target_type"].upper()], branch["target"]),
-                labels=[base64.b64encode(original_branch_name).decode(),],
+                labels=[
+                    base64.b64encode(original_branch_name).decode(),
+                ],
             )
 
     def process_release(self, release):

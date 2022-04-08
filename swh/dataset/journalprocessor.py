@@ -313,7 +313,9 @@ class ParallelJournalProcessor:
                     continue
                 d.update(item)
                 progress = sum(n + 1 - self.offsets[p][0] for p, n in d.items())
-                pbar.set_postfix(workers=f"{active_workers}/{self.processes}",)
+                pbar.set_postfix(
+                    workers=f"{active_workers}/{self.processes}",
+                )
                 pbar.update(progress - pbar.n)
 
     def export_worker(self, assignment, progress_queue):

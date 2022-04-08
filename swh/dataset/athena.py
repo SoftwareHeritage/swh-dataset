@@ -138,7 +138,7 @@ def create_tables(database_name, dataset_location, output_location=None, replace
 
 
 def human_size(n, units=["bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"]):
-    """ Returns a human readable string representation of bytes """
+    """Returns a human readable string representation of bytes"""
     return f"{n} " + units[0] if n < 1024 else human_size(n >> 10, units[1:])
 
 
@@ -149,7 +149,9 @@ def _s3_url_to_bucket_path(s3_url):
 
 
 def run_query_get_results(
-    database_name, query_string, output_location=None,
+    database_name,
+    query_string,
+    output_location=None,
 ):
     """
     Run a query on AWS Athena and return the resulting data in CSV format.
@@ -176,7 +178,11 @@ def run_query_get_results(
 
 
 def generate_subdataset(
-    dataset_db, subdataset_db, subdataset_s3_path, swhids_file, output_location=None,
+    dataset_db,
+    subdataset_db,
+    subdataset_s3_path,
+    swhids_file,
+    output_location=None,
 ):
     # Upload list of all the swhids included in the dataset
     subdataset_bucket, subdataset_path = _s3_url_to_bucket_path(subdataset_s3_path)
@@ -269,5 +275,7 @@ def generate_subdataset(
             ctas_query += " AND length(message) < 100000"
 
         query(
-            athena_client, ctas_query, desc="Creating join table {}".format(table),
+            athena_client,
+            ctas_query,
+            desc="Creating join table {}".format(table),
         )

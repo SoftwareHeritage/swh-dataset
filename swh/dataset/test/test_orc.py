@@ -219,12 +219,24 @@ def test_date_to_tuple():
     ) == ((123456, 1515), 60, b"+0100")
 
     assert orc.swh_date_to_tuple(
-        {"timestamp": ts, "offset": 120, "negative_utc": False,}
+        {
+            "timestamp": ts,
+            "offset": 120,
+            "negative_utc": False,
+        }
     ) == ((123456, 1515), 120, b"+0200")
 
     assert orc.swh_date_to_tuple(
-        {"timestamp": ts, "offset": 0, "negative_utc": True,}
-    ) == ((123456, 1515), 0, b"-0000",)
+        {
+            "timestamp": ts,
+            "offset": 0,
+            "negative_utc": True,
+        }
+    ) == (
+        (123456, 1515),
+        0,
+        b"-0000",
+    )
 
 
 # mapping of related tables for each main table (if any)
@@ -236,7 +248,8 @@ RELATED = {
 
 
 @pytest.mark.parametrize(
-    "obj_type", MAIN_TABLES.keys(),
+    "obj_type",
+    MAIN_TABLES.keys(),
 )
 @pytest.mark.parametrize("max_rows", (None, 1, 2, 10000))
 def test_export_related_files(max_rows, obj_type, tmpdir):
@@ -286,7 +299,8 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
 
 
 @pytest.mark.parametrize(
-    "obj_type", MAIN_TABLES.keys(),
+    "obj_type",
+    MAIN_TABLES.keys(),
 )
 def test_export_related_files_separated(obj_type, tmpdir):
     exporter({obj_type: TEST_OBJECTS[obj_type]}, tmpdir=tmpdir)
@@ -320,7 +334,10 @@ def test_export_content_with_data(monkeypatch, tmpdir):
 
     monkeypatch.setattr(orc, "get_objstorage", get_objstorage_mock)
     config = {
-        "orc": {"with_data": True, "objstorage": {"cls": "mock"},},
+        "orc": {
+            "with_data": True,
+            "objstorage": {"cls": "mock"},
+        },
     }
 
     output = exporter({obj_type: TEST_OBJECTS[obj_type]}, config=config, tmpdir=tmpdir)

@@ -33,7 +33,10 @@ class ZSTFile:
         else:
             cmd = ["zstdcat", self.path]
         self.process = subprocess.Popen(
-            cmd, text=is_text, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            cmd,
+            text=is_text,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
         )
         return self
 

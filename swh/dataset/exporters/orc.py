@@ -97,12 +97,17 @@ class SWHTimestampConverter:
     # use Any as timezone annotation to make it easier to run mypy on python <
     # 3.9, plus we do not use the timezone argument here...
     @staticmethod
-    def from_orc(seconds: int, nanoseconds: int, timezone: Any,) -> Tuple[int, int]:
+    def from_orc(
+        seconds: int,
+        nanoseconds: int,
+        timezone: Any,
+    ) -> Tuple[int, int]:
         return (seconds, nanoseconds // 1000)
 
     @staticmethod
     def to_orc(
-        obj: Optional[Tuple[int, int]], timezone: Any,
+        obj: Optional[Tuple[int, int]],
+        timezone: Any,
     ) -> Optional[Tuple[int, int]]:
         if obj is None:
             return None
@@ -250,7 +255,8 @@ class ORCExporter(ExporterDispatch):
         # we want to store branches in the same directory as snapshot objects,
         # and have both files have the same UUID.
         snapshot_branch_writer = self.get_writer_for(
-            "snapshot_branch", unique_id=self.uuids["snapshot"],
+            "snapshot_branch",
+            unique_id=self.uuids["snapshot"],
         )
         for branch_name, branch in snapshot["branches"].items():
             if branch is None:
@@ -296,7 +302,8 @@ class ORCExporter(ExporterDispatch):
         )
 
         revision_history_writer = self.get_writer_for(
-            "revision_history", unique_id=self.uuids["revision"],
+            "revision_history",
+            unique_id=self.uuids["revision"],
         )
         for i, parent_id in enumerate(revision["parents"]):
             revision_history_writer.write(
@@ -308,7 +315,8 @@ class ORCExporter(ExporterDispatch):
             )
 
         revision_header_writer = self.get_writer_for(
-            "revision_extra_headers", unique_id=self.uuids["revision"],
+            "revision_extra_headers",
+            unique_id=self.uuids["revision"],
         )
         for key, value in revision["extra_headers"]:
             revision_header_writer.write(
@@ -318,11 +326,15 @@ class ORCExporter(ExporterDispatch):
     def process_directory(self, directory):
         directory_writer = self.get_writer_for("directory")
         directory_writer.write(
-            (hash_to_hex_or_none(directory["id"]), directory.get("raw_manifest"),)
+            (
+                hash_to_hex_or_none(directory["id"]),
+                directory.get("raw_manifest"),
+            )
         )
 
         directory_entry_writer = self.get_writer_for(
-            "directory_entry", unique_id=self.uuids["directory"],
+            "directory_entry",
+            unique_id=self.uuids["directory"],
         )
         for entry in directory["entries"]:
             directory_entry_writer.write(
