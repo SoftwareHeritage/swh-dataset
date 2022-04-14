@@ -4,6 +4,7 @@
 # See top-level LICENSE file for more information
 
 from datetime import datetime
+import hashlib
 import logging
 import math
 from types import TracebackType
@@ -220,7 +221,12 @@ class ORCExporter(ExporterDispatch):
 
     def process_origin(self, origin):
         origin_writer = self.get_writer_for("origin")
-        origin_writer.write((origin["url"],))
+        origin_writer.write(
+            (
+                hashlib.sha1(origin["url"].encode()).hexdigest(),
+                origin["url"],
+            )
+        )
 
     def process_origin_visit(self, visit):
         origin_visit_writer = self.get_writer_for("origin_visit")

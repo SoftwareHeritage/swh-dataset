@@ -6,6 +6,7 @@
 # fmt: off
 MAIN_TABLES = {
     "origin": [
+        ("id", "string"),
         ("url", "string"),
     ],
     "origin_visit": [

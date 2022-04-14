@@ -5,6 +5,7 @@
 
 import collections
 from contextlib import contextmanager
+import hashlib
 import math
 from pathlib import Path
 import tempfile
@@ -64,7 +65,7 @@ def test_export_origin():
     obj_type = "origin"
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
-        assert (obj.url,) in output[obj_type]
+        assert (hashlib.sha1(obj.url.encode()).hexdigest(), obj.url) in output[obj_type]
 
 
 def test_export_origin_visit():
