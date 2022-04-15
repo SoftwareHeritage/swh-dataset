@@ -83,9 +83,18 @@ AVAILABLE_EXPORTERS = {
     type=click.STRING,
     help="Comma-separated list of objects types to export",
 )
+@click.option(
+    "--margin",
+    type=click.FloatRange(0, 1),
+    help=(
+        "Offset margin to start consuming from. E.g. is set to '0.95', "
+        "consumers will start at 95% of the last committed offset; "
+        "in other words, start earlier than last committed position."
+    ),
+)
 @click.pass_context
 def export_graph(
-    ctx, export_path, export_id, formats, exclude, object_types, processes
+    ctx, export_path, export_id, formats, exclude, object_types, processes, margin
 ):
     """Export the Software Heritage graph as an edge dataset."""
     from importlib import import_module
@@ -143,6 +152,7 @@ def export_graph(
             obj_type,
             node_sets_path=pathlib.Path(export_path) / ".node_sets" / obj_type,
             processes=processes,
+            offset_margin=margin,
         )
         print("Exporting {}:".format(obj_type))
         parallel_exporter.run()
