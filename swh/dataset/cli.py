@@ -77,8 +77,16 @@ AVAILABLE_EXPORTERS = {
     type=click.STRING,
     help="Comma-separated list of object types to exclude",
 )
+@click.option(
+    "--types",
+    "object_types",
+    type=click.STRING,
+    help="Comma-separated list of objects types to export",
+)
 @click.pass_context
-def export_graph(ctx, export_path, export_id, formats, exclude, processes):
+def export_graph(
+    ctx, export_path, export_id, formats, exclude, object_types, processes
+):
     """Export the Software Heritage graph as an edge dataset."""
     from importlib import import_module
     import uuid
@@ -89,6 +97,16 @@ def export_graph(ctx, export_path, export_id, formats, exclude, processes):
     if not export_id:
         export_id = str(uuid.uuid4())
 
+    if object_types:
+        object_types = {o.strip() for o in object_types.split(",")}
+        invalid_object_types = object_types - set(MAIN_TABLES.keys())
+        if invalid_object_types:
+            raise click.BadOptionUsage(
+                option_name="types",
+                message=f"Invalid object types: {', '.join(invalid_object_types)}.",
+            )
+    else:
+        object_types = set(MAIN_TABLES.keys())
     exclude_obj_types = {o.strip() for o in (exclude.split(",") if exclude else [])}
     export_formats = [c.strip() for c in formats.split(",")]
     for f in export_formats:
@@ -108,7 +126,7 @@ def export_graph(ctx, export_path, export_id, formats, exclude, processes):
         if fmt in export_formats
     )
     # Run the exporter for each edge type.
-    for obj_type in MAIN_TABLES:
+    for obj_type in object_types:
         if obj_type in exclude_obj_types:
             continue
         exporters = [
