@@ -37,7 +37,6 @@ You should see an output like this::
 
     [FileInfo(path='abfss://.../swh/content/', name='content/', size=0),
      FileInfo(path='abfss://.../swh/directory/', name='directory/', size=0),
-     FileInfo(path='abfss://.../swh/directory_entry_dir/', name='directory_entry_dir/', size=0),
      ...]
 
 Loading the tables
@@ -55,19 +54,16 @@ We need to load the Parquet tables as temporary views in Spark::
     tables = [
       'content',
       'directory',
-      'directory_entry_dir',
-      'directory_entry_file',
-      'directory_entry_rev',
+      'directory_entry',
       'origin',
       'origin_visit',
-      'person',
+      'origin_visit_status',
       'release',
       'revision',
       'revision_history',
       'skipped_content',
       'snapshot',
       'snapshot_branch',
-      'snapshot_branches'
     ]
 
     for table in tables:
