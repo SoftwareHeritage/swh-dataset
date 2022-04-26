@@ -39,28 +39,21 @@ Setup
 Athena needs to be made aware of the location and the schema of the Parquet
 files available as a public dataset. Unfortunately, since Athena does not
 support queries that contain multiple commands, it is not as simple as pasting
-an installation script in the console. Instead, we provide a Python script that
-can be run locally on your machine, that will communicate with Athena to create
+an installation script in the console. Instead, you can use the ``swh dataset
+athena`` command on your local machine, which will query Athena to create
 the tables automatically with the appropriate schema.
 
-To run this script, you will need to install a few dependencies on your
-machine:
+First, install the ``swh.dataset`` Python module from PyPI::
 
-- For **Ubuntu** and **Debian**::
-
-    sudo apt install python3 python3-boto3 awscli
-
-- For **Archlinux**::
-
-    sudo pacman -S --needed python python-boto3 aws-cli
+    pip install swh.dataset
 
 Once the dependencies are installed, run::
 
-  aws configure
+    aws configure
 
 This will ask for an AWS Access Key ID and an AWS Secret Access Key in
-order to give Python access to your AWS account. These keys can be generated at
-`this address
+order to give the Boto3 library access to your AWS account. These keys can be
+generated at `this address
 <https://console.aws.amazon.com/iam/home#/security_credentials>`_.
 
 It will also ask for the region in which you want to run the queries. We
@@ -70,30 +63,14 @@ located.
 Creating the tables
 ~~~~~~~~~~~~~~~~~~~
 
-Download and run the Python script that will create the tables on your account:
+The ``swh dataset athena create`` command can be used to create the tables on
+your Athena instance. For example, to create the tables of the 2021-03-23
+graph::
 
-.. tabs::
-
-  .. group-tab:: full
-
-    ::
-
-      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/athena.py
-      python3 athena.py -o 's3://YOUR_OUTPUT_BUCKET/'
-
-  .. group-tab:: teaser: popular-4k
-
-    ::
-
-      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/athena.py
-      python3 athena.py -o 's3://YOUR_OUTPUT_BUCKET/' -d popular4k -l 's3://softwareheritage/teasers/popular-4k'
-
-  .. group-tab:: teaser: popular-3k-python
-
-    ::
-
-      wget https://annex.softwareheritage.org/public/dataset/graph/latest/athena/athena.py
-      python3 athena.py -o 's3://YOUR_OUTPUT_BUCKET/' -d popular3kpython -l 's3://softwareheritage/teasers/popular-3k-python'
+    swh dataset athena create \
+        --database-name swh_graph_2021_03_23
+        --location-prefix s3://softwareheritage/graph/2021-03-23/orc
+        --output-location s3://YOUR_OUTPUT_BUCKET/
 
 To check that the tables have been successfully created in your account, you
 can open your `Amazon Athena console
@@ -106,20 +83,28 @@ the database corresponding to your dataset, and see the tables:
 Running queries
 ---------------
 
-.. highlight:: sql
-
 From the console, once you have selected the database of your dataset, you can
 run SQL queries directly from the Query Editor.
 
 Try for instance this query that computes the most frequent file names in the
-archive::
+archive:
 
-  SELECT from_utf8(name, '?') AS name, COUNT(DISTINCT target) AS cnt
-  FROM directory_entry_file
-  GROUP BY name
-  ORDER BY cnt DESC
-  LIMIT 10;
+.. code-block:: sql
+
+    SELECT from_utf8(name, '?') AS name, COUNT(DISTINCT target) AS cnt
+    FROM directory_entry
+    GROUP BY name
+    ORDER BY cnt DESC
+    LIMIT 10;
 
 Other examples are available in the preprint of our article: `The Software
 Heritage Graph Dataset: Public software development under one roof.
 <https://upsilon.cc/~zack/research/publications/msr-2019-swh.pdf>`_
+
+It is also possible to query Athena directly from the command line, using the
+``swh dataset athena query`` command::
+
+    echo "select message from revision limit 10;" |
+    swh dataset athena query \
+        --database-name swh_graph_2021_03_23
+        --output-location s3://YOUR_OUTPUT_BUCKET/
