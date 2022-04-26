@@ -8,7 +8,7 @@ import hashlib
 import logging
 import math
 from types import TracebackType
-from typing import Any, Optional, Tuple, Type, cast
+from typing import Any, Callable, Optional, Tuple, Type, cast
 
 from pkg_resources import get_distribution
 from pyorc import (
@@ -30,8 +30,18 @@ from swh.dataset.relational import MAIN_TABLES, TABLES
 from swh.dataset.utils import remove_pull_requests
 from swh.model.hashutil import hash_to_hex
 from swh.model.model import TimestampWithTimezone
-from swh.objstorage.factory import get_objstorage
-from swh.objstorage.objstorage import ID_HASH_ALGO, ObjNotFoundError
+
+ObjNotFoundError: Type[Exception]
+get_objstorage: Optional[Callable]
+ID_HASH_ALGO: str
+try:
+    from swh.objstorage.factory import get_objstorage
+    from swh.objstorage.objstorage import ID_HASH_ALGO, ObjNotFoundError
+except ImportError:
+    get_objstorage = None
+    ID_HASH_ALGO = ""
+    ObjNotFoundError = Exception  # helps keep mypy happy
+
 
 ORC_TYPE_MAP = {
     "string": String,
@@ -138,7 +148,15 @@ class ORCExporter(ExporterDispatch):
         self.with_data = config.get("with_data", False)
         self.objstorage = None
         if self.with_data:
-            assert "objstorage" in config
+            if get_objstorage is None:
+                raise EnvironmentError(
+                    "The swh-objstorage dependency package must be installed "
+                    "when 'with_data' is set. Please install 'swh.dataset[with-content]'"
+                )
+            if "objstorage" not in config:
+                raise ValueError(
+                    "The 'objstorage' configuration entry is mandatory when 'with_data' is set."
+                )
             self.objstorage = get_objstorage(**config["objstorage"])
         self._reset()
 

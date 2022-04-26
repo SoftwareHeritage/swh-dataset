@@ -51,7 +51,10 @@ setup(
         dataset=swh.dataset.cli
     """,
     setup_requires=["setuptools-scm"],
-    extras_require={"testing": parse_requirements("test")},
+    extras_require={
+        "testing": parse_requirements("test"),
+        "with-content": parse_requirements("swh-with-content"),
+    },
     use_scm_version=True,
     include_package_data=True,
     classifiers=[
