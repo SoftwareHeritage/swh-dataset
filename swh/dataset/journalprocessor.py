@@ -416,13 +416,13 @@ class JournalProcessorWorker:
 
         Node sets are sharded by partition ID (as each object is guaranteed to
         be assigned to a deterministic Kafka partition) then by object ID
-        prefix. The sharding path of each file looks like:
+        suffix. The sharding path of each file looks like:
 
-            .node_sets/{origin..content}/part-{0..256}/nodes-{0..f}.sqlite
+            .node_sets/{origin..content}/part-{0..256}/nodes-{0..f}.db
         """
-        # obj_id_prefix = "{:x}".format(object_id[0] % 16)
-        obj_id_prefix = "all"  # disable sharding for now
-        shard_id = (partition_id, obj_id_prefix)
+        obj_id_suffix = "{:x}".format(object_id[-1] % 16)
+        # obj_id_suffix = "all"  # uncomment to disable sharding
+        shard_id = (partition_id, obj_id_suffix)
         if shard_id not in self.node_sets:
             node_set_dir = (
                 self.node_sets_path
@@ -430,7 +430,7 @@ class JournalProcessorWorker:
                 / ("part-{}".format(str(partition_id)))
             )
             node_set_dir.mkdir(exist_ok=True, parents=True)
-            node_set_file = node_set_dir / "nodes-{}.db".format(obj_id_prefix)
+            node_set_file = node_set_dir / "nodes-{}.db".format(obj_id_suffix)
             node_set = LevelDBSet(node_set_file)
             self.exit_stack.enter_context(node_set)
             self.node_sets[shard_id] = node_set
