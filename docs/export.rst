@@ -1,3 +1,5 @@
+.. _swh-graph-export:
+
 ===================
 Exporting a dataset
 ===================
@@ -8,6 +10,9 @@ researchers.
 
 Graph dataset
 =============
+
+Exporting the full dataset
+--------------------------
 
 Right now, the only supported export pipeline is the *Graph Dataset*, a set of
 relational tables representing the Software Heritage Graph, as documented in
@@ -20,11 +25,14 @@ export with the ``--formats`` option. You also need an export ID, a unique
 identifier used by the Kafka server to store the current progress of the
 export.
 
+**Note**: exporting as the ``edges`` format is discouraged, as it is redundant
+and can easily be generated directly from the ORC format.
+
 Here is an example command to start a graph dataset export::
 
     swh dataset -C graph_export_config.yml graph export \
         --formats orc \
-        --export-id seirl-2022-04-25 \
+        --export-id 2022-04-25 \
         -p 64 \
         /srv/softwareheritage/hdd/graph/2022-04-25
 
@@ -54,3 +62,37 @@ The following configuration options can be used for the export:
   ``refs/*`` but not matching ``refs/heads/*`` or ``refs/tags/*``. This removes
   all the pull requests that are present in Software Heritage (archived with
   ``git clone --mirror``).
+
+
+Uploading on S3 & on the annex
+------------------------------
+
+The dataset should then be made available publicly by uploading it on S3 and on
+the public annex.
+
+For S3::
+
+    aws s3 cp --recursive /srv/softwareheritage/hdd/graph/2022-04-25/orc s3://softwareheritage/graph/2022-04-25/orc
+
+For the annex::
+
+    scp -r 2022-04-25/orc saam.internal.softwareheritage.org:/srv/softwareheritage/annex/public/dataset/graph/2022-04-25/
+    ssh saam.internal.softwareheritage.org
+    cd /srv/softwareheritage/annex/public/dataset/graph
+    git annex add 2022-04-25
+    git annex sync --content
+
+
+Documenting the new dataset
+---------------------------
+
+In the ``swh-dataset`` repository, edit the the file ``docs/graph/dataset.rst``
+to document the availability of the new dataset. You should usually mention:
+
+- the name of the dataset version (e.g., 2022-04-25)
+- the number of nodes
+- the number of edges
+- the available formats (notably whether the graph is also available in its
+  compressed representation).
+- the total on-disk size of the dataset
+- the buckets/URIs to obtain the graph from S3 and from the annex

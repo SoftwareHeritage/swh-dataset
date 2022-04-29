@@ -1,3 +1,5 @@
+.. _swh-graph-athena:
+
 Setup on Amazon Athena
 ======================
 
