@@ -1,3 +1,5 @@
+.. _swh-dataset-list:
+
 Dataset
 =======
 

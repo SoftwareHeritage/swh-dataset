@@ -1,3 +1,5 @@
+.. _swh-dataset-schema:
+
 Relational schema
 =================
 
@@ -7,9 +9,10 @@ set of relational tables.
 This page documents the relational schema of the **latest version** of the
 graph dataset.
 
-A simplified view of the corresponding database schema is shown here:
+..
+    A simplified view of the corresponding database schema is shown here:
 
-.. image:: _images/dataset-schema.svg
+    .. image:: _images/dataset-schema.svg
 
 **Note**: To limit abuse, some columns containing personal information are
 pseudonimized in the dataset using a hash algorithm. Individual authors may be
