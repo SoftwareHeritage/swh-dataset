@@ -33,6 +33,12 @@ Summary of dataset versions
      - Columnar
      - Compressed
 
+   * - `2022-04-25`_
+     - 25,340,003,875
+     - 375,867,687,011
+     - ✔
+     - ✔
+
    * - `2021-03-23`_
      - 20,667,308,808
      - 232,748,148,441
@@ -69,6 +75,12 @@ Summary of dataset versions
      - Columnar
      - Compressed
 
+   * - `2021-03-23-popular-3k-python`_
+     - 45,691,499
+     - 1,221,283,907
+     - ✔
+     - ✔
+
    * - `2020-12-15-gitlab-all`_
      - 1,083,011,764
      - 27,919,670,049
@@ -95,6 +107,20 @@ Summary of dataset versions
 
 Full graph datasets
 -------------------
+
+2022-04-25
+~~~~~~~~~~
+
+A full export of the graph dated from April 2022
+
+- **Columnar tables (Apache ORC)**:
+
+  - **Total size**: 11 TiB
+  - **S3**: ``s3://softwareheritage/graph/2022-04-25/orc``
+
+- **Compressed graph**:
+
+  - **S3**: ``s3://softwareheritage/graph/2022-04-25/compressed``
 
 
 2021-03-23
@@ -168,6 +194,34 @@ Teaser datasets
 
 If the above datasets are too big, we also provide "teaser"
 datasets that can get you started and have a smaller size fingerprint.
+
+2021-03-23-popular-3k-python
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``popular-3k-python`` teaser contains a subset of 2197 popular
+repositories **tagged as being written in the Python language**, from GitHub,
+Gitlab, PyPI and Debian. The selection criteria to pick the software origins
+was the following:
+
+- the 580 most popular GitHub projects written in Python (by number of stars),
+- the 135 Gitlab projects written in Python that have 2 stars or more,
+- the 827 most popular PyPI projects (by usage statistics, according to the
+  `Top PyPI Packages <https://hugovk.github.io/top-pypi-packages/>`_ database),
+- the 655 most popular Debian packages with the
+  `debtag <https://debtags.debian.org/>`_ ``implemented-in::python`` (by
+  "votes" according to the `Debian Popularity Contest
+  <https://popcon.debian.org/>`_ database).
+
+- **Columnar (Apache ORC)**:
+
+  - **Total size**: 36 GiB
+  - **S3**: ``s3://softwareheritage/graph/2021-03-23-popular-3k-python/orc/``
+
+- **Compressed graph**:
+
+  - **Total size**: 15 GiB
+  - **S3**: ``s3://softwareheritage/graph/2021-03-23-popular-3k-python/compressed/``
+
 
 2020-12-15-gitlab-all
 ~~~~~~~~~~~~~~~~~~~~~
