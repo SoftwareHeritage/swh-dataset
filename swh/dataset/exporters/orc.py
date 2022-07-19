@@ -375,11 +375,10 @@ class ORCExporter(ExporterDispatch):
         content_writer = self.get_writer_for("content")
         data = None
         if self.with_data:
-            obj_id = content[ID_HASH_ALGO]
             try:
-                data = self.objstorage.get(obj_id)
+                data = self.objstorage.get(content)
             except ObjNotFoundError:
-                logger.warning(f"Missing object {hash_to_hex(obj_id)}")
+                logger.warning("Missing object %s", hash_to_hex(content[ID_HASH_ALGO]))
 
         content_writer.write(
             (

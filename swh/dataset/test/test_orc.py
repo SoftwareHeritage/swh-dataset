@@ -327,7 +327,7 @@ def test_export_content_with_data(monkeypatch, tmpdir):
     obj_type = "content"
     objstorage = get_objstorage("memory")
     for content in TEST_OBJECTS[obj_type]:
-        objstorage.add(content=content.data, obj_id=content.sha1)
+        objstorage.add(content=content.data, obj_id=content.hashes())
 
     def get_objstorage_mock(**kw):
         if kw.get("cls") == "mock":
