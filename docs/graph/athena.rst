@@ -71,7 +71,7 @@ graph::
 
     swh dataset athena create \
         --database-name swh_graph_2021_03_23
-        --location-prefix s3://softwareheritage/graph/2021-03-23/orc
+        --location-prefix s3://softwareheritage/graph/2021-03-23
         --output-location s3://YOUR_OUTPUT_BUCKET/
 
 To check that the tables have been successfully created in your account, you
