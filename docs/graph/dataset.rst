@@ -108,6 +108,9 @@ Summary of dataset versions
 Full graph datasets
 -------------------
 
+Because of their size, some of the latest datasets are only available for
+downside from Amazon S3.
+
 2022-04-25
 ~~~~~~~~~~
 
@@ -137,8 +140,7 @@ A full export of the graph dated from March 2021.
 
 - **Compressed graph**:
 
-  - **URL**: `/graph/2021-03-23/compressed/
-    <https://annex.softwareheritage.org/public/dataset/graph/2021-03-23/compressed/>`_
+  - **S3**: ``s3://softwareheritage/graph/2021-03-23/compressed``
 
 
 2020-12-15
