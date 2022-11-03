@@ -124,6 +124,11 @@ def export_graph(
                 option_name="formats", message=f"{f} is not an available format."
             )
 
+    # Enforce order (from origin to contents) to reduce number of holes in the graph.
+    object_types = [
+        obj_type for obj_type in MAIN_TABLES.keys() if obj_type in object_types
+    ]
+
     def importcls(clspath):
         mod, cls = clspath.split(":")
         m = import_module(mod)
