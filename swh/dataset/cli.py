@@ -98,9 +98,13 @@ def export_graph(
 ):
     """Export the Software Heritage graph as an edge dataset."""
     from importlib import import_module
+    import logging
+    import resource
     import uuid
 
     from swh.dataset.journalprocessor import ParallelJournalProcessor
+
+    logger = logging.getLogger(__name__)
 
     config = ctx.obj["config"]
     if not export_id:
@@ -128,6 +132,29 @@ def export_graph(
     object_types = [
         obj_type for obj_type in MAIN_TABLES.keys() if obj_type in object_types
     ]
+
+    # ParallelJournalProcessor opens 256 LevelDBs in total. Depending on the number of
+    # processes, this can exceed the maximum number of file descriptors (soft limit
+    # defaults to 1024 on Debian), so let's increase it.
+    (soft, hard) = resource.getrlimit(resource.RLIMIT_NOFILE)
+    nb_shards = 256  # TODO: make this configurable or detect nb of kafka partitions
+    open_fds_per_shard = 61  # estimated with plyvel==1.3.0 and libleveldb1d==1.22-3
+    spare = 1024  # for everything other than LevelDB
+    want_fd = nb_shards * open_fds_per_shard + spare
+    if hard < want_fd:
+        logger.warning(
+            "Hard limit of open file descriptors (%d) is lower than ideal (%d)",
+            hard,
+            want_fd,
+        )
+    if soft < want_fd:
+        want_fd = min(want_fd, hard)
+        logger.info(
+            "Soft limit of open file descriptors (%d) is too low, increasing to %d",
+            soft,
+            want_fd,
+        )
+        resource.setrlimit(resource.RLIMIT_NOFILE, (want_fd, hard))
 
     def importcls(clspath):
         mod, cls = clspath.split(":")
