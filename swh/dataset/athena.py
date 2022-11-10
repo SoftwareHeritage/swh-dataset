@@ -107,12 +107,14 @@ def create_tables(database_name, dataset_location, output_location=None, replace
     """
     client = boto3.client("athena")
     client.output_location = output_location
-    client.database_name = database_name
+
+    client.database_name = "default"  # we have to pick some existing database
     query(
         client,
         create_database(database_name),
         desc="Creating {} database".format(database_name),
     )
+    client.database_name = database_name
 
     if replace:
         for table in TABLES:
