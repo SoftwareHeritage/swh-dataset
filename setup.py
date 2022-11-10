@@ -54,6 +54,7 @@ setup(
     extras_require={
         "testing": parse_requirements("test"),
         "with-content": parse_requirements("swh-with-content"),
+        "luigi": parse_requirements("luigi"),
     },
     use_scm_version=True,
     include_package_data=True,
