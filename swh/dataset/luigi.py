@@ -118,10 +118,10 @@ import luigi
 from swh.dataset import cli
 from swh.dataset.relational import MAIN_TABLES
 
-_ObjectType = enum.Enum(  # type: ignore[misc]
-    "_ObjectType", [obj_type for obj_type in MAIN_TABLES.keys()]
+ObjectType = enum.Enum(  # type: ignore[misc]
+    "ObjectType", [obj_type for obj_type in MAIN_TABLES.keys()]
 )
-_Format = enum.Enum("_Format", list(cli.AVAILABLE_EXPORTERS))  # type: ignore[misc]
+Format = enum.Enum("Format", list(cli.AVAILABLE_EXPORTERS))  # type: ignore[misc]
 
 
 T = TypeVar("T", bound=Hashable)
@@ -201,8 +201,8 @@ class FractionalFloatParameter(luigi.FloatParameter):
         return v
 
 
-def stamps_paths(formats: List[_Format], object_types: List[_ObjectType]) -> List[str]:
-    """Returns a list of (local FS or S3) paths used to mark tables are successfully
+def stamps_paths(formats: List[Format], object_types: List[ObjectType]) -> List[str]:
+    """Returns a list of (local FS or S3) paths used to mark tables as successfully
     exported.
     """
     return [
@@ -237,7 +237,7 @@ class ExportGraph(luigi.Task):
         'journal' section of the config file, defaults to 'swh-dataset-export-'.
         """,
     )
-    formats = luigi.EnumListParameter(enum=_Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
     processes = luigi.IntParameter(default=1, significant=False)
     margin = FractionalFloatParameter(
         default=1.0,
@@ -248,7 +248,7 @@ class ExportGraph(luigi.Task):
         """,
     )
     object_types = luigi.EnumListParameter(
-        enum=_ObjectType, default=list(_ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
 
     def output(self) -> List[luigi.Target]:
@@ -328,9 +328,9 @@ class UploadToS3(luigi.Task):
     """
 
     local_export_path = PathParameter(is_dir=True, create=True, significant=False)
-    formats = luigi.EnumListParameter(enum=_Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
     object_types = luigi.EnumListParameter(
-        enum=_ObjectType, default=list(_ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
     s3_export_path = S3PathParameter()
 
@@ -444,7 +444,7 @@ class CreateAthena(luigi.Task):
     """
 
     object_types = luigi.EnumListParameter(
-        enum=_ObjectType, default=list(_ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
     s3_export_path = S3PathParameter()
     s3_athena_output_location = S3PathParameter()
@@ -464,7 +464,7 @@ class CreateAthena(luigi.Task):
         format."""
         return [
             UploadToS3(
-                formats=[_Format.orc],  # type: ignore[attr-defined]
+                formats=[Format.orc],  # type: ignore[attr-defined]
                 object_types=self.object_types,
                 s3_export_path=self.s3_export_path,
             )
@@ -502,9 +502,9 @@ class RunAll(luigi.Task):
                 --s3-athena-output-location=s3://softwareheritage/graph/tmp/athena
     """
 
-    formats = luigi.EnumListParameter(enum=_Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
     object_types = luigi.EnumListParameter(
-        enum=_ObjectType, default=list(_ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
     s3_export_path = S3PathParameter()
     s3_athena_output_location = S3PathParameter()
