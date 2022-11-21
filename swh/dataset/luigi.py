@@ -62,8 +62,12 @@ For example:
             "origin",
             "origin_visit"
         ],
+        "privileged": false,
         "hostname": "desktop5",
-        "privileged": false
+        "tool": {
+            "name": "swh.dataset",
+            "version": "0.3.2",
+        }
     }
 
 Running all on staging
@@ -284,6 +288,8 @@ class ExportGraph(luigi.Task):
         import json
         import socket
 
+        import pkg_resources
+
         from swh.core import config
 
         # we are about to overwrite files, so remove any existing stamp
@@ -321,8 +327,12 @@ class ExportGraph(luigi.Task):
             "prefix": conf["journal"]["prefix"],
             "formats": [format_.name for format_ in self.formats],
             "object_type": [object_type.name for object_type in self.object_types],
-            "hostname": socket.getfqdn(),
             "privileged": conf["journal"].get("privileged"),
+            "hostname": socket.getfqdn(),
+            "tool": {
+                "name": "swh.dataset",
+                "version": pkg_resources.get_distribution("swh.dataset").version,
+            },
         }
         with self._meta().open("w") as fd:
             json.dump(meta, fd, indent=4)
