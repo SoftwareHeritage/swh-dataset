@@ -116,6 +116,7 @@ for readability; but `they can be used interchangeably <https://luigi.readthedoc
 # control
 import enum
 from pathlib import Path
+import shutil
 from typing import Hashable, Iterator, List, TypeVar, Union
 
 import luigi
@@ -296,6 +297,8 @@ class ExportGraph(luigi.Task):
         for output in self.output():
             if output.exists():
                 output.remove()
+        if self.local_export_path.exists():  # type: ignore[operator]
+            shutil.rmtree(self.local_export_path)
 
         conf = config.read(self.config_file)
 
