@@ -66,7 +66,7 @@ For example:
         "hostname": "desktop5",
         "tool": {
             "name": "swh.dataset",
-            "version": "0.3.2",
+            "version": "0.3.2"
         }
     }
 
@@ -403,9 +403,11 @@ class UploadExportToS3(luigi.Task):
                     # intermediary object types (eg. origin_visit, origin_visit_status)
                     # do not have their own directory
                     continue
+                status_message = f"Uploading {format_.name}/{object_type.name}/"
+                self.set_status_message(status_message)
                 for file_ in tqdm.tqdm(
                     list(os.listdir(local_dir)),
-                    desc=f"Uploading {format_.name}/{object_type.name}/",
+                    desc=status_message,
                 ):
                     client.put_multipart(
                         local_dir / file_, f"{s3_dir}/{file_}", ACL="public-read"
@@ -443,6 +445,7 @@ class DownloadExportFromS3(luigi.Task):
         expected location."""
         return [
             UploadExportToS3(
+                local_export_path=self.local_export_path,
                 formats=self.formats,
                 object_types=self.object_types,
                 s3_export_path=self.s3_export_path,
@@ -479,9 +482,11 @@ class DownloadExportFromS3(luigi.Task):
                     # do not have their own directory
                     continue
                 local_dir.mkdir(parents=True, exist_ok=True)
+                status_message = f"Downloading {format_.name}/{object_type.name}/"
+                self.set_status_message(status_message)
                 for file_ in tqdm.tqdm(
                     files,
-                    desc=f"Downloading {format_.name}/{object_type.name}/",
+                    desc=status_message,
                 ):
                     client.get(
                         f"{s3_dir}/{file_}",
