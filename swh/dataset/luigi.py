@@ -661,7 +661,9 @@ class RunExportAll(luigi.Task):
                 --s3-athena-output-location=s3://softwareheritage/graph/tmp/athena
     """
 
-    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(
+        enum=Format, batch_method=merge_lists, default=list(Format)
+    )
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
