@@ -607,10 +607,15 @@ class CreateAthena(luigi.Task):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if not self.s3_export_path.replace("-", "").endswith(f"/{self.athena_db_name}"):
+        if not self.s3_export_path.replace("-", "").endswith(
+            "/" + self.athena_db_name.split("_", 1)[1]
+        ):
             raise ValueError(
                 f"S3 export path ({self.s3_export_path}) does not match "
-                f"Athena database name ({self.athena_db_name})"
+                f"Athena database name ({self.athena_db_name})."
+                f"They should use these formats: "
+                f"'s3://<whatever>/YYYY-MM-DD[_<flavor>]/' "
+                f"and '<prefix>_YYYYMMDD[_<flavor>]"
             )
 
     def requires(self) -> List[luigi.Task]:
