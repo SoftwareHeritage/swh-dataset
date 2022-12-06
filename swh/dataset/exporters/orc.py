@@ -266,7 +266,7 @@ class ORCExporter(ExporterDispatch):
                 datetime_to_tuple(visit_status["date"]),
                 visit_status["status"],
                 hash_to_hex_or_none(visit_status["snapshot"]),
-                visit_status["type"],
+                visit_status.get("type"),  # missing from old messages
             )
         )
 
