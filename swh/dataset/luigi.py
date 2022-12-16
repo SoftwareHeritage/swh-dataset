@@ -271,8 +271,13 @@ class ExportGraph(luigi.Task):
     )
 
     def output(self) -> List[luigi.Target]:
-        """Returns stamp and meta paths on the local FS."""
-        return self._stamps() + [self._meta()]
+        """Returns path of `meta/export.json` on the local FS."""
+        return [self._meta()]
+
+    def complete(self) -> bool:
+        return super().complete() and _export_metadata_has_object_types(
+            self._meta(), self.object_types
+        )
 
     def _stamps(self):
         return [
