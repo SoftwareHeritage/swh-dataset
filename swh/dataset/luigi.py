@@ -416,9 +416,16 @@ class UploadExportToS3(luigi.Task):
                     list(os.listdir(local_dir)),
                     desc=status_message,
                 ):
-                    client.put_multipart(
-                        local_dir / file_, f"{s3_dir}/{file_}", ACL="public-read"
-                    )
+                    local_path = local_dir / file_
+                    s3_path = f"{s3_dir}/{file_}"
+                    obj_summary = client.get_key(s3_path)
+                    if (
+                        obj_summary is not None
+                        and obj_summary.size == local_path.stat().st_size
+                    ):
+                        # already uploaded (probably by a previous interrupted run)
+                        continue
+                    client.put_multipart(local_path, s3_path, ACL="public-read")
 
         client.put(
             self.local_export_path / "meta" / "export.json",
