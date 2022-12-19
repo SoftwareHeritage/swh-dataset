@@ -14,3 +14,12 @@
    graph/index
    export
    generate_subdataset
+
+.. only:: package_doc
+
+   Indices and tables
+   ------------------
+
+   * :ref:`genindex`
+   * :ref:`modindex`
+   * :ref:`search`
