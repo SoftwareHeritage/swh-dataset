@@ -15,7 +15,7 @@
    export
    generate_subdataset
 
-.. only:: package_doc
+.. only:: standalone_package_doc
 
    Indices and tables
    ------------------
