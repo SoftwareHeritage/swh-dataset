@@ -48,9 +48,9 @@ class JournalClientOffsetRanges(JournalClient):
     def __init__(
         self,
         *args,
-        offset_ranges: Mapping[int, Tuple[int, int]] = None,
-        assignment: Sequence[int] = None,
-        progress_queue: multiprocessing.Queue = None,
+        offset_ranges: Mapping[int, Tuple[int, int]],
+        assignment: Sequence[int],
+        progress_queue: multiprocessing.Queue,
         refresh_every: int = 200,
         **kwargs,
     ):
