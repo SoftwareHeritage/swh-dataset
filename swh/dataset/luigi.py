@@ -58,7 +58,7 @@ For example:
             "edges",
             "orc"
         ],
-        "object_type": [
+        "object_types": [
             "origin",
             "origin_visit"
         ],
@@ -226,7 +226,7 @@ def _export_metadata_has_object_types(
 
     with export_metadata.open() as fd:
         meta = json.load(fd)
-    return set(meta["object_type"]) >= {
+    return set(meta["object_types"]) >= {
         object_type.name for object_type in object_types
     }
 
@@ -334,7 +334,7 @@ class ExportGraph(luigi.Task):
             "brokers": conf["journal"]["brokers"],
             "prefix": conf["journal"]["prefix"],
             "formats": [format_.name for format_ in self.formats],
-            "object_type": [object_type.name for object_type in self.object_types],
+            "object_types": [object_type.name for object_type in self.object_types],
             "privileged": conf["journal"].get("privileged"),
             "hostname": socket.getfqdn(),
             "tool": {
