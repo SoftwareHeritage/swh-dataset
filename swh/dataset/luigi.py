@@ -59,8 +59,12 @@ For example:
             "orc"
         ],
         "object_types": [
-            "origin",
-            "origin_visit"
+            "revision",
+            "release",
+            "snapshot",
+            "origin_visit_status",
+            "origin_visit",
+            "origin"
         ],
         "privileged": false,
         "hostname": "desktop5",
@@ -69,6 +73,9 @@ For example:
             "version": "0.3.2"
         }
     }
+
+``object_types`` contains a list of "main tables" exported; this excludes relational
+tables like ``directory_entry``.
 
 Running all on staging
 ----------------------
