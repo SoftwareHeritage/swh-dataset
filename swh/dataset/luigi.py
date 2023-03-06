@@ -670,7 +670,7 @@ class CreateAthena(luigi.Task):
         )
 
 
-class RunExportAll(luigi.Task):
+class RunExportAll(luigi.WrapperTask):
     """Runs both the S3 and Athena export.
 
     Example invocation::
@@ -713,8 +713,3 @@ class RunExportAll(luigi.Task):
                 s3_export_path=self.s3_export_path,
             ),
         ]
-
-    def complete(self) -> bool:
-        # Dependencies perform their own completeness check, and this task
-        # does no work itself
-        return False
