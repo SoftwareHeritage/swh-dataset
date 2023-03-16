@@ -124,7 +124,7 @@ for readability; but `they can be used interchangeably <https://luigi.readthedoc
 import enum
 from pathlib import Path
 import shutil
-from typing import Hashable, Iterator, List, TypeVar, Union
+from typing import Hashable, Iterator, List, Set, TypeVar, Union
 
 import luigi
 
@@ -586,19 +586,30 @@ class LocalExport(luigi.Task):
 class AthenaDatabaseTarget(luigi.Target):
     """Target for the existence of a database on Athena."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, table_names: Set[str]):
         self.name = name
+        self.table_names = table_names
 
     def exists(self) -> bool:
         import boto3
 
         client = boto3.client("athena")
+
         database_list = client.list_databases(CatalogName="AwsDataCatalog")
         for database in database_list["DatabaseList"]:
             if database["Name"] == self.name:
-                # TODO: check all expected tables are present
-                return True
-        return False
+                break
+        else:
+            # the database doesn't exist at all
+            return False
+
+        table_metadata = client.list_table_metadata(
+            CatalogName="AwsDataCatalog", DatabaseName=self.name
+        )
+        missing_tables = self.table_names - {
+            table["Name"] for table in table_metadata["TableMetadataList"]
+        }
+        return not missing_tables
 
 
 class CreateAthena(luigi.Task):
@@ -656,7 +667,9 @@ class CreateAthena(luigi.Task):
 
     def output(self) -> List[luigi.Target]:
         """Returns an instance of :class:`AthenaDatabaseTarget`."""
-        return [AthenaDatabaseTarget(self.athena_db_name)]
+        from swh.dataset.athena import TABLES
+
+        return [AthenaDatabaseTarget(self.athena_db_name, set(TABLES))]
 
     def run(self) -> None:
         """Creates tables from the ORC dataset."""
