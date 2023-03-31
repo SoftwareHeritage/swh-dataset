@@ -132,6 +132,14 @@ A full export of the graph dated from December 2022
   - **Total size**: 7.1 TiB
   - **S3**: ``s3://softwareheritage/graph/2022-12-07/compressed``
 
+- **"History and hosting" Compressed graph**:
+
+  - This is a compressed graph of only the "history and hosting" layer (origins,
+    snapshots, releases, revisions) and the root directory (or rarely content) of
+    every revision/release; but most directories and contents are excluded
+  - **Total size**: 1 TiB
+  - **S3**: ``s3://softwareheritage/graph/2022-12-07-history-hosting/compressed``
+
 2022-04-25
 ~~~~~~~~~~
 
