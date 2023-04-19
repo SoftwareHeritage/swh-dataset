@@ -198,12 +198,20 @@ class PathParameter(luigi.PathParameter):
 class S3PathParameter(luigi.Parameter):
     """A parameter that strip trailing slashes"""
 
+    def __init__(self, *args, **kwargs):
+        # Override luigi.Parameter.__init__'s docstring, which contains a broken ref
+        super().__init__(*args, **kwargs)
+
     def normalize(self, s):
         return s.rstrip("/")
 
 
 class FractionalFloatParameter(luigi.FloatParameter):
     """A float parameter that must be between 0 and 1"""
+
+    def __init__(self, *args, **kwargs):
+        # Override luigi.Parameter.__init__'s docstring, which contains a broken ref
+        super().__init__(*args, **kwargs)
 
     def parse(self, s):
         v = super().parse(s)
@@ -393,6 +401,9 @@ class UploadExportToS3(luigi.Task):
         return luigi.contrib.s3.S3Target(f"{self.s3_export_path}/meta/export.json")
 
     def complete(self) -> bool:
+        """Returns whether the graph dataset was exported with a superset of
+        ``object_types``"""
+
         return super().complete() and _export_metadata_has_object_types(
             self._meta(), self.object_types
         )
