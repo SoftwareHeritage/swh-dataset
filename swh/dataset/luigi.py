@@ -167,6 +167,15 @@ class PathParameter(luigi.PathParameter):
         create: bool = False,
         **kwargs,
     ):
+        """
+        :param is_dir: whether the path should be to a directory
+        :param is_file: whether the path should be to a directory
+        :param exists: whether the path should already exist
+        :param create: whether the path should be created if it does not exist
+
+        ``is_dir`` and ``is_file`` are mutually exclusive.
+        ``exists`` and ``create`` are mutually exclusive.
+        """
         if create and not is_dir:
             raise ValueError("`is_dir` must be True if `create` is True")
         if is_dir and is_file:
@@ -721,6 +730,7 @@ class RunExportAll(luigi.WrapperTask):
     athena_db_name = luigi.Parameter()
 
     def requires(self) -> List[luigi.Task]:
+        """Returns instances of :cls:`CreateAthena` and :cls:`UploadExportToS3`."""
         # CreateAthena depends on UploadExportToS3(formats=[edges]), so we need to
         # explicitly depend on UploadExportToS3(formats=self.formats) here, to also
         # export the formats requested by the user.
