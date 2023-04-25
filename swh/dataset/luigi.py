@@ -730,7 +730,7 @@ class RunExportAll(luigi.WrapperTask):
     athena_db_name = luigi.Parameter()
 
     def requires(self) -> List[luigi.Task]:
-        """Returns instances of :cls:`CreateAthena` and :cls:`UploadExportToS3`."""
+        """Returns instances of :class:`CreateAthena` and :class:`UploadExportToS3`."""
         # CreateAthena depends on UploadExportToS3(formats=[edges]), so we need to
         # explicitly depend on UploadExportToS3(formats=self.formats) here, to also
         # export the formats requested by the user.
