@@ -19,6 +19,11 @@ different formats:
   library <https://docs.softwareheritage.org/devel/swh-graph/index.html>`_.
 
 
+See also:
+
+* :ref:`using-swh-data`
+* `Terms of use for bulk access <https://www.softwareheritage.org/legal/bulk-access-terms-of-use/>`_
+
 Summary of dataset versions
 ---------------------------
 
