@@ -1,4 +1,5 @@
 pytest
+swh.core[testing]
 types-python-dateutil
 types-pyyaml
 types-requests
