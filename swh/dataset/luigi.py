@@ -327,7 +327,10 @@ class ExportGraph(luigi.Task):
             if output.exists():
                 output.remove()
         if self.local_export_path.exists():  # type: ignore[operator]
-            shutil.rmtree(self.local_export_path)
+            # don't delete self.local_export_path itself, it may be pre-created by
+            # the root user in a directory we cannot write to.
+            for path in self.local_export_path.iterdir():
+                shutil.rmtree(path)
 
         conf = config.read(self.config_file)
 
