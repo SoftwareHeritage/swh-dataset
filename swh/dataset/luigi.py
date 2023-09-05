@@ -415,6 +415,14 @@ class UploadExportToS3(luigi.Task):
     def complete(self) -> bool:
         """Returns whether the graph dataset was exported with a superset of
         ``object_types``"""
+        if (
+            "s3://softwareheritage/graph/"
+            < self.s3_export_path
+            < "s3://softwareheritage/graph/2022-12-07"
+        ):
+            # exports before 2022-12-07 did not have the metadata needed; skip check
+            # for old exports.
+            return True
 
         return super().complete() and _export_metadata_has_object_types(
             self._meta(), self.object_types
@@ -608,6 +616,11 @@ class LocalExport(luigi.Task):
         return luigi.LocalTarget(self.local_export_path / "meta" / "export.json")
 
     def complete(self) -> bool:
+        if "2020-" < self.local_export_path.name < "2022-12-07":
+            # exports before 2022-12-07 did not have the metadata needed; skip check
+            # for old exports.
+            return True
+
         return super().complete() and _export_metadata_has_object_types(
             self._meta(), self.object_types
         )
