@@ -563,8 +563,7 @@ class LocalExport(luigi.Task):
         default=DownloadExportFromS3,
         significant=False,
         description="""The task used to get the dataset if it is not present.
-        Should be either ``swh.dataset.luigi.ExportGraph`` or
-        ``swh.dataset.luigi.DownloadExportFromS3``.""",
+        Should be either ``ExportGraph`` or ``DownloadExportFromS3``.""",
     )
 
     def requires(self) -> List[luigi.Task]:
