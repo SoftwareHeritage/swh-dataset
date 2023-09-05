@@ -483,6 +483,7 @@ class DownloadExportFromS3(luigi.Task):
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
     s3_export_path = S3PathParameter(significant=False)
+    parallelism = luigi.IntParameter(default=10, significant=False)
 
     def requires(self) -> List[luigi.Task]:
         """Returns a :class:`ExportGraph` task that writes local files at the
@@ -511,6 +512,7 @@ class DownloadExportFromS3(luigi.Task):
     def run(self) -> None:
         """Copies all files: first the export itself, then :file:`meta.json`."""
         import collections
+        import multiprocessing.dummy
 
         import luigi.contrib.s3
         import tqdm
@@ -518,6 +520,7 @@ class DownloadExportFromS3(luigi.Task):
         client = luigi.contrib.s3.S3Client()
 
         # recursively copy local files to S3, and end with export metadata
+        paths = []
         for format_ in self.formats:
             local_dir = self.local_export_path / format_.name
             s3_dir = f"{self.s3_export_path}/{format_.name}"
@@ -530,16 +533,21 @@ class DownloadExportFromS3(luigi.Task):
 
             for (object_type, files) in files_by_type.items():
                 (local_dir / object_type).mkdir(parents=True, exist_ok=True)
-                status_message = f"Downloading {format_.name}/{object_type}/"
-                self.set_status_message(status_message)
-                for file_ in tqdm.tqdm(
-                    files,
-                    desc=status_message,
-                ):
-                    client.get(
-                        f"{s3_dir}/{file_}",
-                        str(local_dir / file_),
+                for file_ in files:
+                    paths.append(
+                        (
+                            f"{s3_dir}/{file_}",
+                            str(local_dir / file_),
+                        )
                     )
+
+        with multiprocessing.dummy.Pool(self.parallelism) as p:
+            for (i, _) in tqdm.tqdm(
+                enumerate(p.imap_unordered(lambda args: client.get(*args), paths)),
+                total=len(paths),
+                desc="Downloading graph export",
+            ):
+                self.set_progress_percentage(int(i * 100 / len(paths)))
 
         export_json_path = self.local_export_path / "meta" / "export.json"
         export_json_path.parent.mkdir(exist_ok=True)
