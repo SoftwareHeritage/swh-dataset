@@ -2,4 +2,4 @@ pytest
 swh.core[testing]
 types-python-dateutil
 types-pyyaml
-types-requests
+# types-requests dep have been moved to the main requirement file
