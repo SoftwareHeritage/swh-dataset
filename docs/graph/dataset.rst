@@ -173,6 +173,10 @@ A full export of the graph dated from December 2022
   - **Total size**: 1 TiB
   - **S3**: ``s3://softwareheritage/graph/2022-12-07-history-hosting/compressed``
 
+- **Erratum**:
+
+  - `author and committer timestamps were shifted back 1 or 2 hours, based on the Europe/Paris timezone <https://gitlab.softwareheritage.org/swh/devel/swh-graph/-/issues/4788>`_
+
 
 .. _graph-dataset-2022-04-25:
 
