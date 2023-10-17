@@ -122,11 +122,15 @@ Summary of dataset versions
      - ✔
      - ✔
 
+
 Full graph datasets
 -------------------
 
 Because of their size, some of the latest datasets are only available for
 downside from Amazon S3.
+
+
+.. _graph-dataset-2023-09-06:
 
 2023-09-06
 ~~~~~~~~~~
@@ -142,6 +146,9 @@ A full export of the graph dated from September 2023
 
   - **Total size**: 8.8 TiB
   - **S3**: ``s3://softwareheritage/graph/2023-09-06/compressed``
+
+
+.. _graph-dataset-2022-12-07:
 
 2022-12-07
 ~~~~~~~~~~
@@ -166,6 +173,9 @@ A full export of the graph dated from December 2022
   - **Total size**: 1 TiB
   - **S3**: ``s3://softwareheritage/graph/2022-12-07-history-hosting/compressed``
 
+
+.. _graph-dataset-2022-04-25:
+
 2022-04-25
 ~~~~~~~~~~
 
@@ -181,6 +191,8 @@ A full export of the graph dated from April 2022
   - **Total size**: 6.5 TiB
   - **S3**: ``s3://softwareheritage/graph/2022-04-25/compressed``
 
+
+.. _graph-dataset-2021-03-23:
 
 2021-03-23
 ~~~~~~~~~~
@@ -199,6 +211,8 @@ A full export of the graph dated from March 2021.
   - **S3**: ``s3://softwareheritage/graph/2021-03-23/compressed``
 
 
+.. _graph-dataset-2020-12-15:
+
 2020-12-15
 ~~~~~~~~~~
 
@@ -210,6 +224,8 @@ compressed representation.
   - **URL**: `/graph/2020-12-15/compressed/
     <https://annex.softwareheritage.org/public/dataset/graph/2020-12-15/compressed/>`_
 
+
+.. _graph-dataset-2020-05-20:
 
 2020-05-20
 ~~~~~~~~~~
@@ -224,6 +240,8 @@ compressed representation.
   - **URL**: `/graph/2020-05-20/compressed/
     <https://annex.softwareheritage.org/public/dataset/graph/2020-05-20/compressed/>`_
 
+
+.. _graph-dataset-2019-01-28:
 
 2019-01-28
 ~~~~~~~~~~
@@ -253,6 +271,9 @@ Teaser datasets
 If the above datasets are too big, we also provide "teaser"
 datasets that can get you started and have a smaller size fingerprint.
 
+
+.. _graph-dataset-2021-03-23-popular-3k-python:
+
 2021-03-23-popular-3k-python
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -281,6 +302,8 @@ was the following:
   - **S3**: ``s3://softwareheritage/graph/2021-03-23-popular-3k-python/compressed/``
 
 
+.. _graph-dataset-2020-12-15-gitlab-all:
+
 2020-12-15-gitlab-all
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -291,6 +314,9 @@ Available in compressed graph format.
 
   - **URL**: `/graph/2020-12-15-gitlab-all/compressed/
     <https://annex.softwareheritage.org/public/dataset/graph/2020-12-15-gitlab-all/compressed/>`_
+
+
+.. _graph-dataset-2020-12-15-gitlab-100k:
 
 2020-12-15-gitlab-100k
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -303,6 +329,8 @@ exported in December 2020. Available in compressed graph format.
   - **URL**: `/graph/2020-12-15-gitlab-100k/compressed/
     <https://annex.softwareheritage.org/public/dataset/graph/2020-12-15-gitlab-100k/compressed/>`_
 
+
+.. _graph-dataset-2019-01-28-popular-4k:
 
 2019-01-28-popular-4k
 ~~~~~~~~~~~~~~~~~~~~~
@@ -324,6 +352,8 @@ was the following:
   - **URL**: `/graph/2019-01-28-popular-4k/parquet/
     <https://annex.softwareheritage.org/public/dataset/graph/2019-01-28-popular-4k/parquet/>`_
   - **S3**: ``s3://softwareheritage/graph/2019-01-28-popular-4k/parquet/``
+
+.. _graph-dataset-2019-01-28-popular-3k-python:
 
 2019-01-28-popular-3k-python
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
