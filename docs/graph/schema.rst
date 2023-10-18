@@ -68,8 +68,9 @@ retrieved by querying the Software Heritage API.
   - ``date_offset`` (integer): the offset of the timezone of ``date``
   - ``committer`` (string): an anonymized hash of the committer of the revision.
   - ``committer_date`` (timestamp): the date the revision was committed
-  - ``committer_date_offset`` (integer): the offset of the timezone of
-    ``committer_date``
+  - ``committer_offset`` (integer): the offset of the timezone of
+    ``committer_date``, known as ``committer_date_offset`` in
+    :ref:`swh-storage <swh-storage>`
   - ``directory`` (string): the Git SHA-1 of the directory the revision points
     to (hexadecimal). Every revision points to the root directory of the
     project source tree to which it corresponds.

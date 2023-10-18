@@ -48,7 +48,7 @@ MAIN_TABLES = {
         ("date_raw_offset_bytes", "binary"),
         ("committer", "binary"),
         ("committer_date", "timestamp"),
-        ("committer_offset", "smallint"),
+        ("committer_offset", "smallint"),  # called committer_date_offset in swh-storage
         ("committer_date_raw_offset_bytes", "binary"),
         ("directory", "string"),
         ("type", "string"),
