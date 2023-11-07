@@ -208,6 +208,7 @@ class S3PathParameter(luigi.Parameter):
     """A parameter that strip trailing slashes"""
 
     def __init__(self, *args, **kwargs):
+        """"""
         # Override luigi.Parameter.__init__'s docstring, which contains a broken ref
         super().__init__(*args, **kwargs)
 
@@ -219,6 +220,7 @@ class FractionalFloatParameter(luigi.FloatParameter):
     """A float parameter that must be between 0 and 1"""
 
     def __init__(self, *args, **kwargs):
+        """"""
         # Override luigi.Parameter.__init__'s docstring, which contains a broken ref
         super().__init__(*args, **kwargs)
 
