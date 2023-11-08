@@ -4,7 +4,8 @@
 boto3
 click
 tqdm
-pyorc
+pyorc ; python_version>="3.8"
+pyorc<0.9 ; python_version<"3.8"
 plyvel
 # the constraint on types-requests is for python 3.7(+?), otherwise the pip
 # install process takes ages (because there are gazillions of versions of
