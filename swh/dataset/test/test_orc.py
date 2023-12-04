@@ -30,7 +30,6 @@ def orc_tmpdir(tmpdir):
 
 @contextmanager
 def orc_export(messages, config=None, tmpdir=None):
-
     with orc_tmpdir(tmpdir) as tmpdir:
         if config is None:
             config = {}

@@ -541,7 +541,7 @@ class DownloadExportFromS3(luigi.Task):
             for file in files:
                 files_by_type[file.split("/")[0]].append(file)
 
-            for (object_type, files) in files_by_type.items():
+            for object_type, files in files_by_type.items():
                 (local_dir / object_type).mkdir(parents=True, exist_ok=True)
                 for file_ in files:
                     paths.append(
@@ -552,7 +552,7 @@ class DownloadExportFromS3(luigi.Task):
                     )
 
         with multiprocessing.dummy.Pool(self.parallelism) as p:
-            for (i, _) in tqdm.tqdm(
+            for i, _ in tqdm.tqdm(
                 enumerate(p.imap_unordered(lambda args: client.get(*args), paths)),
                 total=len(paths),
                 desc="Downloading graph export",

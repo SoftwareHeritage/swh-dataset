@@ -469,7 +469,7 @@ class JournalProcessorWorker:
                     )
                 )
             for partition, objects in fixed_objects_by_partition.items():
-                for (key, obj) in objects:
+                for key, obj in objects:
                     self.process_message(object_type, partition, key, obj)
 
     def process_message(self, object_type, partition, obj_key, obj):
