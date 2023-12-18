@@ -18,11 +18,53 @@ different formats:
   <https://webgraph.di.unimi.it/>`_, specifically using our `swh-graph
   library <https://docs.softwareheritage.org/devel/swh-graph/index.html>`_.
 
+See also :ref:`using-swh-data`.
 
-See also:
+.. admonition:: Terms of Use
+   :name: remember-the-tos
+   :class: important
 
-* :ref:`using-swh-data`
-* `Terms of use for bulk access <https://www.softwareheritage.org/legal/bulk-access-terms-of-use/>`_
+   Usage of the datasets from the Software Heritage archive is covered by
+   our `Ethical Charter`_ and the `Terms of use for bulk access`_.
+
+.. _Ethical charter: https://www.softwareheritage.org/legal/users-ethical-charter/
+.. _Terms of use for bulk access: https://www.softwareheritage.org/legal/bulk-access-terms-of-use/
+
+.. raw:: html
+
+   <script>
+     window.addEventListener('load', function(_event) {
+         try {
+             if (localStorage.getItem("bulk-access-tos-agreed")) {
+                 return;
+             }
+         } catch (_error) {
+             // local storage not supported.
+             // just proceed like the user never saw the button
+         }
+         let admonition = document.getElementById("remember-the-tos");
+         let sections = document.querySelectorAll("#dataset > section");
+         let button = document.createElement("button");
+         button.id = "i-have-read-the-tos";
+         button.innerHTML = "I will respect the Ethical Charter and Terms of Use";
+         admonition.appendChild(button);
+         sections.forEach(section => {
+             section.style.display = "none";
+         });
+         document.getElementById("i-have-read-the-tos").onclick = function() {
+             sections.forEach(section => {
+                 section.style.display = "block";
+             });
+             document.getElementById("i-have-read-the-tos").style.display = "none";
+             try {
+                 localStorage.setItem("bulk-access-tos-agreed", true);
+             } catch (_error) {
+                 // unable to remember that the button has been clicked…
+                 // too bad for the users, but not a big deal for us.
+             }
+         };
+     });
+   </script>
 
 Summary of dataset versions
 ---------------------------
