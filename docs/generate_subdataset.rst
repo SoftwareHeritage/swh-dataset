@@ -65,7 +65,7 @@ First, make sure that your base dataset containing the entire graph is
 available as a database on AWS Athena, which can be set up by
 following the steps described in :ref:`swh-graph-athena`.
 
-The subdataset can then be generated with the ``aws dataset athena
+The subdataset can then be generated with the ``swh dataset athena
 gensubdataset`` command::
 
     swh dataset athena gensubdataset \
