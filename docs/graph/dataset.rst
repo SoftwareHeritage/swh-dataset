@@ -134,6 +134,12 @@ Summary of dataset versions
      - Columnar
      - Compressed
 
+   * - `2023-09-06-popular-1k`_
+     - 176,569,127
+     - 11,322,432,687
+     - ✔
+     - ✔
+
    * - `2021-03-23-popular-3k-python`_
      - 45,691,499
      - 1,221,283,907
@@ -318,6 +324,40 @@ If the above datasets are too big, we also provide "teaser"
 datasets that can get you started and have a smaller size fingerprint.
 
 
+.. _graph-dataset-2023-09-06-popular-1k:
+
+2023-09-06-popular-1k
+~~~~~~~~~~~~~~~~~~~~~
+
+The ``popular-1k`` teaser contains a subset of 1120 popular repositories **tagged
+as being written in one of the 10 most popular languages** (Javascript, Python, Java,
+Typescript, C#, C++, PHP, Shell, C, Ruby), from GitHub,
+Gitlab.com, Packagist, PyPI and Debian. The selection criteria to pick the software origins
+for each language was the following:
+
+- the 50 most popular Gitlab.com projects written in that languagethat have 2 stars or more,
+- for Python, the 50 most popular PyPI projects (by usage statistics, according to the
+  `Top PyPI Packages <https://hugovk.github.io/top-pypi-packages/>`_ database),
+- for PHP, the 50 most popular Packagist projects (by usage statistics, according to
+  `Packagist's API <https://packagist.org/apidoc#list-popular-packages>`_),
+- the 50 most popular Debian packages with the relevant ``implemented-in::``
+  `debtag <https://debtags.debian.org/>`_ (by "installs" according to the
+  `Debian Popularity Contest <https://popcon.debian.org/>`_ database).
+- most popular GitHub projects written in Python (by number of stars), until the total
+  number of origins for that language reaches 200
+- removing origins not archived by |swh| by 2023-09-06
+
+- **Columnar (Apache ORC)**:
+
+  - **Total size**: 280 GiB
+  - **S3**: ``s3://softwareheritage/graph/2023-09-06-popular-1k/orc/``
+
+- **Compressed graph**:
+
+  - **Total size**: 42 GiB
+  - **S3**: ``s3://softwareheritage/graph/2023-09-06-popular-1k/compressed/``
+
+
 .. _graph-dataset-2021-03-23-popular-3k-python:
 
 2021-03-23-popular-3k-python
@@ -325,11 +365,11 @@ datasets that can get you started and have a smaller size fingerprint.
 
 The ``popular-3k-python`` teaser contains a subset of 2197 popular
 repositories **tagged as being written in the Python language**, from GitHub,
-Gitlab, PyPI and Debian. The selection criteria to pick the software origins
+Gitlab.com, PyPI and Debian. The selection criteria to pick the software origins
 was the following:
 
 - the 580 most popular GitHub projects written in Python (by number of stars),
-- the 135 Gitlab projects written in Python that have 2 stars or more,
+- the 135 Gitlab.com projects written in Python that have 2 stars or more,
 - the 827 most popular PyPI projects (by usage statistics, according to the
   `Top PyPI Packages <https://hugovk.github.io/top-pypi-packages/>`_ database),
 - the 655 most popular Debian packages with the
@@ -353,7 +393,7 @@ was the following:
 2020-12-15-gitlab-all
 ~~~~~~~~~~~~~~~~~~~~~
 
-A teaser dataset containing the entirety of Gitlab, exported in December 2020.
+A teaser dataset containing the entirety of Gitlab.com, exported in December 2020.
 Available in compressed graph format.
 
 - **Compressed graph**:
@@ -367,7 +407,7 @@ Available in compressed graph format.
 2020-12-15-gitlab-100k
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A teaser dataset containing the 100k most popular Gitlab repositories,
+A teaser dataset containing the 100k most popular Gitlab.com repositories,
 exported in December 2020. Available in compressed graph format.
 
 - **Compressed graph**:
@@ -382,11 +422,11 @@ exported in December 2020. Available in compressed graph format.
 ~~~~~~~~~~~~~~~~~~~~~
 
 This teaser dataset contains a subset of 4000 popular repositories from GitHub,
-Gitlab, PyPI and Debian. The selection criteria to pick the software origins
+Gitlab.com, PyPI and Debian. The selection criteria to pick the software origins
 was the following:
 
 - The 1000 most popular GitHub projects (by number of stars)
-- The 1000 most popular Gitlab projects (by number of stars)
+- The 1000 most popular Gitlab.com projects (by number of stars)
 - The 1000 most popular PyPI projects (by usage statistics, according to the
   `Top PyPI Packages <https://hugovk.github.io/top-pypi-packages/>`_ database),
 - The 1000 most popular Debian packages (by "votes" according to the `Debian
@@ -406,11 +446,11 @@ was the following:
 
 The ``popular-3k-python`` teaser contains a subset of 3052 popular
 repositories **tagged as being written in the Python language**, from GitHub,
-Gitlab, PyPI and Debian. The selection criteria to pick the software origins
+Gitlab.com, PyPI and Debian. The selection criteria to pick the software origins
 was the following, similar to ``popular-4k``:
 
 - the 1000 most popular GitHub projects written in Python (by number of stars),
-- the 131 Gitlab projects written in Python that have 2 stars or more,
+- the 131 Gitlab.com projects written in Python that have 2 stars or more,
 - the 1000 most popular PyPI projects (by usage statistics, according to the
   `Top PyPI Packages <https://hugovk.github.io/top-pypi-packages/>`_ database),
 - the 1000 most popular Debian packages with the
