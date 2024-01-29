@@ -66,6 +66,22 @@ See also :ref:`using-swh-data`.
      });
    </script>
 
+
+Downloading the datasets
+------------------------
+
+All datasets below are available publicly and with no login required, subject
+to the terms of use above.
+After installing `awscli`_, datasets hosted on Amazon S3 can be downloaded
+with this command::
+
+    aws s3 cp s3://softwareheritage/graph/... ./target/path/ --recursive --no-sign-request
+
+The latest **compressed graphs** contain some ``.zst`` files, which must be
+decompressed with ``unzstd`` before they can be used with swh-graph.
+
+.. _awscli: https://github.com/aws/aws-cli
+
 Summary of dataset versions
 ---------------------------
 
