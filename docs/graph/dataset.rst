@@ -291,6 +291,7 @@ compressed representation.
 
   - **URL**: `/graph/2020-12-15/compressed/
     <https://annex.softwareheritage.org/public/dataset/graph/2020-12-15/compressed/>`_
+  - **S3**: ``s3://softwareheritage/graph/2020-12-15/compressed``
 
 
 .. _graph-dataset-2020-05-20:
