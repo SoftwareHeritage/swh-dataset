@@ -1,7 +1,9 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
+
+from typing import Dict, List, Union
 
 # fmt: off
 MAIN_TABLES = {
@@ -108,5 +110,67 @@ RELATION_TABLES = {
 }
 
 TABLES = {**MAIN_TABLES, **RELATION_TABLES}
+
+BLOOM_FILTER_COLUMNS: Dict[str, List[Union[str, int]]] = {
+    "origin": [
+        "url",  # allows checking if an origin is in the dataset
+    ],
+    "origin_visit": [
+        "origin",  # allows listing visits of an origin
+    ],
+    "origin_visit_status": [
+        "origin",  # allows listing visit statuses of an origin
+    ],
+    "snapshot": [
+        "id",  # allows checking a snapshot is in the dataset
+    ],
+    "release": [
+        "id",
+        "author",
+        "target",  # allows reverse traversal
+    ],
+    "revision": [
+        "id",
+        "author",
+        "committer",
+        "directory",  # allows reverse traversal
+    ],
+    "directory": [
+        "id",  # allows checking a directory is in the dataset
+    ],
+    "content": [
+        "sha1",
+        "sha1_git",
+        "sha256",
+        # not including blake2s256, it's unlikely to be useful
+    ],
+    "skipped_content": [
+        "sha1",
+        "sha1_git",
+        "sha256",
+        # not including blake2s256, it's unlikely to be useful
+    ],
+    "snapshot_branch": [
+        "snapshot_id",  # allows finding the stripe containing a snapshot's branches
+        "target",  # allows reverse traversal
+    ],
+    "revision_history": [
+        "id",  # allows finding the stripe containing a revision's parents
+        "parent_id",  # allows reverse traversal
+    ],
+    "revision_extra_headers": [],
+    "directory_entry": [
+        "directory_id",  # allows finding the stripe containing a revision's parents
+        "target",  # allows reverse traversal
+        # not including name, it is often filtered with wildcards and/or case
+        # normalization, so Bloom Filters cannot be used.
+    ],
+}
+"""
+Columns where we include Bloom filters.
+
+They allow looking for high cardinality values without decompressing most stripes
+not containing any (equality) match.
+"""
 
 # fmt: on

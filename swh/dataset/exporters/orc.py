@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022  The Software Heritage developers
+# Copyright (C) 2020-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -26,7 +26,7 @@ from pyorc import (
 from pyorc.converters import ORCConverter
 
 from swh.dataset.exporter import ExporterDispatch
-from swh.dataset.relational import MAIN_TABLES, TABLES
+from swh.dataset.relational import BLOOM_FILTER_COLUMNS, MAIN_TABLES, TABLES
 from swh.dataset.utils import remove_pull_requests
 from swh.model.hashutil import hash_to_hex
 from swh.model.model import TimestampWithTimezone
@@ -224,6 +224,7 @@ class ORCExporter(ExporterDispatch):
                 converters={
                     TypeKind.TIMESTAMP: cast(Type[ORCConverter], SWHTimestampConverter)
                 },
+                bloom_filter_columns=BLOOM_FILTER_COLUMNS[table_name],
             )
 
             self.writers[table_name].set_user_metadata(
