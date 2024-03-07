@@ -284,14 +284,25 @@ A full export of the graph dated from March 2021.
 2020-12-15
 ~~~~~~~~~~
 
-A full export of the graph dated from December 2020. Only available in
-compressed representation.
+A full export of the graph dated from December 2020.
+
+This export has a CSV representation of nodes and edges instead of columnar:
+
+* edges as :file:`graph.edges.{cnt,ori,rel,rev,snp}.csv.zst` and
+  :file:`graph.edges.dir.{00..21}.csv.zst`
+* nodes as :file:`graph.nodes.csv.zst`
+* deduplicated labels as :file:`graph.labels.csv.zst`
+* statistics as :file:`graph.edges.count.txt`, :file:`graph.edges.stats.txt`,
+  :file:`graph.labels.count.txt`, :file:`graph.nodes.count.txt`, and :file:`graph.nodes.stats.txt`
 
 - **Compressed graph**:
 
   - **URL**: `/graph/2020-12-15/compressed/
     <https://annex.softwareheritage.org/public/dataset/graph/2020-12-15/compressed/>`_
   - **S3**: ``s3://softwareheritage/graph/2020-12-15/compressed``
+
+- **Edges**:
+  - **S3**: ``s3://softwareheritage/graph/2020-12-15/edges``
 
 
 .. _graph-dataset-2020-05-20:
