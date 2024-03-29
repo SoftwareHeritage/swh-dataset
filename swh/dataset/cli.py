@@ -186,14 +186,16 @@ def run_export_graph(
         for (fmt, clspath) in AVAILABLE_EXPORTERS.items()
         if fmt in export_formats
     )
+
     # Run the exporter for each edge type.
+    parallel_exporters = {}
     for obj_type in object_types:
         if obj_type in exclude_obj_types:
             continue
         exporters = [
             (exporter_cls[f], {"export_path": export_path / f}) for f in export_formats
         ]
-        parallel_exporter = ParallelJournalProcessor(
+        parallel_exporters[obj_type] = ParallelJournalProcessor(
             config,
             exporters,
             export_id,
@@ -202,6 +204,11 @@ def run_export_graph(
             processes=processes,
             offset_margin=margin,
         )
+        # Fetch all offsets before we start exporting to minimize the time interval
+        # between the offsets of each topic
+        parallel_exporters[obj_type].get_offsets()
+
+    for obj_type, parallel_exporter in parallel_exporters.items():
         print("Exporting {}:".format(obj_type))
         parallel_exporter.run()
 
