@@ -204,10 +204,10 @@ class ParallelJournalProcessor:
         self.obj_type = obj_type
         self.processes = processes
         self.node_sets_path = node_sets_path
-        self.offsets = None
+        self.offsets: Optional[Dict[int, Tuple[int, int]]] = None
         self.offset_margin = offset_margin
 
-    def get_offsets(self):
+    def get_offsets(self) -> Dict[int, Tuple[int, int]]:
         """
         Compute (lo, high) offset boundaries for all partitions.
 
@@ -285,7 +285,7 @@ class ParallelJournalProcessor:
             client.close()
         return self.offsets
 
-    def run(self):
+    def run(self) -> None:
         """
         Run the parallel export.
         """
@@ -322,12 +322,13 @@ class ParallelJournalProcessor:
                     f.result()
                     raise exc
 
-    def progress_worker(self, queue=None):
+    def progress_worker(self, queue=None) -> None:
         """
         An additional worker process that reports the current progress of the
         export between all the different parallel consumers and across all the
         partitions, by consuming the shared progress reporting Queue.
         """
+        assert self.offsets is not None
         d = {}
         active_workers = self.processes
         offset_diff = sum((hi - lo) for lo, hi in self.offsets.values())
@@ -352,7 +353,8 @@ class ParallelJournalProcessor:
             / f"offsets-final-{int(time.time())}.json"
         ).write_text(json.dumps(d))
 
-    def export_worker(self, assignment, progress_queue):
+    def export_worker(self, assignment, progress_queue) -> None:
+        assert self.offsets is not None
         worker = JournalProcessorWorker(
             self.config,
             self.exporters,
@@ -400,13 +402,13 @@ class JournalProcessorWorker:
         ]
         self.exit_stack: contextlib.ExitStack = contextlib.ExitStack()
 
-    def __enter__(self):
+    def __enter__(self) -> "JournalProcessorWorker":
         self.exit_stack.__enter__()
         for exporter in self.exporters:
             self.exit_stack.enter_context(exporter)
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
 
     def get_node_set_for_object(self, partition_id: int, object_id: bytes):
@@ -436,7 +438,7 @@ class JournalProcessorWorker:
             self.node_sets[shard_id] = node_set
         return self.node_sets[shard_id]
 
-    def run(self):
+    def run(self) -> None:
         """
         Start a Journal client on the given assignment and process all the
         incoming messages.
@@ -455,12 +457,14 @@ class JournalProcessorWorker:
         client = JournalClientOffsetRanges(**cfg)
         client.process(self.process_messages)
 
-    def process_messages(self, messages):
+    def process_messages(self, messages: Dict[str, List]) -> None:
         """
         Process the incoming Kafka messages.
         """
         for object_type, message_list in messages.items():
-            fixed_objects_by_partition = collections.defaultdict(list)
+            fixed_objects_by_partition: Dict[
+                int, List[Tuple[Any, dict]]
+            ] = collections.defaultdict(list)
             for message in message_list:
                 fixed_objects_by_partition[message.partition()].extend(
                     zip(
@@ -472,7 +476,7 @@ class JournalProcessorWorker:
                 for key, obj in objects:
                     self.process_message(object_type, partition, key, obj)
 
-    def process_message(self, object_type, partition, obj_key, obj):
+    def process_message(self, object_type: str, partition: int, obj_key, obj) -> None:
         """
         Process a single incoming Kafka message if the object it refers to has
         not been processed yet.
