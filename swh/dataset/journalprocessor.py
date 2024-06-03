@@ -14,6 +14,7 @@ from pathlib import Path
 import time
 from typing import (
     Any,
+    Callable,
     Container,
     Dict,
     List,
@@ -22,7 +23,6 @@ from typing import (
     Sequence,
     Set,
     Tuple,
-    Type,
 )
 
 from confluent_kafka import Message, TopicPartition
@@ -179,7 +179,7 @@ class ParallelJournalProcessor:
     def __init__(
         self,
         config,
-        exporters: Sequence[Tuple[Type[Exporter], Dict[str, Any]]],
+        exporter_factories: Sequence[Callable[[], Exporter]],
         export_id: str,
         obj_type: str,
         node_sets_path: Path,
@@ -190,7 +190,8 @@ class ParallelJournalProcessor:
         Args:
             config: the exporter config, which should also include the
                 JournalClient configuration.
-            exporters: a list of Exporter to process the objects
+            exporter_factories: a list of functions returning :class:`Exporter`
+                instances to process the objects
             export_id: a unique identifier for the export that will be used
                 as part of a Kafka consumer group ID.
             obj_type: The type of SWH object to export.
@@ -198,7 +199,7 @@ class ParallelJournalProcessor:
             processes: The number of processes to run.
         """
         self.config = config
-        self.exporters = exporters
+        self.exporter_factories = exporter_factories
         prefix = self.config["journal"].get("group_id", "swh-dataset-export-")
         self.group_id = f"{prefix}{export_id}"
         self.obj_type = obj_type
@@ -357,7 +358,7 @@ class ParallelJournalProcessor:
         assert self.offsets is not None
         worker = JournalProcessorWorker(
             self.config,
-            self.exporters,
+            self.exporter_factories,
             self.group_id,
             self.obj_type,
             self.offsets,
@@ -378,7 +379,7 @@ class JournalProcessorWorker:
     def __init__(
         self,
         config,
-        exporters: Sequence[Tuple[Type[Exporter], Dict[str, Any]]],
+        exporter_factories: Sequence[Callable[[], Exporter]],
         group_id: str,
         obj_type: str,
         offsets: Dict[int, Tuple[int, int]],
@@ -397,9 +398,7 @@ class JournalProcessorWorker:
         self.node_sets_path.mkdir(exist_ok=True, parents=True)
         self.node_sets: Dict[Tuple[int, str], LevelDBSet] = {}
 
-        self.exporters = [
-            exporter_class(config, **kwargs) for exporter_class, kwargs in exporters
-        ]
+        self.exporters = [exporter_factory() for exporter_factory in exporter_factories]
         self.exit_stack: contextlib.ExitStack = contextlib.ExitStack()
 
     def __enter__(self) -> "JournalProcessorWorker":

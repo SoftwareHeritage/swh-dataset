@@ -136,6 +136,7 @@ def run_export_graph(
     processes: int,
     margin: Optional[float],
 ):
+    import functools
     from importlib import import_module
     import logging
     import resource
@@ -193,7 +194,10 @@ def run_export_graph(
         if obj_type in exclude_obj_types:
             continue
         exporters = [
-            (exporter_cls[f], {"export_path": export_path / f}) for f in export_formats
+            functools.partial(
+                exporter_cls[f], config=config, export_path=export_path / f
+            )
+            for f in export_formats
         ]
         parallel_exporters[obj_type] = ParallelJournalProcessor(
             config,
