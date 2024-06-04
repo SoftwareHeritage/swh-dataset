@@ -41,7 +41,8 @@ def journal_writer(kafka_server: str, kafka_prefix: str):
 
 
 def disable_gc(f):
-    """Decorator for test functions; prevents segfaults in confluent-kafka"""
+    """Decorator for test functions; prevents segfaults in confluent-kafka.
+    See https://github.com/confluentinc/confluent-kafka-python/issues/1761"""
 
     @functools.wraps(f)
     def newf(*args, **kwargs):
