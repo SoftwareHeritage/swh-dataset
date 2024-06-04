@@ -8,13 +8,16 @@
 import os
 import pathlib
 import sys
-from typing import Any, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 import click
 
 from swh.core.cli import CONTEXT_SETTINGS
 from swh.core.cli import swh as swh_cli_group
 from swh.dataset.relational import MAIN_TABLES
+
+if TYPE_CHECKING:
+    from swh.model.swhids import ExtendedSWHID
 
 
 @swh_cli_group.group(name="dataset", context_settings=CONTEXT_SETTINGS)
@@ -126,6 +129,26 @@ def export_graph(ctx, export_path, formats, exclude, object_types, **kwargs):
     )
 
 
+def get_masked_swhids(logger, config: Dict[str, Any]) -> Set["ExtendedSWHID"]:
+    """Fetches the masking database and returns the list of all non-visible SWHIDs"""
+    import tqdm
+
+    from swh.storage.proxies.masking.db import MaskingQuery
+
+    if config["masking_db"] is None:
+        logger.warning("Exporting dataset without masking.")
+        return set()
+    masking_query = MaskingQuery.connect(config["masking_db"])
+    return {
+        swhid
+        for (swhid, statuses) in tqdm.tqdm(
+            masking_query.iter_masked_swhids(),
+            desc="Listing masked SWHIDs",
+            unit_scale=True,
+        )
+    }
+
+
 def run_export_graph(
     config: Dict[str, Any],
     export_path: pathlib.Path,
@@ -145,6 +168,8 @@ def run_export_graph(
     from swh.dataset.journalprocessor import ParallelJournalProcessor
 
     logger = logging.getLogger(__name__)
+
+    masked_swhids = get_masked_swhids(logger, config)
 
     if not export_id:
         export_id = str(uuid.uuid4())
@@ -201,6 +226,7 @@ def run_export_graph(
         ]
         parallel_exporters[obj_type] = ParallelJournalProcessor(
             config,
+            masked_swhids,
             exporters,
             export_id,
             obj_type,

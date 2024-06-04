@@ -32,6 +32,8 @@ from swh.dataset.exporter import Exporter
 from swh.dataset.utils import LevelDBSet
 from swh.journal.client import JournalClient
 from swh.journal.serializers import kafka_to_value
+from swh.model.model import Origin
+from swh.model.swhids import ExtendedObjectType, ExtendedSWHID
 from swh.storage.fixer import fix_objects
 
 logger = logging.getLogger(__name__)
@@ -167,6 +169,12 @@ class JournalClientOffsetRanges(JournalClient):
             self._partitions_to_unsubscribe.clear()
             self.unsubscribe(partitions)
 
+        if self.consumer.assignment() == []:
+            # this should not be needed; but when any of the partitions is empty
+            # we don't get an assignment at all for that partition, so confluent-kafka
+            # does not notice we are done consuming everything and gets stuck.
+            at_eof = True
+
         return nb_processed, at_eof
 
 
@@ -179,6 +187,7 @@ class ParallelJournalProcessor:
     def __init__(
         self,
         config,
+        masked_swhids: Set[ExtendedSWHID],
         exporter_factories: Sequence[Callable[[], Exporter]],
         export_id: str,
         obj_type: str,
@@ -199,6 +208,7 @@ class ParallelJournalProcessor:
             processes: The number of processes to run.
         """
         self.config = config
+        self.masked_swhids = masked_swhids
         self.exporter_factories = exporter_factories
         prefix = self.config["journal"].get("group_id", "swh-dataset-export-")
         self.group_id = f"{prefix}{export_id}"
@@ -358,6 +368,7 @@ class ParallelJournalProcessor:
         assert self.offsets is not None
         worker = JournalProcessorWorker(
             self.config,
+            self.masked_swhids,
             self.exporter_factories,
             self.group_id,
             self.obj_type,
@@ -379,6 +390,7 @@ class JournalProcessorWorker:
     def __init__(
         self,
         config,
+        masked_swhids: Set[ExtendedSWHID],
         exporter_factories: Sequence[Callable[[], Exporter]],
         group_id: str,
         obj_type: str,
@@ -388,6 +400,7 @@ class JournalProcessorWorker:
         node_sets_path: Path,
     ):
         self.config = config
+        self.masked_swhids = masked_swhids
         self.group_id = group_id
         self.obj_type = obj_type
         self.offsets = offsets
@@ -461,6 +474,36 @@ class JournalProcessorWorker:
         Process the incoming Kafka messages.
         """
         for object_type, message_list in messages.items():
+            swhid_type = getattr(ExtendedObjectType, object_type.upper(), None)
+            if object_type == "origin":
+                make_swhids = lambda obj: {Origin(url=obj["url"]).swhid()}  # noqa
+            elif object_type in ("origin_visit", "origin_visit_status"):
+                make_swhids = lambda obj: {Origin(url=obj["origin"]).swhid()}  # noqa
+            elif object_type == "extid":
+                make_swhids = lambda obj: {  # noqa
+                    ExtendedSWHID.from_string(obj["target"])
+                }
+            elif object_type == "raw_extrinsic_metadata":
+                make_swhids = lambda obj: {  # noqa
+                    ExtendedSWHID.from_string(obj["target"]),
+                    ExtendedSWHID(object_type=swhid_type, object_id=obj["id"]),
+                }
+            elif object_type in ("directory", "revision", "release", "snapshot"):
+                make_swhids = lambda obj: {  # noqa
+                    ExtendedSWHID(object_type=swhid_type, object_id=obj["id"])
+                }
+            elif object_type in ("content", "skipped_content"):
+                swhid_type = ExtendedObjectType.CONTENT
+                make_swhids = (
+                    lambda obj: {  # noqa
+                        ExtendedSWHID(object_type=swhid_type, object_id=obj["sha1_git"])
+                    }
+                    if obj.get("sha1_git")
+                    else set()
+                )
+            else:
+                raise NotImplementedError(f"Unsupported object type {object_type}")
+
             fixed_objects_by_partition: Dict[
                 int, List[Tuple[Any, dict]]
             ] = collections.defaultdict(list)
@@ -473,7 +516,8 @@ class JournalProcessorWorker:
                 )
             for partition, objects in fixed_objects_by_partition.items():
                 for key, obj in objects:
-                    self.process_message(object_type, partition, key, obj)
+                    if make_swhids(obj).isdisjoint(self.masked_swhids):
+                        self.process_message(object_type, partition, key, obj)
 
     def process_message(self, object_type: str, partition: int, obj_key, obj) -> None:
         """
