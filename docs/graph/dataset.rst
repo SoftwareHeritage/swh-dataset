@@ -96,6 +96,12 @@ Summary of dataset versions
      - Columnar
      - Compressed
 
+   * - `2024-05-16`_
+     - 38,977,225,252
+     - 604,179,689,399
+     - ✔
+     - ✔
+
    * - `2023-09-06`_
      - 34,121,566,250
      - 517,399,308,984
@@ -192,6 +198,26 @@ Full graph datasets
 
 Because of their size, some of the latest datasets are only available for
 downside from Amazon S3.
+
+
+.. _graph-dataset-2024-05-16:
+
+2024-05-16
+~~~~~~~~~~
+
+A full export of the graph dated from May 2024
+
+- **Columnar tables (Apache ORC)**:
+
+  - **Total size**: 18 TiB
+  - **S3**: ``s3://softwareheritage/graph/2024-05-16/orc``
+
+- **Compressed graph**:
+
+  - **Total size**: 11 TiB
+  - **S3**: ``s3://softwareheritage/graph/2024-05-16/compressed``
+  - This graph export contains all files needed by the Rust implementation of swh-graph,
+    so running :file:`swh-graph/tools/swh-graph-java2rust.sh` is no longer necessary.
 
 
 .. _graph-dataset-2023-09-06:
