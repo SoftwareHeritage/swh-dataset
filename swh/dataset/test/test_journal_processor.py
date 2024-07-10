@@ -60,7 +60,9 @@ class ListExporter(Exporter):
         self._objects = objects
         super().__init__(*args, **kwargs)
 
-    def process_object(self, object_type: str, obj: Dict[str, Any]) -> None:
+    def process_object(
+        self, object_type: model.ModelObjectType, obj: Dict[str, Any]
+    ) -> None:
         self._objects.append((object_type, obj))
 
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2022  The Software Heritage developers
+# Copyright (C) 2020-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -15,6 +15,7 @@ import pytest
 
 from swh.dataset.exporters import orc
 from swh.dataset.relational import MAIN_TABLES, RELATION_TABLES
+from swh.model.model import ModelObjectType
 from swh.model.tests.swh_model_data import TEST_OBJECTS
 from swh.objstorage.factory import get_objstorage
 
@@ -61,14 +62,14 @@ def exporter(messages, config=None, tmpdir=None):
 
 
 def test_export_origin():
-    obj_type = "origin"
+    obj_type = ModelObjectType.ORIGIN
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (hashlib.sha1(obj.url.encode()).hexdigest(), obj.url) in output[obj_type]
 
 
 def test_export_origin_visit():
-    obj_type = "origin_visit"
+    obj_type = ModelObjectType.ORIGIN_VISIT
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -80,7 +81,7 @@ def test_export_origin_visit():
 
 
 def test_export_origin_visit_status():
-    obj_type = "origin_visit_status"
+    obj_type = ModelObjectType.ORIGIN_VISIT_STATUS
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -94,7 +95,7 @@ def test_export_origin_visit_status():
 
 
 def test_export_snapshot():
-    obj_type = "snapshot"
+    obj_type = ModelObjectType.SNAPSHOT
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (orc.hash_to_hex_or_none(obj.id),) in output["snapshot"]
@@ -110,7 +111,7 @@ def test_export_snapshot():
 
 
 def test_export_release():
-    obj_type = "release"
+    obj_type = ModelObjectType.RELEASE
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -128,7 +129,7 @@ def test_export_release():
 
 
 def test_export_revision():
-    obj_type = "revision"
+    obj_type = ModelObjectType.REVISION
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -155,7 +156,7 @@ def test_export_revision():
 
 
 def test_export_directory():
-    obj_type = "directory"
+    obj_type = ModelObjectType.DIRECTORY
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (orc.hash_to_hex_or_none(obj.id), obj.raw_manifest) in output[
@@ -172,7 +173,7 @@ def test_export_directory():
 
 
 def test_export_content():
-    obj_type = "content"
+    obj_type = ModelObjectType.CONTENT
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -187,7 +188,7 @@ def test_export_content():
 
 
 def test_export_skipped_content():
-    obj_type = "skipped_content"
+    obj_type = ModelObjectType.SKIPPED_CONTENT
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -256,7 +257,11 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
     config = {"orc": {}}
     if max_rows is not None:
         config["orc"]["max_rows"] = {obj_type: max_rows}
-    exporter({obj_type: TEST_OBJECTS[obj_type]}, config=config, tmpdir=tmpdir)
+    exporter(
+        {ModelObjectType(obj_type): TEST_OBJECTS[obj_type]},
+        config=config,
+        tmpdir=tmpdir,
+    )
     # check there are as many ORC files as objects
     orcfiles = [fname for fname in (tmpdir / obj_type).listdir(f"{obj_type}-*.orc")]
     if max_rows is None:
@@ -303,7 +308,7 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
     MAIN_TABLES.keys(),
 )
 def test_export_related_files_separated(obj_type, tmpdir):
-    exporter({obj_type: TEST_OBJECTS[obj_type]}, tmpdir=tmpdir)
+    exporter({ModelObjectType(obj_type): TEST_OBJECTS[obj_type]}, tmpdir=tmpdir)
     # check there are as many ORC files as objects
     orcfiles = [fname for fname in (tmpdir / obj_type).listdir(f"{obj_type}-*.orc")]
     assert len(orcfiles) == 1
@@ -340,7 +345,11 @@ def test_export_content_with_data(monkeypatch, tmpdir):
         },
     }
 
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]}, config=config, tmpdir=tmpdir)
+    output = exporter(
+        {ModelObjectType(obj_type): TEST_OBJECTS[obj_type]},
+        config=config,
+        tmpdir=tmpdir,
+    )
     for obj in TEST_OBJECTS[obj_type]:
         assert (
             orc.hash_to_hex_or_none(obj.sha1),

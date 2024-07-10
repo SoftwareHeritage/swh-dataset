@@ -32,7 +32,7 @@ from swh.dataset.exporter import Exporter
 from swh.dataset.utils import LevelDBSet
 from swh.journal.client import JournalClient
 from swh.journal.serializers import kafka_to_value
-from swh.model.model import Origin
+from swh.model.model import ModelObjectType, Origin
 from swh.model.swhids import ExtendedObjectType, ExtendedSWHID
 from swh.storage.fixer import fix_objects
 
@@ -534,7 +534,7 @@ class JournalProcessorWorker:
 
         for exporter in self.exporters:
             try:
-                exporter.process_object(object_type, obj)
+                exporter.process_object(ModelObjectType(object_type), obj)
             except Exception:
                 logger.exception(
                     "Exporter %s: error while exporting the object: %s",

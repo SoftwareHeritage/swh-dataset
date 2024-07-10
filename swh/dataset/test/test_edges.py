@@ -1,4 +1,4 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2024  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -14,6 +14,7 @@ import pytest
 from swh.dataset.exporters.edges import GraphEdgesExporter, sort_graph_nodes
 from swh.dataset.utils import ZSTFile
 from swh.model.hashutil import MultiHash, hash_to_bytes
+from swh.model.model import ModelObjectType
 
 DATE = {
     "timestamp": {"seconds": 1234567891, "microseconds": 0},
@@ -119,7 +120,7 @@ def b64e(s: str) -> str:
 def test_export_origin(exporter):
     node_writer, edge_writer = exporter(
         {
-            "origin": [
+            ModelObjectType.ORIGIN: [
                 {"url": "ori1"},
                 {"url": "ori2"},
             ]
@@ -135,7 +136,7 @@ def test_export_origin(exporter):
 def test_export_origin_visit_status(exporter):
     node_writer, edge_writer = exporter(
         {
-            "origin_visit_status": [
+            ModelObjectType.ORIGIN_VISIT_STATUS: [
                 {
                     **TEST_ORIGIN_VISIT_STATUS,
                     "origin": "ori1",
@@ -159,7 +160,7 @@ def test_export_origin_visit_status(exporter):
 def test_export_snapshot_simple(exporter):
     node_writer, edge_writer = exporter(
         {
-            "snapshot": [
+            ModelObjectType.SNAPSHOT: [
                 {
                     "id": binhash("snp1"),
                     "branches": {
@@ -235,7 +236,7 @@ def test_export_snapshot_simple(exporter):
 def test_export_snapshot_aliases(exporter):
     node_writer, edge_writer = exporter(
         {
-            "snapshot": [
+            ModelObjectType.SNAPSHOT: [
                 {
                     "id": binhash("snp1"),
                     "branches": {
@@ -296,7 +297,7 @@ def test_export_snapshot_no_pull_requests(exporter):
         },
     }
 
-    node_writer, edge_writer = exporter({"snapshot": [snp]})
+    node_writer, edge_writer = exporter({ModelObjectType.SNAPSHOT: [snp]})
     assert edge_writer.mock_calls == [
         call(
             f"swh:1:snp:{hexhash('snp1')} swh:1:rev:{hexhash('rev1')}"
@@ -321,7 +322,7 @@ def test_export_snapshot_no_pull_requests(exporter):
     ]
 
     node_writer, edge_writer = exporter(
-        {"snapshot": [snp]}, config={"remove_pull_requests": True}
+        {ModelObjectType.SNAPSHOT: [snp]}, config={"remove_pull_requests": True}
     )
     assert edge_writer.mock_calls == [
         call(
@@ -338,7 +339,7 @@ def test_export_snapshot_no_pull_requests(exporter):
 def test_export_releases(exporter):
     node_writer, edge_writer = exporter(
         {
-            "release": [
+            ModelObjectType.RELEASE: [
                 {
                     **TEST_RELEASE,
                     "id": binhash("rel1"),
@@ -383,7 +384,7 @@ def test_export_releases(exporter):
 def test_export_revision(exporter):
     node_writer, edge_writer = exporter(
         {
-            "revision": [
+            ModelObjectType.REVISION: [
                 {
                     **TEST_REVISION,
                     "id": binhash("rev1"),
@@ -414,7 +415,7 @@ def test_export_revision(exporter):
 def test_export_directory(exporter):
     node_writer, edge_writer = exporter(
         {
-            "directory": [
+            ModelObjectType.DIRECTORY: [
                 {
                     "id": binhash("dir1"),
                     "entries": [
@@ -465,7 +466,7 @@ def test_export_directory(exporter):
 def test_export_content(exporter):
     node_writer, edge_writer = exporter(
         {
-            "content": [
+            ModelObjectType.CONTENT: [
                 {**TEST_CONTENT, "sha1_git": binhash("cnt1")},
                 {**TEST_CONTENT, "sha1_git": binhash("cnt2")},
             ]

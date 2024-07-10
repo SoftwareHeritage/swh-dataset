@@ -9,6 +9,8 @@ from types import TracebackType
 from typing import Any, Dict, Optional, Type
 import uuid
 
+from swh.model.model import ModelObjectType
+
 
 class Exporter:
     """
@@ -46,7 +48,7 @@ class Exporter:
     ) -> Optional[bool]:
         return self.exit_stack.__exit__(exc_type, exc_value, traceback)
 
-    def process_object(self, object_type: str, obj: Dict[str, Any]) -> None:
+    def process_object(self, object_type: ModelObjectType, obj: Dict[str, Any]) -> None:
         """
         Process a SWH object to export.
 
@@ -69,7 +71,7 @@ class ExporterDispatch(Exporter):
     (e.g you can override `process_origin(self, object)` to process origins.)
     """
 
-    def process_object(self, object_type: str, obj: Dict[str, Any]) -> None:
-        method_name = "process_" + object_type
+    def process_object(self, object_type: ModelObjectType, obj: Dict[str, Any]) -> None:
+        method_name = "process_" + object_type.name.lower()
         if hasattr(self, method_name):
             getattr(self, method_name)(obj)
