@@ -6,7 +6,8 @@
 import functools
 import gc
 import multiprocessing
-from typing import Any, Dict, List, Sequence, Tuple
+from multiprocessing.managers import ListProxy
+from typing import Any, Dict, Sequence, Tuple
 
 import pytest
 
@@ -56,7 +57,7 @@ def disable_gc(f):
 
 
 class ListExporter(Exporter):
-    def __init__(self, objects: List, *args, **kwargs):
+    def __init__(self, objects: ListProxy, *args, **kwargs):
         self._objects = objects
         super().__init__(*args, **kwargs)
 
