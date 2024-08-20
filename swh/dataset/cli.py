@@ -239,7 +239,6 @@ def run_export_graph(
         parallel_exporters[obj_type].get_offsets()
 
     for obj_type, parallel_exporter in parallel_exporters.items():
-        print("Exporting {}:".format(obj_type))
         parallel_exporter.run()
 
 
