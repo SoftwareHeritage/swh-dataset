@@ -197,7 +197,7 @@ Full graph datasets
 -------------------
 
 Because of their size, some of the latest datasets are only available for
-downside from Amazon S3.
+download from Amazon S3.
 
 
 .. _graph-dataset-2024-05-16:
