@@ -494,19 +494,17 @@ class JournalProcessorWorker:
                 }
             elif object_type in ("content", "skipped_content"):
                 swhid_type = ExtendedObjectType.CONTENT
-                make_swhids = (
-                    lambda obj: {  # noqa
-                        ExtendedSWHID(object_type=swhid_type, object_id=obj["sha1_git"])
-                    }
+                make_swhids = lambda obj: (  # noqa
+                    {ExtendedSWHID(object_type=swhid_type, object_id=obj["sha1_git"])}
                     if obj.get("sha1_git")
                     else set()
                 )
             else:
                 raise NotImplementedError(f"Unsupported object type {object_type}")
 
-            fixed_objects_by_partition: Dict[
-                int, List[Tuple[Any, dict]]
-            ] = collections.defaultdict(list)
+            fixed_objects_by_partition: Dict[int, List[Tuple[Any, dict]]] = (
+                collections.defaultdict(list)
+            )
             for message in message_list:
                 fixed_objects_by_partition[message.partition()].extend(
                     zip(
