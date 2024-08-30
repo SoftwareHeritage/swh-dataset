@@ -128,7 +128,7 @@ class JournalClientOffsetRanges(JournalClient):
                 # offset will be committed after executing the worker_fn in
                 # process(); see handle_messages() below
                 self._messages_to_commit.append(message)
-                # delay the unsubcription to handle_messages() to prevent
+                # delay the unsubscription to handle_messages() to prevent
                 # rdkakfa errors like
                 #
                 #   rd_kafka_assignment_partition_stopped:
