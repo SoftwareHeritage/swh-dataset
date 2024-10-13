@@ -51,7 +51,7 @@ retrieved by querying the Software Heritage API.
     containing the entry (hexadecimal).
   - ``name`` (bytes): the name of the file (basename of its path)
   - ``type`` (string): the type of object the branch points to (either
-    ``revision``, ``directory`` or ``content``).
+    ``rev`` (revision), ``dir`` (directory) or ``file`` (content)).
   - ``target`` (string): the Git SHA-1 of the object this
     entry points to (hexadecimal).
   - ``perms`` (integer): the permissions of the object
