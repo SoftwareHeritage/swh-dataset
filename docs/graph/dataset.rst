@@ -96,6 +96,12 @@ Summary of dataset versions
      - Columnar
      - Compressed
 
+   * - `2024-08-23`_
+     - 41,074,031,225
+     - 644,153,760,912
+     - ✔
+     - ✔
+
    * - `2024-05-16`_
      - 38,977,225,252
      - 604,179,689,399
@@ -199,6 +205,26 @@ Full graph datasets
 Because of their size, some of the latest datasets are only available for
 download from Amazon S3.
 
+
+.. _graph-dataset-2024-08-23:
+
+2024-08-23
+~~~~~~~~~~
+
+A full export of the graph dated from August 2024
+
+- **Columnar tables (Apache ORC)**:
+
+  - **Total size**: 19 TiB
+  - **S3**: ``s3://softwareheritage/graph/2024-08-23/orc``
+
+- **Compressed graph**:
+
+  - **Total size**: 11 TiB
+  - **S3**: ``s3://softwareheritage/graph/2024-08-23/compressed``
+  - This graph changed the MPH from GOV/Cmph to PTHash; Rust code hardcoding ``GOVMPH`` needs
+    to replace it with ``DynMph`` or ``SwhidPthash``.
+    Java is no longer supported to read this graph.
 
 .. _graph-dataset-2024-05-16:
 
