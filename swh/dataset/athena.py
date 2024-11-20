@@ -273,7 +273,7 @@ def generate_subdataset(
         # Temporary fix: Athena no longer supports >32MB rows, but some of
         # the objects were added to the dataset before this restriction was
         # in place.
-        if table == "revision":
+        if table in ("revision", "release"):
             ctas_query += " AND length(message) < 100000"
 
         query(
