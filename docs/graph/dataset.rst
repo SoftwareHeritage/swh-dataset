@@ -162,6 +162,12 @@ Summary of dataset versions
      - Columnar
      - Compressed
 
+   * - `2024-08-23-popular-500-python`_
+     - 60,286,526
+     - 1,630,768,493
+     - ✔
+     - ✔
+
    * - `2023-09-06-popular-1k`_
      - 176,569,127
      - 11,322,432,687
@@ -402,6 +408,26 @@ Teaser datasets
 
 If the above datasets are too big, we also provide "teaser"
 datasets that can get you started and have a smaller size fingerprint.
+
+
+.. _graph-dataset-2024-08-23_popular-500-python:
+
+2024-08-23-popular-500-python
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``2024-08-23-popular-500-python`` teaser contains a subset of the 443 repositories
+archived by |swh| as of 2024-08-23, among the 700 GitHub repositories
+**tagged as being written in **Python** with the most stars.
+
+- **Columnar (Apache ORC)**:
+
+  - **Total size**: 36 GiB
+  - **S3**: ``s3://softwareheritage/graph/2024-08-23-popular-500-python/orc/``
+
+- **Compressed graph**:
+
+  - **Total size**: 23 GiB
+  - **S3**: ``s3://softwareheritage/graph/2024-08-23-popular-500-python/compressed/``
 
 
 .. _graph-dataset-2023-09-06-popular-1k:
