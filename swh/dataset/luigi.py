@@ -272,8 +272,8 @@ class ExportGraph(luigi.Task):
         swh dataset --config-file graph.prod.yml graph export export/ --formats=edges
     """
 
-    config_file = PathParameter(is_file=True)
-    local_export_path = PathParameter(is_dir=True, create=True)
+    config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
+    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
     export_id = luigi.OptionalParameter(
         default=None,
         description="""
@@ -284,7 +284,7 @@ class ExportGraph(luigi.Task):
     )
     formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
     processes = luigi.IntParameter(default=1, significant=False)
-    margin = FractionalFloatParameter(
+    margin: float = FractionalFloatParameter(  # type: ignore[assignment]
         default=1.0,
         description="""
         Offset margin to start consuming from. E.g. is set to '0.95',
@@ -296,7 +296,7 @@ class ExportGraph(luigi.Task):
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
 
-    def output(self) -> List[luigi.Target]:
+    def output(self) -> List[luigi.LocalTarget]:
         """Returns path of `meta/export.json` on the local FS."""
         return [self._meta()]
 
@@ -328,13 +328,13 @@ class ExportGraph(luigi.Task):
         for output in self.output():
             if output.exists():
                 output.remove()
-        if self.local_export_path.exists():  # type: ignore[operator]
+        if self.local_export_path.exists():
             # don't delete self.local_export_path itself, it may be pre-created by
             # the root user in a directory we cannot write to.
             for path in self.local_export_path.iterdir():
                 shutil.rmtree(path)
 
-        conf = config.read(self.config_file)
+        conf = config.read(str(self.config_file))
 
         start_date = datetime.datetime.now(tz=datetime.timezone.utc)
         cli.run_export_graph(
@@ -387,12 +387,12 @@ class UploadExportToS3(luigi.Task):
                 --s3-export-path=s3://softwareheritage/graph/swh_2022-11-08
     """
 
-    local_export_path = PathParameter(is_dir=True, create=True, significant=False)
+    local_export_path: Path = PathParameter(is_dir=True, create=True, significant=False)  # type: ignore[assignment]
     formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
-    s3_export_path = S3PathParameter()
+    s3_export_path: str = S3PathParameter()  # type: ignore[assignment]
 
     def requires(self) -> List[luigi.Task]:
         """Returns a :class:`ExportGraph` task that writes local files at the
@@ -487,12 +487,12 @@ class DownloadExportFromS3(luigi.Task):
                 --s3-export-path=s3://softwareheritage/graph/swh_2022-11-08
     """
 
-    local_export_path = PathParameter(is_dir=True, create=True)
+    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
     formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
-    s3_export_path = S3PathParameter(significant=False)
+    s3_export_path: str = S3PathParameter(significant=False)  # type: ignore[assignment]
     parallelism = luigi.IntParameter(default=10, significant=False)
 
     def requires(self) -> List[luigi.Task]:
@@ -572,7 +572,7 @@ class LocalExport(luigi.Task):
     :class:`ExportGraph` or via :class:`DownloadExportFromS3`.
     """
 
-    local_export_path = PathParameter(is_dir=True)
+    local_export_path: Path = PathParameter(is_dir=True)  # type: ignore[assignment]
     formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists

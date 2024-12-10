@@ -1,1 +1,1 @@
-luigi
+luigi != 3.5.2
