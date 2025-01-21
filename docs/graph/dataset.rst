@@ -1,4 +1,4 @@
-.. _swh-dataset-list:
+.. _swh-export-list:
 
 Dataset
 =======

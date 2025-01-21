@@ -1,11 +1,11 @@
 # Changes here will be overwritten by Copier
 _commit: v0.2.3
 _src_path: https://gitlab.softwareheritage.org/swh/devel/swh-py-template.git
-description: Software Heritage dataset tools
-distribution_name: swh-dataset
+description: Reads from the SWH Journal (ie. Kafka) and dumps the content to plain ORC or CSV files
+distribution_name: swh-export
 have_cli: true
 have_workers: false
-package_root: swh/dataset
-project_name: swh.dataset
+package_root: swh/export
+project_name: swh.export
 python_minimal_version: '3.7'
 readme_format: rst

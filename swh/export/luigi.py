@@ -69,7 +69,7 @@ For example:
         "privileged": false,
         "hostname": "desktop5",
         "tool": {
-            "name": "swh.dataset",
+            "name": "swh.export",
             "version": "0.3.2"
         }
     }
@@ -110,7 +110,7 @@ files:
 
 And run this command, for example::
 
-    luigi --log-level INFO --local-scheduler --module swh.dataset.luigi RunExportAll \
+    luigi --log-level INFO --local-scheduler --module swh.export.luigi RunExportAll \
             --UploadExportToS3-local-export-path=/poolswh/softwareheritage/2022-11-09_staging/ \
             --s3-export-path=s3://vlorentz-test2/vlorentz_2022-11-09_staging/ \
             --athena-db-name=vlorentz_20221109_staging
@@ -128,8 +128,8 @@ from typing import Hashable, Iterator, List, Set, TypeVar, Union
 
 import luigi
 
-from swh.dataset import cli
-from swh.dataset.relational import MAIN_TABLES
+from swh.export import cli
+from swh.export.relational import MAIN_TABLES
 
 ObjectType = enum.Enum(  # type: ignore[misc]
     "ObjectType", [obj_type for obj_type in MAIN_TABLES.keys()]
@@ -262,14 +262,14 @@ class ExportGraph(luigi.Task):
 
     Example invocation::
 
-        luigi --local-scheduler --module swh.dataset.luigi ExportGraph \
+        luigi --local-scheduler --module swh.export.luigi ExportGraph \
                 --config=graph.prod.yml \
                 --local-export-path=export/ \
                 --formats=edges
 
     which is equivalent to this CLI call:
 
-        swh dataset --config-file graph.prod.yml graph export export/ --formats=edges
+        swh export --config-file graph.prod.yml graph export export/ --formats=edges
     """
 
     config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
@@ -279,7 +279,7 @@ class ExportGraph(luigi.Task):
         description="""
         Unique ID of the export run. This is appended to the kafka
         group_id config file option. If group_id is not set in the
-        'journal' section of the config file, defaults to 'swh-dataset-export-'.
+        'journal' section of the config file, defaults to 'swh-export-export-'.
         """,
     )
     formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
@@ -367,8 +367,8 @@ class ExportGraph(luigi.Task):
             "privileged": conf["journal"].get("privileged"),
             "hostname": socket.getfqdn(),
             "tool": {
-                "name": "swh.dataset",
-                "version": pkg_resources.get_distribution("swh.dataset").version,
+                "name": "swh.export",
+                "version": pkg_resources.get_distribution("swh.export").version,
             },
         }
         with self._meta().open("w") as fd:
@@ -381,7 +381,7 @@ class UploadExportToS3(luigi.Task):
 
     Example invocation::
 
-        luigi --local-scheduler --module swh.dataset.luigi UploadExportToS3 \
+        luigi --local-scheduler --module swh.export.luigi UploadExportToS3 \
                 --local-export-path=export/ \
                 --formats=edges \
                 --s3-export-path=s3://softwareheritage/graph/swh_2022-11-08
@@ -481,7 +481,7 @@ class DownloadExportFromS3(luigi.Task):
 
     Example invocation::
 
-        luigi --local-scheduler --module swh.dataset.luigi DownloadExportFromS3 \
+        luigi --local-scheduler --module swh.export.luigi DownloadExportFromS3 \
                 --local-export-path=export/ \
                 --formats=edges \
                 --s3-export-path=s3://softwareheritage/graph/swh_2022-11-08
@@ -662,7 +662,7 @@ class CreateAthena(luigi.Task):
 
     Example invocation::
 
-        luigi --local-scheduler --module swh.dataset.luigi CreateAthena \
+        luigi --local-scheduler --module swh.export.luigi CreateAthena \
                 --ExportGraph-config=graph.staging.yml \
                 --athena-db-name=swh_20221108 \
                 --object-types=origin,origin_visit \
@@ -671,7 +671,7 @@ class CreateAthena(luigi.Task):
 
     which is equivalent to this CLI call:
 
-        swh dataset athena create \
+        swh export athena create \
                 --database-name swh_20221108 \
                 --location-prefix s3://softwareheritage/graph/swh_2022-11-08 \
                 --output-location s3://softwareheritage/graph/tmp/athena \
@@ -712,13 +712,13 @@ class CreateAthena(luigi.Task):
 
     def output(self) -> List[luigi.Target]:
         """Returns an instance of :class:`AthenaDatabaseTarget`."""
-        from swh.dataset.athena import TABLES
+        from .athena import TABLES
 
         return [AthenaDatabaseTarget(self.athena_db_name, set(TABLES))]
 
     def run(self) -> None:
         """Creates tables from the ORC dataset."""
-        from swh.dataset.athena import create_tables
+        from .athena import create_tables
 
         create_tables(
             self.athena_db_name,
@@ -733,7 +733,7 @@ class RunExportAll(luigi.WrapperTask):
 
     Example invocation::
 
-        luigi --local-scheduler --module swh.dataset.luigi RunExportAll \
+        luigi --local-scheduler --module swh.export.luigi RunExportAll \
                 --ExportGraph-config=graph.staging.yml \
                 --ExportGraph-processes=12 \
                 --UploadExportToS3-local-export-path=/tmp/export_2022-11-08_staging/ \

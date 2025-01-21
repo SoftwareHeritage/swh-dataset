@@ -1,4 +1,4 @@
-.. _swh-dataset-schema:
+.. _swh-export-schema:
 
 Relational schema
 =================

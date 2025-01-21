@@ -5,7 +5,7 @@
 
 import pytest
 
-from swh.dataset.utils import LevelDBSet, SQLiteSet
+from swh.export.utils import LevelDBSet, SQLiteSet
 
 
 @pytest.fixture(params=[SQLiteSet, LevelDBSet])

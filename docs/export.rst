@@ -16,7 +16,7 @@ Exporting the full dataset
 
 Right now, the only supported export pipeline is the *Graph Dataset*, a set of
 relational tables representing the Software Heritage Graph, as documented in
-:ref:`swh-graph-dataset`. It can be run using the ``swh dataset graph export``
+:ref:`swh-graph-dataset`. It can be run using the ``swh export graph export``
 command.
 
 This dataset can be exported in two different formats: ``orc`` and ``edges``.
@@ -30,7 +30,7 @@ and can easily be generated directly from the ORC format.
 
 Here is an example command to start a graph dataset export::
 
-    swh dataset -C graph_export_config.yml graph export \
+    swh export -C graph_export_config.yml graph export \
         --formats orc \
         --export-id 2022-04-25 \
         -p 64 \
@@ -86,7 +86,7 @@ For the annex::
 Documenting the new dataset
 ---------------------------
 
-In the ``swh-dataset`` repository, edit the the file ``docs/graph/dataset.rst``
+In the ``swh-export`` repository, edit the the file ``docs/graph/dataset.rst``
 to document the availability of the new dataset. You should usually mention:
 
 - the name of the dataset version (e.g., 2022-04-25)

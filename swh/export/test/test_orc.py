@@ -13,8 +13,8 @@ import tempfile
 import pyorc
 import pytest
 
-from swh.dataset.exporters import orc
-from swh.dataset.relational import MAIN_TABLES, RELATION_TABLES
+from swh.export.exporters import orc
+from swh.export.relational import MAIN_TABLES, RELATION_TABLES
 from swh.model.model import ModelObjectType
 from swh.model.tests.swh_model_data import TEST_OBJECTS
 from swh.objstorage.factory import get_objstorage

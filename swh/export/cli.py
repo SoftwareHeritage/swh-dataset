@@ -14,7 +14,8 @@ import click
 
 from swh.core.cli import CONTEXT_SETTINGS
 from swh.core.cli import swh as swh_cli_group
-from swh.dataset.relational import MAIN_TABLES
+
+from .relational import MAIN_TABLES
 
 if TYPE_CHECKING:
     from swh.model.swhids import ExtendedSWHID
@@ -51,8 +52,8 @@ def graph(ctx):
 
 
 AVAILABLE_EXPORTERS = {
-    "edges": "swh.dataset.exporters.edges:GraphEdgesExporter",
-    "orc": "swh.dataset.exporters.orc:ORCExporter",
+    "edges": "swh.export.exporters.edges:GraphEdgesExporter",
+    "orc": "swh.export.exporters.orc:ORCExporter",
 }
 
 
@@ -64,7 +65,7 @@ AVAILABLE_EXPORTERS = {
     help=(
         "Unique ID of the export run. This is appended to the kafka "
         "group_id config file option. If group_id is not set in the "
-        "'journal' section of the config file, defaults to 'swh-dataset-export-'."
+        "'journal' section of the config file, defaults to 'swh-export-export-'."
     ),
 )
 @click.option(
@@ -165,7 +166,7 @@ def run_export_graph(
     import resource
     import uuid
 
-    from swh.dataset.journalprocessor import ParallelJournalProcessor
+    from .journalprocessor import ParallelJournalProcessor
 
     logger = logging.getLogger(__name__)
 
@@ -247,7 +248,7 @@ def run_export_graph(
 @click.pass_context
 def sort_graph(ctx, export_path):
     config = ctx.obj["config"]
-    from swh.dataset.exporters.edges import sort_graph_nodes
+    from .exporters.edges import sort_graph_nodes
 
     sort_graph_nodes(export_path, config)
 
@@ -279,7 +280,7 @@ def athena_create(
     database_name, location_prefix, output_location=None, replace_tables=False
 ):
     """Create tables on AWS Athena pointing to a given graph dataset on S3."""
-    from swh.dataset.athena import create_tables
+    from .athena import create_tables
 
     create_tables(
         database_name,
@@ -303,7 +304,7 @@ def athena_query(
     output_location=None,
 ):
     """Query the AWS Athena database with a given command"""
-    from swh.dataset.athena import run_query_get_results
+    from .athena import run_query_get_results
 
     print(
         run_query_get_results(
@@ -339,7 +340,7 @@ def athena_gensubdataset(database, subdataset_database, subdataset_location, swh
     the base dataset, but only containing the objects present in the SWHID
     list.
     """
-    from swh.dataset.athena import generate_subdataset
+    from .athena import generate_subdataset
 
     generate_subdataset(
         database,

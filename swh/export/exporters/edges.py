@@ -11,11 +11,12 @@ import subprocess
 import tempfile
 from typing import Tuple
 
-from swh.dataset.exporter import ExporterDispatch
-from swh.dataset.utils import ZSTFile, remove_pull_requests
 from swh.model.hashutil import hash_to_hex
 from swh.model.model import Origin
 from swh.model.swhids import ExtendedObjectType
+
+from ..exporter import ExporterDispatch
+from ..utils import ZSTFile, remove_pull_requests
 
 
 def swhid(object_type, object_id):

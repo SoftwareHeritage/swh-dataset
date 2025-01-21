@@ -1,5 +1,5 @@
 [project]
-name = "swh.dataset"
+name = "swh.export"
 authors = [
     {name="Software Heritage developers", email="swh-devel@inria.fr"},
 ]
@@ -28,14 +28,14 @@ with_content = {file = ["requirements-swh-with-content.txt"]}
 luigi = {file = ["requirements-luigi.txt"]}
 
 [project.entry-points."swh.cli.subcommands"]
-"swh.dataset" = "swh.dataset.cli"
+"swh.export" = "swh.export.cli"
 
 [project.urls]
-"Homepage" = "https://gitlab.softwareheritage.org/swh/devel/swh-dataset"
-"Bug Reports" = "https://gitlab.softwareheritage.org/swh/devel/swh-dataset/-/issues"
+"Homepage" = "https://gitlab.softwareheritage.org/swh/devel/swh-export"
+"Bug Reports" = "https://gitlab.softwareheritage.org/swh/devel/swh-export/-/issues"
 "Funding" = "https://www.softwareheritage.org/donate"
-"Documentation" = "https://docs.softwareheritage.org/devel/swh-dataset/"
-"Source" = "https://gitlab.softwareheritage.org/swh/devel/swh-dataset.git"
+"Documentation" = "https://docs.softwareheritage.org/devel/swh-export/"
+"Source" = "https://gitlab.softwareheritage.org/swh/devel/swh-export.git"
 
 [build-system]
 requires = ["setuptools", "setuptools-scm"]

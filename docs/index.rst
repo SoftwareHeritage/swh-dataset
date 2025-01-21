@@ -1,4 +1,4 @@
-.. _swh-dataset:
+.. _swh-export:
 
 .. include:: README.rst
 

@@ -28,13 +28,14 @@ from typing import (
 from confluent_kafka import Message, TopicPartition
 import tqdm
 
-from swh.dataset.exporter import Exporter
-from swh.dataset.utils import LevelDBSet
 from swh.journal.client import JournalClient
 from swh.journal.serializers import kafka_to_value
 from swh.model.model import ModelObjectType, Origin
 from swh.model.swhids import ExtendedObjectType, ExtendedSWHID
 from swh.storage.fixer import fix_objects
+
+from .exporter import Exporter
+from .utils import LevelDBSet
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +211,7 @@ class ParallelJournalProcessor:
         self.config = config
         self.masked_swhids = masked_swhids
         self.exporter_factories = exporter_factories
-        prefix = self.config["journal"].get("group_id", "swh-dataset-export-")
+        prefix = self.config["journal"].get("group_id", "swh-export-export-")
         self.group_id = f"{prefix}{export_id}"
         self.obj_type = obj_type
         self.processes = processes

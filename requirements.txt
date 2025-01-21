@@ -12,6 +12,6 @@ plyvel
 # boto/botocore and it takes ages for pip to find a compatible one).
 # See https://github.com/python/typeshed/blob/main/stubs/requests/METADATA.toml
 # It's not needed in the main requirement, but keeping it in -tests.txt would
-# break dependencies of swh.dataset (not depending on swh.dataset[testing]).
+# break dependencies of swh.export (not depending on swh.export[testing]).
 types-requests ; python_version>="3.10"
 types-requests<2.31.0.7 ; python_version<"3.10"

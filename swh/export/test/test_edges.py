@@ -11,8 +11,8 @@ from unittest.mock import Mock, call
 
 import pytest
 
-from swh.dataset.exporters.edges import GraphEdgesExporter, sort_graph_nodes
-from swh.dataset.utils import ZSTFile
+from swh.export.exporters.edges import GraphEdgesExporter, sort_graph_nodes
+from swh.export.utils import ZSTFile
 from swh.model.hashutil import MultiHash, hash_to_bytes
 from swh.model.model import ModelObjectType
 

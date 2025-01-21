@@ -11,8 +11,8 @@ from typing import Any, Dict, Sequence, Tuple
 
 import pytest
 
-from swh.dataset.exporter import Exporter
-from swh.dataset.journalprocessor import ParallelJournalProcessor
+from swh.export.exporter import Exporter
+from swh.export.journalprocessor import ParallelJournalProcessor
 from swh.journal.serializers import kafka_to_value, value_to_kafka
 from swh.journal.writer import get_journal_writer
 from swh.model import model

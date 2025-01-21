@@ -41,13 +41,13 @@ Setup
 Athena needs to be made aware of the location and the schema of the Parquet
 files available as a public dataset. Unfortunately, since Athena does not
 support queries that contain multiple commands, it is not as simple as pasting
-an installation script in the console. Instead, you can use the ``swh dataset
+an installation script in the console. Instead, you can use the ``swh export
 athena`` command on your local machine, which will query Athena to create
 the tables automatically with the appropriate schema.
 
-First, install the ``swh.dataset`` Python module from PyPI::
+First, install the ``swh.export`` Python module from PyPI::
 
-    pip install swh.dataset
+    pip install swh.export
 
 Once the dependencies are installed, run::
 
@@ -65,11 +65,11 @@ located.
 Creating the tables
 ~~~~~~~~~~~~~~~~~~~
 
-The ``swh dataset athena create`` command can be used to create the tables on
+The ``swh export athena create`` command can be used to create the tables on
 your Athena instance. For example, to create the tables of the 2021-03-23
 graph::
 
-    swh dataset athena create \
+    swh export athena create \
         --database-name swh_graph_2021_03_23
         --location-prefix s3://softwareheritage/graph/2021-03-23
         --output-location s3://YOUR_OUTPUT_BUCKET/
@@ -104,9 +104,9 @@ Heritage Graph Dataset: Public software development under one roof.
 <https://upsilon.cc/~zack/research/publications/msr-2019-swh.pdf>`_
 
 It is also possible to query Athena directly from the command line, using the
-``swh dataset athena query`` command::
+``swh export athena query`` command::
 
     echo "select message from revision limit 10;" |
-    swh dataset athena query \
+    swh export athena query \
         --database-name swh_graph_2021_03_23
         --output-location s3://YOUR_OUTPUT_BUCKET/

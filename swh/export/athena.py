@@ -18,7 +18,7 @@ import time
 import boto3
 import botocore.exceptions
 
-from swh.dataset.relational import TABLES
+from .relational import TABLES
 
 
 def create_database(database_name):
@@ -103,7 +103,7 @@ def create_tables(database_name, dataset_location, output_location=None, replace
 
     Athena works on external columnar data stored in S3, but requires a schema
     for each table to run queries. This creates all the necessary tables
-    remotely by using the relational schemas in swh.dataset.relational.
+    remotely by using the relational schemas in swh.export.relational.
     """
     client = boto3.client("athena")
     client.output_location = output_location

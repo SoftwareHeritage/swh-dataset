@@ -25,11 +25,12 @@ from pyorc import (
 )
 from pyorc.converters import ORCConverter
 
-from swh.dataset.exporter import ExporterDispatch
-from swh.dataset.relational import BLOOM_FILTER_COLUMNS, MAIN_TABLES, TABLES
-from swh.dataset.utils import remove_pull_requests
 from swh.model.hashutil import hash_to_hex
 from swh.model.model import TimestampWithTimezone
+
+from ..exporter import ExporterDispatch
+from ..relational import BLOOM_FILTER_COLUMNS, MAIN_TABLES, TABLES
+from ..utils import remove_pull_requests
 
 ObjNotFoundError: Type[Exception]
 get_objstorage: Optional[Callable]
@@ -151,7 +152,7 @@ class ORCExporter(ExporterDispatch):
             if get_objstorage is None:
                 raise EnvironmentError(
                     "The swh-objstorage dependency package must be installed "
-                    "when 'with_data' is set. Please install 'swh.dataset[with-content]'"
+                    "when 'with_data' is set. Please install 'swh.export[with-content]'"
                 )
             if "objstorage" not in config:
                 raise ValueError(
@@ -231,7 +232,7 @@ class ORCExporter(ExporterDispatch):
                 swh_object_type=table_name.encode(),
                 swh_uuid=unique_id.encode(),
                 swh_model_version=get_distribution("swh.model").version.encode(),
-                swh_dataset_version=get_distribution("swh.dataset").version.encode(),
+                swh_export_version=get_distribution("swh.export").version.encode(),
                 # maybe put a copy of the config (redacted) also?
             )
             self.uuids[table_name] = unique_id
