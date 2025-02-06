@@ -275,6 +275,13 @@ A full export of the graph dated from May 2024
   - This graph export contains all files needed by the Rust implementation of swh-graph,
     so running :file:`swh-graph/tools/swh-graph-java2rust.sh` is no longer necessary.
 
+- **"History and hosting" Compressed graph**:
+
+  - This is a compressed graph of only the "history and hosting" layer (origins,
+    snapshots, releases, revisions) and the root directory (or rarely content) of
+    every revision/release; but most directories and contents are excluded
+  - **S3**: ``s3://softwareheritage/graph/2024-05-16-history-hosting/compressed``
+
 
 .. _graph-dataset-2023-09-06:
 
