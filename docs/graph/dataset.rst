@@ -235,6 +235,14 @@ A full export of the graph dated from December 2024
   - **Total size**: 12 TiB
   - **S3**: ``s3://softwareheritage/graph/2024-12-06/compressed``
 
+- **"History and hosting" Compressed graph**:
+
+  - This is a compressed graph of only the "history and hosting" layer (origins,
+    snapshots, releases, revisions) and the root directory (or rarely content) of
+    every revision/release; but most directories and contents are excluded
+  - **Total size**: 1.4 TiB
+  - **S3**: ``s3://softwareheritage/graph/2024-12-06-history-hosting/compressed``
+
 
 .. _graph-dataset-2024-08-23:
 
@@ -300,6 +308,13 @@ A full export of the graph dated from September 2023
   - **Total size**: 8.8 TiB
   - **S3**: ``s3://softwareheritage/graph/2023-09-06/compressed``
 
+- **"History and hosting" Compressed graph**:
+
+  - This is a compressed graph of only the "history and hosting" layer (origins,
+    snapshots, releases, revisions) and the root directory (or rarely content) of
+    every revision/release; but most directories and contents are excluded
+  - **S3**: ``s3://softwareheritage/graph/2023-09-06-history-hosting/compressed``
+
 
 .. _graph-dataset-2022-12-07:
 
@@ -323,7 +338,7 @@ A full export of the graph dated from December 2022
   - This is a compressed graph of only the "history and hosting" layer (origins,
     snapshots, releases, revisions) and the root directory (or rarely content) of
     every revision/release; but most directories and contents are excluded
-  - **Total size**: 1 TiB
+  - **Total size**: 1.0 TiB
   - **S3**: ``s3://softwareheritage/graph/2022-12-07-history-hosting/compressed``
 
 - **Erratum**:
