@@ -1,7 +1,8 @@
 # Changes here will be overwritten by Copier
-_commit: v0.2.3
+_commit: v0.3.3
 _src_path: https://gitlab.softwareheritage.org/swh/devel/swh-py-template.git
-description: Reads from the SWH Journal (ie. Kafka) and dumps the content to plain ORC or CSV files
+description: Reads from the SWH Journal (ie. Kafka) and dumps the content to plain
+    ORC or CSV files
 distribution_name: swh-export
 have_cli: true
 have_workers: false

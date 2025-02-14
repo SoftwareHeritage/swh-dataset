@@ -93,7 +93,7 @@ class JournalClientOffsetRanges(JournalClient):
         )
 
     def unsubscribe(self, partitions: Container[int]):
-        assert self.assignment is not None
+        assert self.assignment is not None and self.topic_name is not None
         self.assignment = [pid for pid in self.assignment if pid not in partitions]
         logger.debug("Changing assignment to %s", str(self.assignment))
         self.consumer.assign(
