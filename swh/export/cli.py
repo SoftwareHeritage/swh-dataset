@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from swh.model.swhids import ExtendedSWHID
 
 
-@swh_cli_group.group(name="dataset", context_settings=CONTEXT_SETTINGS)
+@swh_cli_group.group(name="export", context_settings=CONTEXT_SETTINGS)
 @click.option(
     "--config-file",
     "-C",
@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     help="Configuration file.",
 )
 @click.pass_context
-def dataset_cli_group(ctx, config_file):
-    """Dataset Tools.
+def export_cli_group(ctx, config_file):
+    """Dataset Export Tools.
 
     A set of tools to export datasets from the Software Heritage Archive in
     various formats.
@@ -44,7 +44,7 @@ def dataset_cli_group(ctx, config_file):
     ctx.obj["config"] = conf
 
 
-@dataset_cli_group.group("graph")
+@export_cli_group.group("graph")
 @click.pass_context
 def graph(ctx):
     """Manage graph export"""
@@ -253,7 +253,7 @@ def sort_graph(ctx, export_path):
     sort_graph_nodes(export_path, config)
 
 
-@dataset_cli_group.group("athena")
+@export_cli_group.group("athena")
 @click.pass_context
 def athena(ctx):
     """Manage and query a remote AWS Athena database"""
