@@ -1,4 +1,4 @@
-# Copyright (C) 2022 The Software Heritage developers
+# Copyright (C) 2022-2025 The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -317,10 +317,9 @@ class ExportGraph(luigi.Task):
     def run(self) -> None:
         """Runs the full export, then writes stamps, then :file:`meta.json`."""
         import datetime
+        from importlib.metadata import version
         import json
         import socket
-
-        import pkg_resources
 
         from swh.core import config
 
@@ -368,7 +367,7 @@ class ExportGraph(luigi.Task):
             "hostname": socket.getfqdn(),
             "tool": {
                 "name": "swh.export",
-                "version": pkg_resources.get_distribution("swh.export").version,
+                "version": version("swh.export"),
             },
         }
         with self._meta().open("w") as fd:
