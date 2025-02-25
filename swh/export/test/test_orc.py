@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2024  The Software Heritage developers
+# Copyright (C) 2020-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -15,7 +15,18 @@ import pytest
 
 from swh.export.exporters import orc
 from swh.export.relational import MAIN_TABLES, RELATION_TABLES
-from swh.model.model import ModelObjectType
+from swh.model.model import (
+    Content,
+    Directory,
+    ModelObjectType,
+    Origin,
+    OriginVisit,
+    OriginVisitStatus,
+    Release,
+    Revision,
+    SkippedContent,
+    Snapshot,
+)
 from swh.model.tests.swh_model_data import TEST_OBJECTS
 from swh.objstorage.factory import get_objstorage
 
@@ -62,14 +73,15 @@ def exporter(messages, config=None, tmpdir=None):
 
 
 def test_export_origin():
-    obj_type = ModelObjectType.ORIGIN
+    obj_type = Origin.object_type
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
-        assert (hashlib.sha1(obj.url.encode()).hexdigest(), obj.url) in output[obj_type]
+        sha1 = hashlib.sha1(obj.url.encode()).hexdigest()
+        assert (sha1, obj.url) in output[obj_type.value]
 
 
 def test_export_origin_visit():
-    obj_type = ModelObjectType.ORIGIN_VISIT
+    obj_type = OriginVisit.object_type
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -77,11 +89,11 @@ def test_export_origin_visit():
             obj.visit,
             orc.datetime_to_tuple(obj.date),
             obj.type,
-        ) in output[obj_type]
+        ) in output[obj_type.value]
 
 
 def test_export_origin_visit_status():
-    obj_type = ModelObjectType.ORIGIN_VISIT_STATUS
+    obj_type = OriginVisitStatus.object_type
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -91,11 +103,11 @@ def test_export_origin_visit_status():
             obj.status,
             orc.hash_to_hex_or_none(obj.snapshot),
             obj.type,
-        ) in output[obj_type]
+        ) in output[obj_type.value]
 
 
 def test_export_snapshot():
-    obj_type = ModelObjectType.SNAPSHOT
+    obj_type = Snapshot.object_type
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (orc.hash_to_hex_or_none(obj.id),) in output["snapshot"]
@@ -111,7 +123,7 @@ def test_export_snapshot():
 
 
 def test_export_release():
-    obj_type = ModelObjectType.RELEASE
+    obj_type = Release.object_type
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -125,11 +137,11 @@ def test_export_release():
                 obj.date.to_dict() if obj.date is not None else None
             ),
             obj.raw_manifest,
-        ) in output[obj_type]
+        ) in output[obj_type.value]
 
 
 def test_export_revision():
-    obj_type = ModelObjectType.REVISION
+    obj_type = Revision.object_type
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -156,7 +168,7 @@ def test_export_revision():
 
 
 def test_export_directory():
-    obj_type = ModelObjectType.DIRECTORY
+    obj_type = Directory.object_type
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (orc.hash_to_hex_or_none(obj.id), obj.raw_manifest) in output[
@@ -173,7 +185,7 @@ def test_export_directory():
 
 
 def test_export_content():
-    obj_type = ModelObjectType.CONTENT
+    obj_type = Content.object_type
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -184,11 +196,11 @@ def test_export_content():
             obj.length,
             obj.status,
             None,
-        ) in output[obj_type]
+        ) in output[obj_type.value]
 
 
 def test_export_skipped_content():
-    obj_type = ModelObjectType.SKIPPED_CONTENT
+    obj_type = SkippedContent.object_type
     output = exporter({obj_type: TEST_OBJECTS[obj_type]})
     for obj in TEST_OBJECTS[obj_type]:
         assert (
@@ -199,7 +211,7 @@ def test_export_skipped_content():
             obj.length,
             obj.status,
             obj.reason,
-        ) in output[obj_type]
+        ) in output[obj_type.value]
 
 
 def test_date_to_tuple():
@@ -250,26 +262,28 @@ RELATED = {
 
 @pytest.mark.parametrize(
     "obj_type",
-    MAIN_TABLES.keys(),
+    (ModelObjectType(obj_type) for obj_type in MAIN_TABLES.keys()),
 )
 @pytest.mark.parametrize("max_rows", (None, 1, 2, 10000))
 def test_export_related_files(max_rows, obj_type, tmpdir):
     config = {"orc": {}}
     if max_rows is not None:
-        config["orc"]["max_rows"] = {obj_type: max_rows}
+        config["orc"]["max_rows"] = {obj_type.value: max_rows}
     exporter(
-        {ModelObjectType(obj_type): TEST_OBJECTS[obj_type]},
+        {obj_type: TEST_OBJECTS[obj_type]},
         config=config,
         tmpdir=tmpdir,
     )
     # check there are as many ORC files as objects
-    orcfiles = [fname for fname in (tmpdir / obj_type).listdir(f"{obj_type}-*.orc")]
+    orcfiles = [
+        fname for fname in (tmpdir / obj_type.value).listdir(f"{obj_type}-*.orc")
+    ]
     if max_rows is None:
         assert len(orcfiles) == 1
     else:
         assert len(orcfiles) == math.ceil(len(TEST_OBJECTS[obj_type]) / max_rows)
     # check the number of related ORC files
-    for related in RELATED.get(obj_type, ()):
+    for related in RELATED.get(obj_type.value, ()):
         related_orcfiles = [
             fname for fname in (tmpdir / related).listdir(f"{related}-*.orc")
         ]
@@ -289,7 +303,7 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
             obj_ids = [row[0] for row in rows]
 
         # check the related tables
-        for related in RELATED.get(obj_type, ()):
+        for related in RELATED.get(obj_type.value, ()):
             orc_file = tmpdir / related / f"{related}-{uuid}.orc"
             with orc_file.open("rb") as orc_obj:
                 reader = pyorc.Reader(
@@ -305,15 +319,17 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
 
 @pytest.mark.parametrize(
     "obj_type",
-    MAIN_TABLES.keys(),
+    (ModelObjectType(obj_type) for obj_type in MAIN_TABLES.keys()),
 )
 def test_export_related_files_separated(obj_type, tmpdir):
-    exporter({ModelObjectType(obj_type): TEST_OBJECTS[obj_type]}, tmpdir=tmpdir)
+    exporter({obj_type: TEST_OBJECTS[obj_type]}, tmpdir=tmpdir)
     # check there are as many ORC files as objects
-    orcfiles = [fname for fname in (tmpdir / obj_type).listdir(f"{obj_type}-*.orc")]
+    orcfiles = [
+        fname for fname in (tmpdir / obj_type.value).listdir(f"{obj_type}-*.orc")
+    ]
     assert len(orcfiles) == 1
     # check related ORC files are in their own directory
-    for related in RELATED.get(obj_type, ()):
+    for related in RELATED.get(obj_type.value, ()):
         related_orcfiles = [
             fname for fname in (tmpdir / related).listdir(f"{related}-*.orc")
         ]
@@ -328,7 +344,7 @@ def test_export_invalid_max_rows(table_name):
 
 
 def test_export_content_with_data(monkeypatch, tmpdir):
-    obj_type = "content"
+    obj_type = Content.object_type
     objstorage = get_objstorage("memory")
     for content in TEST_OBJECTS[obj_type]:
         objstorage.add(content=content.data, obj_id=content.hashes())
@@ -346,7 +362,7 @@ def test_export_content_with_data(monkeypatch, tmpdir):
     }
 
     output = exporter(
-        {ModelObjectType(obj_type): TEST_OBJECTS[obj_type]},
+        {obj_type: TEST_OBJECTS[obj_type]},
         config=config,
         tmpdir=tmpdir,
     )
@@ -359,4 +375,4 @@ def test_export_content_with_data(monkeypatch, tmpdir):
             obj.length,
             obj.status,
             obj.data,
-        ) in output[obj_type]
+        ) in output[obj_type.value]
