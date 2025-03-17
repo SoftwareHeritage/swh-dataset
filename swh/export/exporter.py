@@ -41,9 +41,9 @@ class Exporter:
         if sensitive_export_path is not None:
             self.sensitive_export_path = pathlib.Path(sensitive_export_path)
         else:
-            self.sensitive_export_path = pathlib.Path(
-                export_path
-            ).parent / pathlib.Path(f"{export_path}_sensitive")
+            self.sensitive_export_path = (
+                pathlib.Path(export_path).parent / f"{export_path}-sensitive"
+            )
         self.exit_stack = contextlib.ExitStack()
 
     def __enter__(self) -> "Exporter":

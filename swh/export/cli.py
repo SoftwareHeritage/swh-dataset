@@ -126,6 +126,10 @@ def export_graph(
             raise click.BadOptionUsage(
                 option_name="formats", message=f"{f} is not an available format."
             )
+    if sensitive_export_path is None:
+        sensitive_export_path = (
+            pathlib.Path(export_path).parent / f"{export_path}-sensitive"
+        )
 
     run_export_graph(
         config,
