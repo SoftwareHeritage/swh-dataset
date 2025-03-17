@@ -41,15 +41,25 @@ def orc_tmpdir(tmpdir):
 
 
 @contextmanager
-def orc_export(messages, config=None, tmpdir=None):
+def orc_sensitive_tmpdir(tmpdir):
+    if tmpdir:
+        yield Path(tmpdir)
+    else:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+
+
+@contextmanager
+def orc_export(messages, config=None, tmpdir=None, sensitive_tmpdir=None):
     with orc_tmpdir(tmpdir) as tmpdir:
-        if config is None:
-            config = {}
-        with orc.ORCExporter(config, tmpdir) as exporter:
-            for object_type, objects in messages.items():
-                for obj in objects:
-                    exporter.process_object(object_type, obj.to_dict())
-        yield tmpdir
+        with orc_sensitive_tmpdir(sensitive_tmpdir) as sensitive_tmpdir:
+            if config is None:
+                config = {}
+            with orc.ORCExporter(config, tmpdir, sensitive_tmpdir) as exporter:
+                for object_type, objects in messages.items():
+                    for obj in objects:
+                        exporter.process_object(object_type, obj.to_dict())
+            yield tmpdir
 
 
 def orc_load(rootdir):

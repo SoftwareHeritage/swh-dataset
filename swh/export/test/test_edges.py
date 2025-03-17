@@ -90,7 +90,7 @@ def exporter():
     def wrapped(messages, config=None) -> Tuple[Mock, Mock]:
         if config is None:
             config = {}
-        exporter = GraphEdgesExporter(config, "/dummy_path")
+        exporter = GraphEdgesExporter(config, "/dummy_path", "/dummy_sensitive_path")
         node_writer = Mock()
         edge_writer = Mock()
         exporter.get_writers_for = lambda *a, **k: (  # type: ignore

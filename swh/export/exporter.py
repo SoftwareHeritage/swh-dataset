@@ -29,14 +29,26 @@ class Exporter:
     """
 
     def __init__(
-        self, config: Dict[str, Any], export_path, *args: Any, **kwargs: Any
+        self,
+        config: Dict[str, Any],
+        export_path,
+        sensitive_export_path,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         self.config: Dict[str, Any] = config
         self.export_path = pathlib.Path(export_path)
+        if sensitive_export_path is not None:
+            self.sensitive_export_path = pathlib.Path(sensitive_export_path)
+        else:
+            self.sensitive_export_path = pathlib.Path(
+                export_path
+            ).parent / pathlib.Path(f"{export_path}_sensitive")
         self.exit_stack = contextlib.ExitStack()
 
     def __enter__(self) -> "Exporter":
         self.export_path.mkdir(exist_ok=True, parents=True)
+        self.sensitive_export_path.mkdir(exist_ok=True, parents=True)
         self.exit_stack.__enter__()
         return self
 

@@ -3,14 +3,19 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
+import base64
 import collections
 import concurrent.futures
 from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor
 import contextlib
+import csv
+import hashlib
 import json
 import logging
 import multiprocessing
+import os
 from pathlib import Path
+import subprocess
 import time
 from typing import (
     Any,
@@ -193,6 +198,8 @@ class ParallelJournalProcessor:
         export_id: str,
         obj_type: str,
         node_sets_path: Path,
+        dup_dir: Path,
+        dedup_dir: Path,
         processes: int = 1,
         offset_margin: Optional[float] = None,
     ):
@@ -218,6 +225,8 @@ class ParallelJournalProcessor:
         self.node_sets_path = node_sets_path
         self.offsets: Optional[Dict[int, Tuple[int, int]]] = None
         self.offset_margin = offset_margin
+        self.dup_dir = dup_dir
+        self.dedup_dir = dedup_dir
 
     def get_offsets(self) -> Dict[int, Tuple[int, int]]:
         """
@@ -312,10 +321,12 @@ class ParallelJournalProcessor:
         with ProcessPoolExecutor(self.processes + 1) as pool:
             futures = []
             for i in range(self.processes):
+                csv_file = self.dup_dir / f"fullnames-{i}.csv"
                 futures.append(
                     pool.submit(
                         self.export_worker,
                         assignment=to_assign[i :: self.processes],
+                        csv_file=csv_file,
                         progress_queue=q,
                     )
                 )
@@ -365,7 +376,7 @@ class ParallelJournalProcessor:
             / f"offsets-final-{int(time.time())}.json"
         ).write_text(json.dumps(d))
 
-    def export_worker(self, assignment, progress_queue) -> None:
+    def export_worker(self, assignment, csv_file, progress_queue) -> None:
         assert self.offsets is not None
         worker = JournalProcessorWorker(
             self.config,
@@ -377,6 +388,8 @@ class ParallelJournalProcessor:
             assignment,
             progress_queue,
             self.node_sets_path,
+            csv_file,
+            self.dedup_dir,
         )
         with worker:
             worker.run()
@@ -399,6 +412,8 @@ class JournalProcessorWorker:
         assignment: Sequence[int],
         progress_queue: multiprocessing.Queue,
         node_sets_path: Path,
+        csv_file: Path,
+        dedup_dir: Path,
     ):
         self.config = config
         self.masked_swhids = masked_swhids
@@ -415,16 +430,46 @@ class JournalProcessorWorker:
         self.exporters = [exporter_factory() for exporter_factory in exporter_factories]
         self.exit_stack: contextlib.ExitStack = contextlib.ExitStack()
 
+        self.csv_file = csv_file
+        self.dedup_dir = dedup_dir
+
     def __enter__(self) -> "JournalProcessorWorker":
         self.exit_stack.__enter__()
         for exporter in self.exporters:
             self.exit_stack.enter_context(exporter)
+        dedup_csv = self.dedup_dir / self.csv_file.name
+        self.persons_sorter = subprocess.Popen(
+            # fmt: off
+            [
+                "sort",
+                "-t", ",",
+                "-k", "2",
+                "-S", "100M",
+                "-u",
+                "-o",
+                dedup_csv,
+            ],
+            # fmt: on
+            env={**os.environ, "LC_ALL": "C", "LC_COLLATE": "C", "LANG": "C"},
+            universal_newlines=True,
+            stdin=subprocess.PIPE,
+        )
+        assert self.persons_sorter.stdin is not None
+        self.persons_writer = csv.writer(self.persons_sorter.stdin)
+
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
+        assert self.persons_sorter.stdin is not None
+        self.persons_sorter.stdin.close()
+        logger.debug("Starting persons partial deduplication")
+        self.persons_sorter.wait()
+        logger.debug("Persons partial deduplication done")
 
-    def get_node_set_for_object(self, partition_id: int, object_id: bytes):
+    def get_node_set_for_object(
+        self, obj_type: str, partition_id: int, object_id: bytes
+    ):
         """
         Return an on-disk set object, which stores the nodes that have
         already been processed.
@@ -440,9 +485,7 @@ class JournalProcessorWorker:
         shard_id = (partition_id, obj_id_suffix)
         if shard_id not in self.node_sets:
             node_set_dir = (
-                self.node_sets_path
-                / self.obj_type
-                / ("part-{}".format(str(partition_id)))
+                self.node_sets_path / obj_type / ("part-{}".format(str(partition_id)))
             )
             node_set_dir.mkdir(exist_ok=True, parents=True)
             node_set_file = node_set_dir / "nodes-{}.db".format(obj_id_suffix)
@@ -526,7 +569,12 @@ class JournalProcessorWorker:
         It uses an on-disk set to make sure that each object is only ever
         processed once.
         """
-        node_set = self.get_node_set_for_object(partition, obj_key)
+        if obj.get("author") is not None:
+            self._add_person(obj["author"])
+        if obj.get("committer") is not None:
+            self._add_person(obj["committer"])
+
+        node_set = self.get_node_set_for_object(object_type, partition, obj_key)
         if not node_set.add(obj_key):
             # Node already processed, skipping.
             return
@@ -540,3 +588,14 @@ class JournalProcessorWorker:
                     exporter.__class__.__name__,
                     str(obj),
                 )
+
+    def _add_person(self, person):
+        assert "fullname" in person, f"No fullname for person {person}"
+        self.persons_writer.writerow(
+            (
+                base64.b64encode(person["fullname"]).decode(),
+                base64.b64encode(
+                    (hashlib.sha256(person["fullname"])).digest()
+                ).decode(),
+            )
+        )

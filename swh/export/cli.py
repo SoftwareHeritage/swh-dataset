@@ -97,8 +97,15 @@ AVAILABLE_EXPORTERS = {
         "in other words, start earlier than last committed position."
     ),
 )
+@click.option(
+    "--sensitive-export-path",
+    type=click.STRING,
+    help="Path where sensitive data (eg. fullnames) will be exported to.",
+)
 @click.pass_context
-def export_graph(ctx, export_path, formats, exclude, object_types, **kwargs):
+def export_graph(
+    ctx, export_path, sensitive_export_path, formats, exclude, object_types, **kwargs
+):
     """Export the Software Heritage graph as an edge dataset."""
 
     config = ctx.obj["config"]
@@ -123,6 +130,7 @@ def export_graph(ctx, export_path, formats, exclude, object_types, **kwargs):
     run_export_graph(
         config,
         pathlib.Path(export_path),
+        pathlib.Path(sensitive_export_path),
         export_formats,
         list(object_types),
         exclude_obj_types=exclude_obj_types,
@@ -153,6 +161,7 @@ def get_masked_swhids(logger, config: Dict[str, Any]) -> Set["ExtendedSWHID"]:
 def run_export_graph(
     config: Dict[str, Any],
     export_path: pathlib.Path,
+    sensitive_export_path: pathlib.Path,
     export_formats: List[str],
     object_types: List[str],
     exclude_obj_types: Set[str],
@@ -164,8 +173,10 @@ def run_export_graph(
     from importlib import import_module
     import logging
     import resource
+    import tempfile
     import uuid
 
+    from .fullnames import process_fullnames
     from .journalprocessor import ParallelJournalProcessor
 
     logger = logging.getLogger(__name__)
@@ -214,33 +225,49 @@ def run_export_graph(
         if fmt in export_formats
     )
 
-    # Run the exporter for each edge type.
-    parallel_exporters = {}
-    for obj_type in object_types:
-        if obj_type in exclude_obj_types:
-            continue
-        exporters = [
-            functools.partial(
-                exporter_cls[f], config=config, export_path=export_path / f
-            )
-            for f in export_formats
-        ]
-        parallel_exporters[obj_type] = ParallelJournalProcessor(
-            config,
-            masked_swhids,
-            exporters,
-            export_id,
-            obj_type,
-            node_sets_path=export_path / ".node_sets" / obj_type,
-            processes=processes,
-            offset_margin=margin,
-        )
-        # Fetch all offsets before we start exporting to minimize the time interval
-        # between the offsets of each topic
-        parallel_exporters[obj_type].get_offsets()
+    with tempfile.TemporaryDirectory() as csv_dir:
+        dup_dir = pathlib.Path(csv_dir) / "duplicates"
+        dup_dir.mkdir(parents=True, exist_ok=True)
+        dedup_dir = pathlib.Path(csv_dir) / "deduplicated"
+        dedup_dir.mkdir(parents=True, exist_ok=True)
 
-    for obj_type, parallel_exporter in parallel_exporters.items():
-        parallel_exporter.run()
+        # Run the exporter for each edge type.
+        parallel_exporters = {}
+        for obj_type in object_types:
+            if obj_type in exclude_obj_types:
+                continue
+            exporters = [
+                functools.partial(
+                    exporter_cls[f],
+                    config=config,
+                    export_path=export_path / f,
+                    sensitive_export_path=sensitive_export_path / f,
+                )
+                for f in export_formats
+            ]
+            parallel_exporters[obj_type] = ParallelJournalProcessor(
+                config,
+                masked_swhids,
+                exporters,
+                export_id,
+                obj_type,
+                node_sets_path=export_path / ".node_sets",
+                dup_dir=dup_dir,
+                dedup_dir=dedup_dir,
+                processes=processes,
+                offset_margin=margin,
+            )
+            # Fetch all offsets before we start exporting to minimize the time interval
+            # between the offsets of each topic
+            parallel_exporters[obj_type].get_offsets()
+
+        for obj_type, parallel_exporter in parallel_exporters.items():
+            parallel_exporter.run()
+
+        fullnames_export_path = sensitive_export_path / "orc" / "person"
+        fullnames_export_path.mkdir(parents=True, exist_ok=True)
+        fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
+        process_fullnames(fullnames_orc, dedup_dir)
 
 
 @graph.command("sort")

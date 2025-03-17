@@ -274,6 +274,7 @@ class ExportGraph(luigi.Task):
 
     config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
     local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    local_sensitive_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
     export_id = luigi.OptionalParameter(
         default=None,
         description="""
@@ -332,6 +333,11 @@ class ExportGraph(luigi.Task):
             # the root user in a directory we cannot write to.
             for path in self.local_export_path.iterdir():
                 shutil.rmtree(path)
+        if self.local_sensitive_export_path.exists():
+            # don't delete self.local_sensitive_export_path itself, it may be pre-created by
+            # the root user in a directory we cannot write to.
+            for path in self.local_sensitive_export_path.iterdir():
+                shutil.rmtree(path)
 
         conf = config.read(str(self.config_file))
 
@@ -339,6 +345,7 @@ class ExportGraph(luigi.Task):
         cli.run_export_graph(
             config=conf,
             export_path=self.local_export_path,
+            sensitive_export_path=self.local_sensitive_export_path,
             export_formats=[format_.name for format_ in self.formats],
             object_types=[obj_type.name.lower() for obj_type in self.object_types],
             exclude_obj_types=set(),
@@ -572,6 +579,7 @@ class LocalExport(luigi.Task):
     """
 
     local_export_path: Path = PathParameter(is_dir=True)  # type: ignore[assignment]
+    local_sensitive_export_path: Path = PathParameter(is_dir=True)  # type: ignore[assignment]
     formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
@@ -592,6 +600,7 @@ class LocalExport(luigi.Task):
             return [
                 ExportGraph(
                     local_export_path=self.local_export_path,
+                    local_sensitive_export_path=self.local_sensitive_export_path,
                     formats=self.formats,
                     object_types=self.object_types,
                 )
