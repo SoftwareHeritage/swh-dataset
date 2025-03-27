@@ -497,8 +497,17 @@ class ExportTopic(luigi.Task):
         parallel_exporters = {}
         for obj_type in self.object_types:
             # remove any leftover from a failed previous run
-            shutil.rmtree(self.local_export_path / f.name / obj_type)
-            shutil.rmtree(self.local_sensitive_export_path / f.name / obj_type)
+            for f in self.formats:
+                try:
+                    shutil.rmtree(self.local_export_path / f.name / obj_type.name)
+                except FileNotFoundError:
+                    pass
+                try:
+                    shutil.rmtree(
+                        self.local_sensitive_export_path / f.name / obj_type.name
+                    )
+                except FileNotFoundError:
+                    pass
 
             exporters = [
                 functools.partial(
@@ -526,7 +535,10 @@ class ExportTopic(luigi.Task):
             parallel_exporter.run()
 
         for obj_type in self.object_types:
-            shutil.rmtree(self.local_export_path / ".node_sets" / obj_type.name)
+            try:
+                shutil.rmtree(self.local_export_path / ".node_sets" / obj_type.name)
+            except FileNotFoundError:
+                pass
 
         for path in self._stamp_files():
             path.write_text(json.dumps({}))
@@ -560,10 +572,6 @@ class ExportPersonsTable(luigi.Task):
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
 
-    def _stamp_files(self) -> List[Path]:
-        stamp_dir = Path(self.local_export_path) / "tmp" / "stamps"
-        return [stamp_dir / "person.json"]
-
     def requires(self) -> Dict[str, luigi.Task]:
         return {
             obj_type: ExportTopic(
@@ -580,12 +588,17 @@ class ExportPersonsTable(luigi.Task):
             if obj_type in (ObjectType.revision, ObjectType.release)  # type: ignore[attr-defined]
         }
 
-    def output(self) -> List[luigi.LocalTarget]:
-        return list(map(luigi.LocalTarget, self._stamp_files()))
+    def output(self) -> Dict[str, luigi.LocalTarget]:
+        return {
+            "stamp": luigi.LocalTarget(
+                Path(self.local_export_path) / "tmp" / "stamps" / "person.json"
+            )
+        }
 
     def run(self):
         """Aggregates lists of persons exported by :class:`ExportTopic` into a single table
         with no duplicates."""
+        import json
         import uuid
 
         from .fullnames import process_fullnames
@@ -594,6 +607,9 @@ class ExportPersonsTable(luigi.Task):
         fullnames_export_path.mkdir(parents=True, exist_ok=True)
         fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
         process_fullnames(fullnames_orc, self.local_export_path / "tmp" / "dup_persons")
+
+        with self.output()["stamp"].open("w") as f:
+            json.dump({}, f)
 
 
 class ExportGraph(luigi.Task):
@@ -658,15 +674,18 @@ class ExportGraph(luigi.Task):
         kwargs = dict(
             config_file=self.config_file,
             local_export_path=self.local_export_path,
-            local_sensitive_export_path=self.local_sensitive_export_path,
             export_id=self.export_id,
-            formats=self.formats,
-            processes=self.processes,
             margin=self.margin,
             object_types=self.object_types,
         )
         dependencies: Dict[str, luigi.Task] = {
-            obj_type: ExportTopic(**kwargs) for obj_type in self.object_types
+            obj_type: ExportTopic(
+                **kwargs,
+                local_sensitive_export_path=self.local_sensitive_export_path,
+                processes=self.processes,
+                formats=self.formats,
+            )
+            for obj_type in self.object_types
         }
         dependencies["START"] = StartExport(**kwargs)
         return dependencies
@@ -679,21 +698,6 @@ class ExportGraph(luigi.Task):
         import socket
 
         from swh.core import config
-
-        # we are about to overwrite files, so remove any existing stamp
-        for output in self.output():
-            if output.exists():
-                output.remove()
-        if self.local_export_path.exists():
-            # don't delete self.local_export_path itself, it may be pre-created by
-            # the root user in a directory we cannot write to.
-            for path in self.local_export_path.iterdir():
-                shutil.rmtree(path)
-        if self.local_sensitive_export_path.exists():
-            # don't delete self.local_sensitive_export_path itself, it may be pre-created by
-            # the root user in a directory we cannot write to.
-            for path in self.local_sensitive_export_path.iterdir():
-                shutil.rmtree(path)
 
         conf = config.read(str(self.config_file))
 

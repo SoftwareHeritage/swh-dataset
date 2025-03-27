@@ -152,12 +152,22 @@ def run_export_graph(
     margin: Optional[float],
 ):
     import json
+    import logging
     import tempfile
     import uuid
 
     import luigi
 
-    from .luigi import ExportPersonsTable, ExportTopic, Format, ObjectType, StartExport
+    from .luigi import (
+        ExportGraph,
+        ExportPersonsTable,
+        ExportTopic,
+        Format,
+        ObjectType,
+        StartExport,
+    )
+
+    logger = logging.getLogger(__name__)
 
     if not export_id:
         export_id = str(uuid.uuid4())
@@ -181,7 +191,10 @@ def run_export_graph(
             margin=margin,
             object_types=parsed_object_types,
         )
-        if not task.complete():
+        if task.complete():
+            logger.info("Skipping offsets computation, already done")
+        else:
+            logger.info("Computing offsets...")
             task.run()
 
         kwargs = dict(
@@ -189,7 +202,6 @@ def run_export_graph(
             local_export_path=export_path,
             local_sensitive_export_path=sensitive_export_path,
             export_id=export_id,
-            processes=processes,
             formats=formats,
             object_types=parsed_object_types,
         )
@@ -199,13 +211,27 @@ def run_export_graph(
                 **{
                     **kwargs,
                     "object_types": [object_type],
+                    "processes": processes,
                 }
             )
-            if not task.complete():
+            if task.complete():
+                logger.info("Skipping '%s' export, already done", object_type.name)
+            else:
+                logger.info("Exporting '%s' topic...", object_type.name)
                 task.run()
 
         task = ExportPersonsTable(**kwargs)
-        if not task.complete():
+        if task.complete():
+            logger.info("Skipping persons export, already done")
+        else:
+            logger.info("Exporting persons")
+            task.run()
+
+        task = ExportGraph(**kwargs)
+        if task.complete():
+            logger.info("Skipping cleanup, already done")
+        else:
+            logger.info("Done. Cleaning up")
             task.run()
 
 
