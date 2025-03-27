@@ -9,7 +9,7 @@ from types import TracebackType
 from typing import Any, Dict, Optional, Type
 import uuid
 
-from swh.model.model import ModelObjectType
+from swh.model.model import BaseModel, ModelObjectType
 
 
 class Exporter:
@@ -42,7 +42,7 @@ class Exporter:
             self.sensitive_export_path = pathlib.Path(sensitive_export_path)
         else:
             self.sensitive_export_path = (
-                pathlib.Path(export_path).parent / f"{export_path}-sensitive"
+                self.export_path.parent / f"{self.export_path.name}-sensitive"
             )
         self.exit_stack = contextlib.ExitStack()
 
@@ -60,7 +60,7 @@ class Exporter:
     ) -> Optional[bool]:
         return self.exit_stack.__exit__(exc_type, exc_value, traceback)
 
-    def process_object(self, object_type: ModelObjectType, obj: Dict[str, Any]) -> None:
+    def process_object(self, object_type: ModelObjectType, obj: BaseModel) -> None:
         """
         Process a SWH object to export.
 
@@ -83,7 +83,7 @@ class ExporterDispatch(Exporter):
     (e.g you can override `process_origin(self, object)` to process origins.)
     """
 
-    def process_object(self, object_type: ModelObjectType, obj: Dict[str, Any]) -> None:
+    def process_object(self, object_type: ModelObjectType, obj: BaseModel) -> None:
         method_name = "process_" + object_type.name.lower()
         if hasattr(self, method_name):
             getattr(self, method_name)(obj)

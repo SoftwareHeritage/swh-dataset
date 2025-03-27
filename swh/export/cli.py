@@ -126,10 +126,11 @@ def export_graph(
             raise click.BadOptionUsage(
                 option_name="formats", message=f"{f} is not an available format."
             )
-    if sensitive_export_path is None:
-        sensitive_export_path = (
-            pathlib.Path(export_path).parent / f"{export_path}-sensitive"
-        )
+    export_path = pathlib.Path(export_path)
+    if sensitive_export_path is not None:
+        sensitive_export_path = pathlib.Path(sensitive_export_path)
+    else:
+        sensitive_export_path = export_path.parent / f"{export_path.name}-sensitive"
 
     run_export_graph(
         config,
@@ -268,10 +269,11 @@ def run_export_graph(
         for obj_type, parallel_exporter in parallel_exporters.items():
             parallel_exporter.run()
 
-        fullnames_export_path = sensitive_export_path / "orc" / "person"
-        fullnames_export_path.mkdir(parents=True, exist_ok=True)
-        fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
-        process_fullnames(fullnames_orc, dedup_dir)
+        if config["journal"].get("privileged"):
+            fullnames_export_path = sensitive_export_path / "orc" / "person"
+            fullnames_export_path.mkdir(parents=True, exist_ok=True)
+            fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
+            process_fullnames(fullnames_orc, dedup_dir)
 
 
 @graph.command("sort")

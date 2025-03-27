@@ -6,6 +6,8 @@
 import sqlite3
 import subprocess
 
+from swh.model.model import Snapshot, TargetType
+
 try:
     # Plyvel shouldn't be a hard dependency if we want to use sqlite instead
     import plyvel
@@ -129,21 +131,23 @@ class LevelDBSet:
             return True
 
 
-def remove_pull_requests(snapshot):
+def remove_pull_requests(snapshot: Snapshot) -> Snapshot:
     """
     Heuristic to filter out pull requests in snapshots: remove all branches
     that start with refs/ but do not start with refs/heads or refs/tags.
     """
     # Copy the items with list() to remove items during iteration
-    for branch_name, branch in list(snapshot["branches"].items()):
+    snapshot_dict = snapshot.to_dict()
+    for branch_name, branch in list(snapshot.branches.items()):
         original_branch_name = branch_name
-        while branch and branch.get("target_type") == "alias":
-            branch_name = branch["target"]
-            branch = snapshot["branches"].get(branch_name)
+        while branch and branch.target_type == TargetType.ALIAS:
+            branch_name = branch.target
+            branch = snapshot.branches.get(branch_name)
         if branch is None or not branch_name:
             continue
         if branch_name.startswith(b"refs/") and not (
             branch_name.startswith(b"refs/heads")
             or branch_name.startswith(b"refs/tags")
         ):
-            snapshot["branches"].pop(original_branch_name)
+            snapshot_dict["branches"].pop(original_branch_name)
+    return Snapshot.from_dict(snapshot_dict)

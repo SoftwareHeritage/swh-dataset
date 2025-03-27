@@ -26,6 +26,7 @@ from swh.model.model import (
     Revision,
     SkippedContent,
     Snapshot,
+    TimestampWithTimezone,
 )
 from swh.model.tests.swh_model_data import TEST_OBJECTS
 from swh.objstorage.factory import get_objstorage
@@ -58,7 +59,7 @@ def orc_export(messages, config=None, tmpdir=None, sensitive_tmpdir=None):
             with orc.ORCExporter(config, tmpdir, sensitive_tmpdir) as exporter:
                 for object_type, objects in messages.items():
                     for obj in objects:
-                        exporter.process_object(object_type, obj.to_dict())
+                        exporter.process_object(object_type, obj)
             yield tmpdir
 
 
@@ -143,9 +144,7 @@ def test_export_release():
             orc.hash_to_hex_or_none(obj.target),
             obj.target_type.value,
             obj.author.fullname if obj.author else None,
-            *orc.swh_date_to_tuple(
-                obj.date.to_dict() if obj.date is not None else None
-            ),
+            *orc.swh_date_to_tuple(getattr(obj, "date", None)),
             obj.raw_manifest,
         ) in output[obj_type.value]
 
@@ -158,13 +157,9 @@ def test_export_revision():
             orc.hash_to_hex_or_none(obj.id),
             obj.message,
             obj.author.fullname,
-            *orc.swh_date_to_tuple(
-                obj.date.to_dict() if obj.date is not None else None
-            ),
+            *orc.swh_date_to_tuple(getattr(obj, "date", None)),
             obj.committer.fullname,
-            *orc.swh_date_to_tuple(
-                obj.committer_date.to_dict() if obj.committer_date is not None else None
-            ),
+            *orc.swh_date_to_tuple(getattr(obj, "committer_date", None)),
             orc.hash_to_hex_or_none(obj.directory),
             obj.type.value,
             obj.raw_manifest,
@@ -226,35 +221,43 @@ def test_export_skipped_content():
 
 def test_date_to_tuple():
     ts = {"seconds": 123456, "microseconds": 1515}
-    assert orc.swh_date_to_tuple({"timestamp": ts, "offset_bytes": b"+0100"}) == (
+    assert orc.swh_date_to_tuple(
+        TimestampWithTimezone.from_dict({"timestamp": ts, "offset_bytes": b"+0100"})
+    ) == (
         (123456, 1515),
         60,
         b"+0100",
     )
 
     assert orc.swh_date_to_tuple(
-        {
-            "timestamp": ts,
-            "offset": 120,
-            "negative_utc": False,
-            "offset_bytes": b"+0100",
-        }
+        TimestampWithTimezone.from_dict(
+            {
+                "timestamp": ts,
+                "offset": 120,
+                "negative_utc": False,
+                "offset_bytes": b"+0100",
+            }
+        )
     ) == ((123456, 1515), 60, b"+0100")
 
     assert orc.swh_date_to_tuple(
-        {
-            "timestamp": ts,
-            "offset": 120,
-            "negative_utc": False,
-        }
+        TimestampWithTimezone.from_dict(
+            {
+                "timestamp": ts,
+                "offset": 120,
+                "negative_utc": False,
+            }
+        )
     ) == ((123456, 1515), 120, b"+0200")
 
     assert orc.swh_date_to_tuple(
-        {
-            "timestamp": ts,
-            "offset": 0,
-            "negative_utc": True,
-        }
+        TimestampWithTimezone.from_dict(
+            {
+                "timestamp": ts,
+                "offset": 0,
+                "negative_utc": True,
+            }
+        )
     ) == (
         (123456, 1515),
         0,

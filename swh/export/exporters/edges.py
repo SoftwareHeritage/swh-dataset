@@ -12,7 +12,16 @@ import tempfile
 from typing import Tuple
 
 from swh.model.hashutil import hash_to_hex
-from swh.model.model import Origin
+from swh.model.model import (
+    Content,
+    Directory,
+    Origin,
+    OriginVisitStatus,
+    Release,
+    Revision,
+    Snapshot,
+    TargetType,
+)
 from swh.model.swhids import ExtendedObjectType
 
 from ..exporter import ExporterDispatch
@@ -81,72 +90,73 @@ class GraphEdgesExporter(ExporterDispatch):
         edge_writer = self.get_edge_writer_for(src_type)
         edge_writer.write("{}\n".format(edge_line))
 
-    def process_origin(self, origin):
-        origin_id = Origin(url=origin["url"]).id
-        self.write_node((ExtendedObjectType.ORIGIN, origin_id))
+    def process_origin(self, origin: Origin):
+        self.write_node((ExtendedObjectType.ORIGIN, origin.id))
 
-    def process_origin_visit_status(self, visit_status):
-        origin_id = Origin(url=visit_status["origin"]).id
+    def process_origin_visit_status(self, visit_status: OriginVisitStatus):
+        origin_id = Origin(url=visit_status.origin).id
+        assert visit_status.snapshot is not None
         self.write_edge(
             (ExtendedObjectType.ORIGIN, origin_id),
-            (ExtendedObjectType.SNAPSHOT, visit_status["snapshot"]),
+            (ExtendedObjectType.SNAPSHOT, visit_status.snapshot),
         )
 
-    def process_snapshot(self, snapshot):
+    def process_snapshot(self, snapshot: Snapshot):
         if self.config.get("remove_pull_requests"):
-            remove_pull_requests(snapshot)
+            snapshot = remove_pull_requests(snapshot)
 
-        self.write_node((ExtendedObjectType.SNAPSHOT, snapshot["id"]))
-        for branch_name, branch in snapshot["branches"].items():
+        self.write_node((ExtendedObjectType.SNAPSHOT, snapshot.id))
+        for branch_name, branch in snapshot.branches.items():
             original_branch_name = branch_name
-            while branch and branch.get("target_type") == "alias":
-                branch_name = branch["target"]
-                branch = snapshot["branches"].get(branch_name)
+            while branch and branch.target_type == TargetType.ALIAS:
+                branch_name = branch.target
+                branch = snapshot.branches.get(branch_name)
             if branch is None or not branch_name:
                 continue
             self.write_edge(
-                (ExtendedObjectType.SNAPSHOT, snapshot["id"]),
-                (ExtendedObjectType[branch["target_type"].upper()], branch["target"]),
+                (ExtendedObjectType.SNAPSHOT, snapshot.id),
+                (ExtendedObjectType[branch.target_type.value.upper()], branch.target),
                 labels=[
                     base64.b64encode(original_branch_name).decode(),
                 ],
             )
 
-    def process_release(self, release):
-        self.write_node((ExtendedObjectType.RELEASE, release["id"]))
+    def process_release(self, release: Release):
+        self.write_node((ExtendedObjectType.RELEASE, release.id))
+        assert release.target is not None
         self.write_edge(
-            (ExtendedObjectType.RELEASE, release["id"]),
-            (ExtendedObjectType[release["target_type"].upper()], release["target"]),
+            (ExtendedObjectType.RELEASE, release.id),
+            (ExtendedObjectType[release.target_type.name.upper()], release.target),
         )
 
-    def process_revision(self, revision):
-        self.write_node((ExtendedObjectType.REVISION, revision["id"]))
+    def process_revision(self, revision: Revision):
+        self.write_node((ExtendedObjectType.REVISION, revision.id))
         self.write_edge(
-            (ExtendedObjectType.REVISION, revision["id"]),
-            (ExtendedObjectType.DIRECTORY, revision["directory"]),
+            (ExtendedObjectType.REVISION, revision.id),
+            (ExtendedObjectType.DIRECTORY, revision.directory),
         )
-        for parent in revision["parents"]:
+        for parent in revision.parents:
             self.write_edge(
-                (ExtendedObjectType.REVISION, revision["id"]),
+                (ExtendedObjectType.REVISION, revision.id),
                 (ExtendedObjectType.REVISION, parent),
             )
 
-    def process_directory(self, directory):
-        self.write_node((ExtendedObjectType.DIRECTORY, directory["id"]))
-        for entry in directory["entries"]:
+    def process_directory(self, directory: Directory):
+        self.write_node((ExtendedObjectType.DIRECTORY, directory.id))
+        for entry in directory.entries:
             entry_type_mapping = {
                 "file": ExtendedObjectType.CONTENT,
                 "dir": ExtendedObjectType.DIRECTORY,
                 "rev": ExtendedObjectType.REVISION,
             }
             self.write_edge(
-                (ExtendedObjectType.DIRECTORY, directory["id"]),
-                (entry_type_mapping[entry["type"]], entry["target"]),
-                labels=[base64.b64encode(entry["name"]).decode(), str(entry["perms"])],
+                (ExtendedObjectType.DIRECTORY, directory.id),
+                (entry_type_mapping[entry.type], entry.target),
+                labels=[base64.b64encode(entry.name).decode(), str(entry.perms)],
             )
 
-    def process_content(self, content):
-        self.write_node((ExtendedObjectType.CONTENT, content["sha1_git"]))
+    def process_content(self, content: Content):
+        self.write_node((ExtendedObjectType.CONTENT, content.sha1_git))
 
 
 def sort_graph_nodes(export_path, config):

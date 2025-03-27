@@ -5,6 +5,7 @@
 
 from base64 import b64encode
 import collections
+from datetime import datetime
 import hashlib
 from typing import Tuple
 from unittest.mock import Mock, call
@@ -12,6 +13,7 @@ from unittest.mock import Mock, call
 import pytest
 
 from swh.export.exporters.edges import GraphEdgesExporter, sort_graph_nodes
+from swh.export.journalprocessor import _turn_message_into_objects
 from swh.export.utils import ZSTFile
 from swh.model.hashutil import MultiHash, hash_to_bytes
 from swh.model.model import ModelObjectType
@@ -50,7 +52,7 @@ TEST_RELEASE = {
         "offset": 120,
         "negative_utc": False,
     },
-    "author": {"author": {"fullname": b"foo", "name": b"foo", "email": b""}},
+    "author": {"fullname": b"foo", "name": b"foo", "email": b""},
     "target_type": "revision",
     "target": b"\x04" * 20,
     "message": b"foo",
@@ -63,7 +65,7 @@ TEST_ORIGIN_2 = {"url": "https://somewhere.org/den/fox/2"}
 TEST_ORIGIN_VISIT_STATUS = {
     "origin": TEST_ORIGIN["url"],
     "visit": 1,
-    "date": "2013-05-07 04:20:39.369271+00:00",
+    "date": datetime.fromisoformat("2013-05-07 04:20:39.369271+00:00"),
     "snapshot": None,  # TODO
     "status": "ongoing",  # TODO
     "metadata": {"foo": "bar"},
@@ -87,7 +89,9 @@ class FakeDiskSet(set):
 
 @pytest.fixture
 def exporter():
-    def wrapped(messages, config=None) -> Tuple[Mock, Mock]:
+    def wrapped(
+        messages: dict[ModelObjectType, list[dict]], config=None
+    ) -> Tuple[Mock, Mock]:
         if config is None:
             config = {}
         exporter = GraphEdgesExporter(config, "/dummy_path", "/dummy_sensitive_path")
@@ -97,8 +101,10 @@ def exporter():
             node_writer,
             edge_writer,
         )
-        for object_type, objects in messages.items():
-            for obj in objects:
+        for object_type, message_list in messages.items():
+            for message in message_list:
+                obj = _turn_message_into_objects(object_type.value, (b"", message))[1]
+                assert obj is not None
                 exporter.process_object(object_type, obj)
         return node_writer.write, edge_writer.write
 

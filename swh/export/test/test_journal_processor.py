@@ -7,13 +7,12 @@ import functools
 import gc
 import multiprocessing
 from multiprocessing.managers import ListProxy
-from typing import Any, Dict, Sequence, Tuple
+from typing import Sequence, Tuple
 
 import pytest
 
 from swh.export.exporter import Exporter
 from swh.export.journalprocessor import ParallelJournalProcessor
-from swh.journal.serializers import kafka_to_value, value_to_kafka
 from swh.journal.writer import get_journal_writer
 from swh.model import model
 from swh.model.tests import swh_model_data
@@ -62,31 +61,16 @@ class ListExporter(Exporter):
         super().__init__(*args, **kwargs)
 
     def process_object(
-        self, object_type: model.ModelObjectType, obj: Dict[str, Any]
+        self, object_type: model.ModelObjectType, obj: model.BaseModel
     ) -> None:
         self._objects.append((object_type, obj))
 
 
 def assert_exported_objects(
-    exported_objects: Sequence[Tuple[str, Dict]],
+    exported_objects: Sequence[Tuple[str, model.BaseModel]],
     expected_objects: Sequence[model.BaseModel],
 ) -> None:
-    def key(obj):
-        """bare minimum to get a deterministic order"""
-        return (obj[0],) + tuple(
-            obj[1].get(k) for k in ("id", "url", "origin", "visit", "date")
-        )
-
-    assert sorted(exported_objects, key=key) == sorted(
-        (
-            (
-                obj.object_type,
-                kafka_to_value(value_to_kafka(obj.to_dict())),
-            )  # normalize
-            for obj in expected_objects
-        ),
-        key=key,
-    )
+    assert set(obj[1] for obj in exported_objects) == set(expected_objects)
 
 
 def test_parallel_journal_processor(

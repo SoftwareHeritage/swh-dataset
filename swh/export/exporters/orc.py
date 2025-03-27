@@ -9,7 +9,7 @@ from importlib.metadata import version
 import logging
 import math
 from types import TracebackType
-from typing import Any, Callable, Optional, Tuple, Type, cast
+from typing import Any, Callable, Optional, Tuple, Type, Union, cast
 
 from pyorc import (
     BigInt,
@@ -26,7 +26,18 @@ from pyorc import (
 from pyorc.converters import ORCConverter
 
 from swh.model.hashutil import hash_to_hex
-from swh.model.model import TimestampWithTimezone
+from swh.model.model import (
+    Content,
+    Directory,
+    Origin,
+    OriginVisit,
+    OriginVisitStatus,
+    Release,
+    Revision,
+    SkippedContent,
+    Snapshot,
+    TimestampWithTimezone,
+)
 
 from ..exporter import ExporterDispatch
 from ..relational import BLOOM_FILTER_COLUMNS, MAIN_TABLES, TABLES
@@ -71,21 +82,15 @@ def hash_to_hex_or_none(hash):
     return hash_to_hex(hash) if hash is not None else None
 
 
-def swh_date_to_tuple(obj):
-    if obj is None or obj["timestamp"] is None:
+def swh_date_to_tuple(
+    obj: Optional[TimestampWithTimezone],
+) -> Union[Tuple[None, None, None], Tuple[Tuple[int, int], int, bytes]]:
+    if obj is None or obj.timestamp is None:
         return (None, None, None)
-    offset_bytes = obj.get("offset_bytes")
-    if offset_bytes is None:
-        offset = obj.get("offset", 0)
-        negative = offset < 0 or obj.get("negative_utc", False)
-        (hours, minutes) = divmod(abs(offset), 60)
-        offset_bytes = f"{'-' if negative else '+'}{hours:02}{minutes:02}".encode()
-    else:
-        offset = TimestampWithTimezone._parse_offset_bytes(offset_bytes)
     return (
-        (obj["timestamp"]["seconds"], obj["timestamp"]["microseconds"]),
-        offset,
-        offset_bytes,
+        (obj.timestamp.seconds, obj.timestamp.microseconds),
+        obj.offset_minutes(),
+        obj.offset_bytes,
     )
 
 
@@ -120,7 +125,7 @@ class SWHTimestampConverter:
     def to_orc(
         obj: Optional[Tuple[int, int]],
         timezone: Any,
-    ) -> Optional[Tuple[int, int]]:
+    ) -> Optional[Tuple[int, Optional[int]]]:
         if obj is None:
             return None
         return (obj[0], obj[1] * 1000 if obj[1] is not None else None)
@@ -239,44 +244,45 @@ class ORCExporter(ExporterDispatch):
 
         return self.writers[table_name]
 
-    def process_origin(self, origin):
+    def process_origin(self, origin: Origin):
         origin_writer = self.get_writer_for("origin")
         origin_writer.write(
             (
-                hashlib.sha1(origin["url"].encode()).hexdigest(),
-                origin["url"],
+                hashlib.sha1(origin.url.encode()).hexdigest(),
+                origin.url,
             )
         )
 
-    def process_origin_visit(self, visit):
+    def process_origin_visit(self, visit: OriginVisit):
         origin_visit_writer = self.get_writer_for("origin_visit")
         origin_visit_writer.write(
             (
-                visit["origin"],
-                visit["visit"],
-                datetime_to_tuple(visit["date"]),
-                visit["type"],
+                visit.origin,
+                visit.visit,
+                datetime_to_tuple(visit.date),
+                visit.type,
             )
         )
 
-    def process_origin_visit_status(self, visit_status):
+    def process_origin_visit_status(self, visit_status: OriginVisitStatus):
         origin_visit_status_writer = self.get_writer_for("origin_visit_status")
         origin_visit_status_writer.write(
             (
-                visit_status["origin"],
-                visit_status["visit"],
-                datetime_to_tuple(visit_status["date"]),
-                visit_status["status"],
-                hash_to_hex_or_none(visit_status["snapshot"]),
-                visit_status.get("type"),  # missing from old messages
+                visit_status.origin,
+                visit_status.visit,
+                datetime_to_tuple(visit_status.date),
+                visit_status.status,
+                hash_to_hex_or_none(visit_status.snapshot),
+                # missing from old messages
+                visit_status.type if hasattr(visit_status, "type") else None,
             )
         )
 
-    def process_snapshot(self, snapshot):
+    def process_snapshot(self, snapshot: Snapshot):
         if self.config.get("orc", {}).get("remove_pull_requests"):
-            remove_pull_requests(snapshot)
+            snapshot = remove_pull_requests(snapshot)
         snapshot_writer = self.get_writer_for("snapshot")
-        snapshot_writer.write((hash_to_hex_or_none(snapshot["id"]),))
+        snapshot_writer.write((hash_to_hex_or_none(snapshot.id),))
 
         # we want to store branches in the same directory as snapshot objects,
         # and have both files have the same UUID.
@@ -284,46 +290,50 @@ class ORCExporter(ExporterDispatch):
             "snapshot_branch",
             unique_id=self.uuids["snapshot"],
         )
-        for branch_name, branch in snapshot["branches"].items():
+        for branch_name, branch in snapshot.branches.items():
             if branch is None:
                 continue
             snapshot_branch_writer.write(
                 (
-                    hash_to_hex_or_none(snapshot["id"]),
+                    hash_to_hex_or_none(snapshot.id),
                     branch_name,
-                    hash_to_hex_or_none(branch["target"]),
-                    branch["target_type"],
+                    hash_to_hex_or_none(branch.target),
+                    branch.target_type.value,
                 )
             )
 
-    def process_release(self, release):
+    def process_release(self, release: Release):
         release_writer = self.get_writer_for("release")
         release_writer.write(
             (
-                hash_to_hex_or_none(release["id"]),
-                release["name"],
-                release["message"],
-                hash_to_hex_or_none(release["target"]),
-                release["target_type"],
-                (release.get("author") or {}).get("fullname"),
-                *swh_date_to_tuple(release["date"]),
-                release.get("raw_manifest"),
+                hash_to_hex_or_none(release.id),
+                release.name,
+                release.message,
+                hash_to_hex_or_none(release.target),
+                release.target_type.value,
+                (release.author.fullname if release.author is not None else None),
+                *swh_date_to_tuple(release.date),
+                release.raw_manifest,
             )
         )
 
-    def process_revision(self, revision):
+    def process_revision(self, revision: Revision):
         release_writer = self.get_writer_for("revision")
         release_writer.write(
             (
-                hash_to_hex_or_none(revision["id"]),
-                revision["message"],
-                revision["author"]["fullname"],
-                *swh_date_to_tuple(revision["date"]),
-                revision["committer"]["fullname"],
-                *swh_date_to_tuple(revision["committer_date"]),
-                hash_to_hex_or_none(revision["directory"]),
-                revision["type"],
-                revision.get("raw_manifest"),
+                hash_to_hex_or_none(revision.id),
+                revision.message,
+                (revision.author.fullname if revision.author is not None else None),
+                *swh_date_to_tuple(revision.date),
+                (
+                    revision.committer.fullname
+                    if revision.committer is not None
+                    else None
+                ),
+                *swh_date_to_tuple(revision.committer_date),
+                hash_to_hex_or_none(revision.directory),
+                revision.type.value,
+                revision.raw_manifest,
             )
         )
 
@@ -331,10 +341,10 @@ class ORCExporter(ExporterDispatch):
             "revision_history",
             unique_id=self.uuids["revision"],
         )
-        for i, parent_id in enumerate(revision["parents"]):
+        for i, parent_id in enumerate(revision.parents):
             revision_history_writer.write(
                 (
-                    hash_to_hex_or_none(revision["id"]),
+                    hash_to_hex_or_none(revision.id),
                     hash_to_hex_or_none(parent_id),
                     i,
                 )
@@ -344,17 +354,15 @@ class ORCExporter(ExporterDispatch):
             "revision_extra_headers",
             unique_id=self.uuids["revision"],
         )
-        for key, value in revision["extra_headers"]:
-            revision_header_writer.write(
-                (hash_to_hex_or_none(revision["id"]), key, value)
-            )
+        for key, value in revision.extra_headers:
+            revision_header_writer.write((hash_to_hex_or_none(revision.id), key, value))
 
-    def process_directory(self, directory):
+    def process_directory(self, directory: Directory):
         directory_writer = self.get_writer_for("directory")
         directory_writer.write(
             (
-                hash_to_hex_or_none(directory["id"]),
-                directory.get("raw_manifest"),
+                hash_to_hex_or_none(directory.id),
+                directory.raw_manifest,
             )
         )
 
@@ -362,48 +370,51 @@ class ORCExporter(ExporterDispatch):
             "directory_entry",
             unique_id=self.uuids["directory"],
         )
-        for entry in directory["entries"]:
+        for entry in directory.entries:
             directory_entry_writer.write(
                 (
-                    hash_to_hex_or_none(directory["id"]),
-                    entry["name"],
-                    entry["type"],
-                    hash_to_hex_or_none(entry["target"]),
-                    entry["perms"],
+                    hash_to_hex_or_none(directory.id),
+                    entry.name,
+                    entry.type,
+                    hash_to_hex_or_none(entry.target),
+                    entry.perms,
                 )
             )
 
-    def process_content(self, content):
+    def process_content(self, content: Content):
         content_writer = self.get_writer_for("content")
         data = None
         if self.with_data:
             try:
-                data = self.objstorage.get(content)
+                data = self.objstorage.get(content.hashes())
             except ObjNotFoundError:
-                logger.warning("Missing object %s", hash_to_hex(content[ID_HASH_ALGO]))
+                # WARNING: I'm not sure this is right
+                logger.warning(
+                    "Missing object %s", hash_to_hex(content.get_hash(ID_HASH_ALGO))
+                )
 
         content_writer.write(
             (
-                hash_to_hex_or_none(content["sha1"]),
-                hash_to_hex_or_none(content["sha1_git"]),
-                hash_to_hex_or_none(content["sha256"]),
-                hash_to_hex_or_none(content["blake2s256"]),
-                content["length"],
-                content["status"],
+                hash_to_hex_or_none(content.sha1),
+                hash_to_hex_or_none(content.sha1_git),
+                hash_to_hex_or_none(content.sha256),
+                hash_to_hex_or_none(content.blake2s256),
+                content.length,
+                content.status,
                 data,
             )
         )
 
-    def process_skipped_content(self, skipped_content):
+    def process_skipped_content(self, skipped_content: SkippedContent):
         skipped_content_writer = self.get_writer_for("skipped_content")
         skipped_content_writer.write(
             (
-                hash_to_hex_or_none(skipped_content["sha1"]),
-                hash_to_hex_or_none(skipped_content["sha1_git"]),
-                hash_to_hex_or_none(skipped_content["sha256"]),
-                hash_to_hex_or_none(skipped_content["blake2s256"]),
-                skipped_content["length"],
-                skipped_content["status"],
-                skipped_content["reason"],
+                hash_to_hex_or_none(skipped_content.sha1),
+                hash_to_hex_or_none(skipped_content.sha1_git),
+                hash_to_hex_or_none(skipped_content.sha256),
+                hash_to_hex_or_none(skipped_content.blake2s256),
+                skipped_content.length,
+                skipped_content.status,
+                skipped_content.reason,
             )
         )

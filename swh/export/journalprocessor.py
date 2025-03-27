@@ -15,6 +15,7 @@ import logging
 import multiprocessing
 import os
 from pathlib import Path
+import queue
 import subprocess
 import time
 from typing import (
@@ -35,8 +36,17 @@ import tqdm
 
 from swh.journal.client import JournalClient
 from swh.journal.serializers import kafka_to_value
-from swh.model.model import ModelObjectType, Origin
-from swh.model.swhids import ExtendedObjectType, ExtendedSWHID
+from swh.model.model import (
+    SWH_MODEL_OBJECT_TYPES,
+    BaseModel,
+    Directory,
+    DirectoryEntry,
+    ModelObjectType,
+    Person,
+    Timestamp,
+    TimestampOverflowException,
+)
+from swh.model.swhids import ExtendedSWHID
 from swh.storage.fixer import fix_objects
 
 from .exporter import Exporter
@@ -86,6 +96,7 @@ class JournalClientOffsetRanges(JournalClient):
         self.topic_name = self.subscription[0]
         time.sleep(0.1)  # https://github.com/edenhill/librdkafka/issues/1983
         logger.debug("Changing assignment to %s", str(self.assignment))
+        assert isinstance(self.topic_name, str)
         self.consumer.assign(
             [
                 TopicPartition(
@@ -124,6 +135,7 @@ class JournalClientOffsetRanges(JournalClient):
         if offset < 0:  # Uninitialized partition offset
             return
 
+        assert self.count is not None
         if self.count % self.refresh_every == 0:
             self.progress_queue.put({partition_id: offset})
 
@@ -152,6 +164,7 @@ class JournalClientOffsetRanges(JournalClient):
         will need the partition ID later.
         """
         self.handle_offset(message)
+        assert isinstance(self.count, int)
         self.count += 1
         return message
 
@@ -288,6 +301,7 @@ class ParallelJournalProcessor:
                     # do only process the partition is there are actually new
                     # messages to process (partition not empty and committed
                     # offset is behind the high watermark).
+                    assert self.offsets is not None
                     self.offsets[partition_id] = (lo, hi)
 
             logger.debug(
@@ -345,7 +359,7 @@ class ParallelJournalProcessor:
                     f.result()
                     raise exc
 
-    def progress_worker(self, queue=None) -> None:
+    def progress_worker(self, queue: queue.Queue) -> None:
         """
         An additional worker process that reports the current progress of the
         export between all the different parallel consumers and across all the
@@ -518,50 +532,43 @@ class JournalProcessorWorker:
         Process the incoming Kafka messages.
         """
         for object_type, message_list in messages.items():
-            swhid_type = getattr(ExtendedObjectType, object_type.upper(), None)
-            if object_type == "origin":
-                make_swhids = lambda obj: {Origin(url=obj["url"]).swhid()}  # noqa
-            elif object_type in ("origin_visit", "origin_visit_status"):
-                make_swhids = lambda obj: {Origin(url=obj["origin"]).swhid()}  # noqa
-            elif object_type == "extid":
-                make_swhids = lambda obj: {  # noqa
-                    ExtendedSWHID.from_string(obj["target"])
-                }
-            elif object_type == "raw_extrinsic_metadata":
-                make_swhids = lambda obj: {  # noqa
-                    ExtendedSWHID.from_string(obj["target"]),
-                    ExtendedSWHID(object_type=swhid_type, object_id=obj["id"]),
-                }
-            elif object_type in ("directory", "revision", "release", "snapshot"):
-                make_swhids = lambda obj: {  # noqa
-                    ExtendedSWHID(object_type=swhid_type, object_id=obj["id"])
-                }
-            elif object_type in ("content", "skipped_content"):
-                swhid_type = ExtendedObjectType.CONTENT
-                make_swhids = lambda obj: (  # noqa
-                    {ExtendedSWHID(object_type=swhid_type, object_id=obj["sha1_git"])}
-                    if obj.get("sha1_git")
-                    else set()
-                )
-            else:
-                raise NotImplementedError(f"Unsupported object type {object_type}")
-
-            fixed_objects_by_partition: Dict[int, List[Tuple[Any, dict]]] = (
+            fixed_messages_by_partition: Dict[int, List[Tuple[Any, dict]]] = (
                 collections.defaultdict(list)
             )
             for message in message_list:
-                fixed_objects_by_partition[message.partition()].extend(
+                fixed_messages_by_partition[message.partition()].extend(
                     zip(
                         [message.key()],
                         fix_objects(object_type, [kafka_to_value(message.value())]),
                     )
                 )
-            for partition, objects in fixed_objects_by_partition.items():
-                for key, obj in objects:
-                    if make_swhids(obj).isdisjoint(self.masked_swhids):
-                        self.process_message(object_type, partition, key, obj)
 
-    def process_message(self, object_type: str, partition: int, obj_key, obj) -> None:
+            for partition, messages_ in fixed_messages_by_partition.items():
+                objects = [
+                    _turn_message_into_objects(object_type, message)
+                    for message in messages_
+                ]
+                for key, obj in objects:
+                    if obj is None:
+                        continue
+                    if hasattr(obj, "swhid"):
+                        swhid = obj.swhid()
+                        extended_swhid = (
+                            swhid.to_extended()
+                            if hasattr(swhid, "to_extended")
+                            else swhid
+                        )
+                    elif hasattr(obj, "origin_swhid"):
+                        extended_swhid = obj.origin_swhid()
+                    else:
+                        continue
+                    if extended_swhid in self.masked_swhids:
+                        continue
+                    self.process_message(object_type, partition, key, obj)
+
+    def process_message(
+        self, object_type: str, partition: int, obj_key: bytes, obj: BaseModel
+    ) -> None:
         """
         Process a single incoming Kafka message if the object it refers to has
         not been processed yet.
@@ -569,10 +576,10 @@ class JournalProcessorWorker:
         It uses an on-disk set to make sure that each object is only ever
         processed once.
         """
-        if obj.get("author") is not None:
-            self._add_person(obj["author"])
-        if obj.get("committer") is not None:
-            self._add_person(obj["committer"])
+        if getattr(obj, "author", None) is not None:
+            self._add_person(obj.author)  # type: ignore
+        if getattr(obj, "committer", None) is not None:
+            self._add_person(obj.committer)  # type: ignore
 
         node_set = self.get_node_set_for_object(object_type, partition, obj_key)
         if not node_set.add(obj_key):
@@ -581,6 +588,9 @@ class JournalProcessorWorker:
 
         for exporter in self.exporters:
             try:
+                if self.config["journal"].get("privileged"):
+                    anon_obj = obj.anonymize()
+                    obj = anon_obj if anon_obj is not None else obj
                 exporter.process_object(ModelObjectType(object_type), obj)
             except Exception:
                 logger.exception(
@@ -589,13 +599,58 @@ class JournalProcessorWorker:
                     str(obj),
                 )
 
-    def _add_person(self, person):
-        assert "fullname" in person, f"No fullname for person {person}"
+    def _add_person(self, person: Person):
         self.persons_writer.writerow(
             (
-                base64.b64encode(person["fullname"]).decode(),
-                base64.b64encode(
-                    (hashlib.sha256(person["fullname"])).digest()
-                ).decode(),
+                base64.b64encode(person.fullname).decode(),
+                base64.b64encode((hashlib.sha256(person.fullname)).digest()).decode(),
             )
         )
+
+
+def _turn_message_into_objects(
+    object_type: str,
+    msg: tuple[bytes, dict],
+) -> Tuple[bytes, Optional[BaseModel]]:
+    (key, d) = msg
+    cls = SWH_MODEL_OBJECT_TYPES[object_type]
+    if object_type == "directory":
+        assert set(d) <= {
+            "id",
+            "entries",
+            "raw_manifest",
+        }, f"Unexpected keys in directory dict: {set(d)}"
+        try:
+            entries = tuple(DirectoryEntry(**entry) for entry in d["entries"])
+        except ValueError:
+            if any(b"/" in entry["name"] for entry in d["entries"]):
+                # https://gitlab.softwareheritage.org/swh/meta/-/issues/4644
+                logger.error("Invalid directory entry name in %r", d)
+                return (key, None)
+            else:
+                raise
+        return (
+            key,
+            Directory.from_possibly_duplicated_entries(
+                id=d["id"],
+                entries=entries,
+                raw_manifest=d.get("raw_manifest"),
+            )[1],
+        )
+
+    else:
+        try:
+            return (key, cls.from_dict(d))
+        except TimestampOverflowException:
+            # find which timestamp is overflowing, and reset it to epoch
+            if object_type in ("revision", "release") and d.get("date"):
+                try:
+                    Timestamp.from_dict(d["date"]["timestamp"])
+                except TimestampOverflowException:
+                    d["date"]["timestamp"] = {"seconds": 0, "microseconds": 0}
+            if object_type == "revision" and d.get("committer_date"):
+                try:
+                    Timestamp.from_dict(d["committer_date"]["timestamp"])
+                except TimestampOverflowException:
+                    d["committer_date"]["timestamp"] = {"seconds": 0, "microseconds": 0}
+            return (key, cls.from_dict(d))
