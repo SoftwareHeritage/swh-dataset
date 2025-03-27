@@ -2,6 +2,7 @@ boto3-stubs
 botocore-stubs
 pytest >= 8.1
 swh.core[testing]
+swh.journal[pytest]
 types-confluent-kafka
 types-python-dateutil
 types-pyyaml
