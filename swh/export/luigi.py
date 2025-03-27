@@ -122,14 +122,29 @@ for readability; but `they can be used interchangeably <https://luigi.readthedoc
 # WARNING: do not import unnecessary things here to keep cli startup time under
 # control
 import enum
+import logging
 from pathlib import Path
 import shutil
-from typing import Hashable, Iterator, List, Set, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Hashable,
+    Iterator,
+    List,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 import luigi
 
 from swh.export import cli
 from swh.export.relational import MAIN_TABLES
+
+if TYPE_CHECKING:
+    from swh.model.swhids import ExtendedSWHID
 
 ObjectType = enum.Enum(  # type: ignore[misc]
     "ObjectType", [obj_type for obj_type in MAIN_TABLES.keys()]
@@ -257,6 +272,330 @@ def _export_metadata_has_object_types(
     }
 
 
+def get_masked_swhids(logger, config: Dict[str, Any]) -> Set["ExtendedSWHID"]:
+    """Fetches the masking database and returns the list of all non-visible SWHIDs"""
+    import tqdm
+
+    from swh.storage.proxies.masking.db import MaskingQuery
+
+    if config["masking_db"] is None:
+        logger.warning("Exporting dataset without masking.")
+        return set()
+    masking_query = MaskingQuery.connect(config["masking_db"])
+    return {
+        swhid
+        for (swhid, statuses) in tqdm.tqdm(
+            masking_query.iter_masked_swhids(),
+            desc="Listing masked SWHIDs",
+            unit_scale=True,
+        )
+    }
+
+
+class StartExport(luigi.Task):
+    """Pseudo-task that computes the journal offsets from and to which objects should
+    be exported"""
+
+    config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
+    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    export_id = luigi.OptionalParameter(
+        description="""
+        Unique ID of the export run. This is appended to the kafka
+        group_id config file option. If group_id is not set in the
+        'journal' section of the config file, defaults to 'swh-export-export-'.
+        """,
+    )
+    margin: float = FractionalFloatParameter(  # type: ignore[assignment]
+        default=1.0,
+        description="""
+        Offset margin to start consuming from. E.g. is set to '0.95',
+        consumers will start at 95%% of the last committed offset;
+        in other words, start earlier than last committed position.
+        """,
+    )
+    object_types = luigi.EnumListParameter(
+        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+    )
+
+    def output(self) -> Dict[str, luigi.LocalTarget]:
+        return {
+            "stamp": luigi.LocalTarget(
+                self.local_export_path / "tmp" / "stamps" / "START.json"
+            ),
+            "offsets": luigi.LocalTarget(
+                self.local_export_path / "tmp" / "offsets.json"
+            ),
+        }
+
+    def run(self) -> None:
+        """Writes the offsets file"""
+        import datetime
+        import json
+
+        from .journalprocessor import ParallelJournalProcessor
+
+        with open(self.config_file) as f:
+            config = json.load(f)
+
+        logger = logging.getLogger(__name__)
+
+        masked_swhids = get_masked_swhids(logger, config)
+
+        # {obj_type: {partition: (low, high)}
+        offsets: Dict[str, Dict[int, Tuple[int, int]]] = {}
+        for obj_type in self.object_types:
+            journal_processor = ParallelJournalProcessor(
+                config,
+                masked_swhids,
+                [],  # exporters, not needed yet
+                self.export_id,
+                obj_type.name,
+                node_sets_path=self.local_export_path / ".node_sets",
+                persons_dir=self.local_export_path / "unused",  # placeholder
+                processes=4,  # very quick, no need for more
+            )
+            journal_processor.get_offsets()
+            assert journal_processor.offsets is not None
+            offsets[obj_type.name] = journal_processor.offsets
+
+        (self.local_export_path / "tmp" / "dup_persons").mkdir(
+            parents=True, exist_ok=True
+        )
+
+        with self.output()["offsets"].open("w") as f:
+            json.dump(offsets, f)
+        with self.output()["stamp"].open("w") as f:
+            json.dump(
+                {
+                    "start_date": datetime.datetime.now(
+                        tz=datetime.timezone.utc
+                    ).isoformat(),
+                    "margin": self.margin,
+                    "object_types": [obj_type.name for obj_type in self.object_types],
+                },
+                f,
+            )
+
+
+class ExportTopic(luigi.Task):
+    """Exports a single topic, given already computed offsets in the journal."""
+
+    config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
+    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    local_sensitive_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    export_id = luigi.OptionalParameter(
+        description="""
+        Unique ID of the export run. This is appended to the kafka
+        group_id config file option. If group_id is not set in the
+        'journal' section of the config file, defaults to 'swh-export-export-'.
+        """,
+    )
+    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
+    processes = luigi.IntParameter(default=1, significant=False)
+    margin: float = FractionalFloatParameter(  # type: ignore[assignment]
+        default=1.0,
+        description="""
+        Offset margin to start consuming from. E.g. is set to '0.95',
+        consumers will start at 95%% of the last committed offset;
+        in other words, start earlier than last committed position.
+        """,
+    )
+    object_types = luigi.EnumListParameter(
+        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+    )
+
+    def _stamp_files(self) -> List[Path]:
+        stamp_dir = Path(self.local_export_path) / "tmp" / "stamps"
+        return [stamp_dir / f"{obj_type}.json" for obj_type in self.object_types]
+
+    def requires(self) -> Dict[str, luigi.Task]:
+        return {
+            "start": StartExport(
+                config_file=self.config_file,
+                local_export_path=self.local_export_path,
+                export_id=self.export_id,
+                margin=self.margin,
+                object_types=self.object_types,
+            )
+        }
+
+    def output(self) -> List[luigi.LocalTarget]:
+        return list(map(luigi.LocalTarget, self._stamp_files()))
+
+    def _setrlimit(self, nb_shards):
+        import resource
+
+        logger = logging.getLogger(__name__)
+
+        # ParallelJournalProcessor opens 256 LevelDBs in total. Depending on the number of
+        # processes, this can exceed the maximum number of file descriptors (soft limit
+        # defaults to 1024 on Debian), so let's increase it.
+        (soft, hard) = resource.getrlimit(resource.RLIMIT_NOFILE)
+        open_fds_per_shard = 61  # estimated with plyvel==1.3.0 and libleveldb1d==1.22-3
+        spare = 1024  # for everything other than LevelDB
+        want_fd = nb_shards * open_fds_per_shard + spare
+        if hard < want_fd:
+            logger.warning(
+                "Hard limit of open file descriptors (%d) is lower than ideal (%d)",
+                hard,
+                want_fd,
+            )
+        if soft < want_fd:
+            want_fd = min(want_fd, hard)
+            logger.info(
+                "Soft limit of open file descriptors (%d) is too low, increasing to %d",
+                soft,
+                want_fd,
+            )
+            resource.setrlimit(resource.RLIMIT_NOFILE, (want_fd, hard))
+
+    def run(self) -> None:
+        """Consumes all of the ``self.OBJECT_TYPE`` topic into
+        ``self.export_path / self.OBJECT_TYPE``."""
+        import functools
+        from importlib import import_module
+        import json
+        import shutil
+
+        from .journalprocessor import ParallelJournalProcessor
+
+        with open(self.config_file) as f:
+            config = json.load(f)
+        logger = logging.getLogger(__name__)
+
+        masked_swhids = get_masked_swhids(logger, config)
+
+        with self.input()["start"]["offsets"].open("r") as f:
+            # {obj_type: {partition: (low, high)}
+            offsets: Dict[ObjectType, Dict[int, Tuple[int, int]]] = {
+                ObjectType[obj_type]: {
+                    int(partition): (low, high)
+                    for (partition, (low, high)) in partition_offsets.items()
+                }
+                for obj_type, partition_offsets in json.load(f).items()
+            }
+
+        self._setrlimit(
+            sum(
+                len(topic_offsets)
+                for (obj_type, topic_offsets) in offsets.items()
+                if obj_type in self.object_types
+            )
+        )
+
+        def importcls(clspath):
+            mod, cls = clspath.split(":")
+            m = import_module(mod)
+            return getattr(m, cls)
+
+        exporter_cls = dict(
+            (fmt, importcls(clspath))
+            for (fmt, clspath) in cli.AVAILABLE_EXPORTERS.items()
+            if Format[fmt] in self.formats
+        )
+
+        parallel_exporters = {}
+        for obj_type in self.object_types:
+            # remove any leftover from a failed previous run
+            shutil.rmtree(self.local_export_path / f.name / obj_type)
+            shutil.rmtree(self.local_sensitive_export_path / f.name / obj_type)
+
+            exporters = [
+                functools.partial(
+                    exporter_cls[f.name],
+                    config=config,
+                    export_path=self.local_export_path / f.name,
+                    sensitive_export_path=self.local_sensitive_export_path / f.name,
+                )
+                for f in self.formats
+            ]
+            journal_processor = ParallelJournalProcessor(
+                config,
+                masked_swhids,
+                exporters,
+                self.export_id,
+                obj_type.name,
+                node_sets_path=self.local_export_path / ".node_sets",
+                persons_dir=self.local_export_path / "tmp" / "dup_persons",
+                processes=self.processes,
+            )
+            journal_processor.offsets = offsets[obj_type]
+            parallel_exporters[obj_type] = journal_processor
+
+        for obj_type, parallel_exporter in parallel_exporters.items():
+            parallel_exporter.run()
+
+        for obj_type in self.object_types:
+            shutil.rmtree(self.local_export_path / ".node_sets" / obj_type.name)
+
+        for path in self._stamp_files():
+            path.write_text(json.dumps({}))
+
+
+class ExportPersonsTable(luigi.Task):
+    """Aggregates lists of persons exported by :class:`ExportTopic` into a single table
+    with no duplicates."""
+
+    config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
+    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    local_sensitive_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    export_id = luigi.OptionalParameter(
+        description="""
+        Unique ID of the export run. This is appended to the kafka
+        group_id config file option. If group_id is not set in the
+        'journal' section of the config file, defaults to 'swh-export-export-'.
+        """,
+    )
+    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
+    processes = luigi.IntParameter(default=1, significant=False)
+    margin: float = FractionalFloatParameter(  # type: ignore[assignment]
+        default=1.0,
+        description="""
+        Offset margin to start consuming from. E.g. is set to '0.95',
+        consumers will start at 95%% of the last committed offset;
+        in other words, start earlier than last committed position.
+        """,
+    )
+    object_types = luigi.EnumListParameter(
+        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+    )
+
+    def _stamp_files(self) -> List[Path]:
+        stamp_dir = Path(self.local_export_path) / "tmp" / "stamps"
+        return [stamp_dir / "person.json"]
+
+    def requires(self) -> Dict[str, luigi.Task]:
+        return {
+            obj_type: ExportTopic(
+                config_file=self.config_file,
+                local_export_path=self.local_export_path,
+                local_sensitive_export_path=self.local_sensitive_export_path,
+                export_id=self.export_id,
+                formats=self.formats,
+                processes=self.processes,
+                margin=self.margin,
+                object_types=self.object_types,
+            )
+            for obj_type in self.object_types
+            if obj_type in (ObjectType.revision, ObjectType.release)  # type: ignore[attr-defined]
+        }
+
+    def output(self) -> List[luigi.LocalTarget]:
+        return list(map(luigi.LocalTarget, self._stamp_files()))
+
+    def run(self):
+        """Aggregates lists of persons exported by :class:`ExportTopic` into a single table
+        with no duplicates."""
+        import uuid
+
+        from .fullnames import process_fullnames
+
+        fullnames_export_path = self.local_sensitive_export_path / "orc" / "person"
+        fullnames_export_path.mkdir(parents=True, exist_ok=True)
+        fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
+        process_fullnames(fullnames_orc, self.local_export_path / "tmp" / "dup_persons")
+
+
 class ExportGraph(luigi.Task):
     """Exports the entire graph to the local filesystem.
 
@@ -315,6 +654,23 @@ class ExportGraph(luigi.Task):
     def _meta(self):
         return luigi.LocalTarget(self.local_export_path / "meta" / "export.json")
 
+    def requires(self) -> Dict[str, luigi.Task]:
+        kwargs = dict(
+            config_file=self.config_file,
+            local_export_path=self.local_export_path,
+            local_sensitive_export_path=self.local_sensitive_export_path,
+            export_id=self.export_id,
+            formats=self.formats,
+            processes=self.processes,
+            margin=self.margin,
+            object_types=self.object_types,
+        )
+        dependencies: Dict[str, luigi.Task] = {
+            obj_type: ExportTopic(**kwargs) for obj_type in self.object_types
+        }
+        dependencies["START"] = StartExport(**kwargs)
+        return dependencies
+
     def run(self) -> None:
         """Runs the full export, then writes stamps, then :file:`meta.json`."""
         import datetime
@@ -341,18 +697,8 @@ class ExportGraph(luigi.Task):
 
         conf = config.read(str(self.config_file))
 
-        start_date = datetime.datetime.now(tz=datetime.timezone.utc)
-        cli.run_export_graph(
-            config=conf,
-            export_path=self.local_export_path,
-            sensitive_export_path=self.local_sensitive_export_path,
-            export_formats=[format_.name for format_ in self.formats],
-            object_types=[obj_type.name.lower() for obj_type in self.object_types],
-            exclude_obj_types=set(),
-            export_id=self.export_id,
-            processes=self.processes,
-            margin=self.margin,
-        )
+        with self.input()["START"]["stamp"].open() as f:
+            start_date = datetime.datetime.fromisoformat(json.load(f)["start_date"])
         end_date = datetime.datetime.now(tz=datetime.timezone.utc)
 
         # Create stamps
@@ -379,6 +725,8 @@ class ExportGraph(luigi.Task):
         }
         with self._meta().open("w") as fd:
             json.dump(meta, fd, indent=4)
+
+        shutil.rmtree(self.local_export_path / "tmp")
 
 
 class UploadExportToS3(luigi.Task):

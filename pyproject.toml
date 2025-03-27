@@ -25,7 +25,6 @@ dependencies = {file = ["requirements.txt", "requirements-swh.txt"]}
 [tool.setuptools.dynamic.optional-dependencies]
 testing = {file = ["requirements-test.txt"]}
 with_content = {file = ["requirements-swh-with-content.txt"]}
-luigi = {file = ["requirements-luigi.txt"]}
 
 [project.entry-points."swh.cli.subcommands"]
 "swh.export" = "swh.export.cli"

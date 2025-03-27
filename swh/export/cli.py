@@ -8,7 +8,7 @@
 import os
 import pathlib
 import sys
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 import click
 
@@ -16,9 +16,6 @@ from swh.core.cli import CONTEXT_SETTINGS
 from swh.core.cli import swh as swh_cli_group
 
 from .relational import MAIN_TABLES
-
-if TYPE_CHECKING:
-    from swh.model.swhids import ExtendedSWHID
 
 
 @swh_cli_group.group(name="export", context_settings=CONTEXT_SETTINGS)
@@ -143,26 +140,6 @@ def export_graph(
     )
 
 
-def get_masked_swhids(logger, config: Dict[str, Any]) -> Set["ExtendedSWHID"]:
-    """Fetches the masking database and returns the list of all non-visible SWHIDs"""
-    import tqdm
-
-    from swh.storage.proxies.masking.db import MaskingQuery
-
-    if config["masking_db"] is None:
-        logger.warning("Exporting dataset without masking.")
-        return set()
-    masking_query = MaskingQuery.connect(config["masking_db"])
-    return {
-        swhid
-        for (swhid, statuses) in tqdm.tqdm(
-            masking_query.iter_masked_swhids(),
-            desc="Listing masked SWHIDs",
-            unit_scale=True,
-        )
-    }
-
-
 def run_export_graph(
     config: Dict[str, Any],
     export_path: pathlib.Path,
@@ -174,106 +151,62 @@ def run_export_graph(
     processes: int,
     margin: Optional[float],
 ):
-    import functools
-    from importlib import import_module
-    import logging
-    import resource
+    import json
     import tempfile
     import uuid
 
-    from .fullnames import process_fullnames
-    from .journalprocessor import ParallelJournalProcessor
+    import luigi
 
-    logger = logging.getLogger(__name__)
-
-    masked_swhids = get_masked_swhids(logger, config)
+    from .luigi import ExportPersonsTable, ExportTopic, Format, ObjectType, StartExport
 
     if not export_id:
         export_id = str(uuid.uuid4())
 
-    # Enforce order (from origin to contents) to reduce number of holes in the graph.
-    object_types = [
-        obj_type for obj_type in MAIN_TABLES.keys() if obj_type in object_types
+    parsed_object_types = [
+        ObjectType[obj_type]
+        for obj_type in object_types
+        if obj_type not in exclude_obj_types
     ]
 
-    # ParallelJournalProcessor opens 256 LevelDBs in total. Depending on the number of
-    # processes, this can exceed the maximum number of file descriptors (soft limit
-    # defaults to 1024 on Debian), so let's increase it.
-    (soft, hard) = resource.getrlimit(resource.RLIMIT_NOFILE)
-    nb_shards = 256  # TODO: make this configurable or detect nb of kafka partitions
-    open_fds_per_shard = 61  # estimated with plyvel==1.3.0 and libleveldb1d==1.22-3
-    spare = 1024  # for everything other than LevelDB
-    want_fd = nb_shards * open_fds_per_shard + spare
-    if hard < want_fd:
-        logger.warning(
-            "Hard limit of open file descriptors (%d) is lower than ideal (%d)",
-            hard,
-            want_fd,
+    formats = [Format[format_] for format_ in export_formats]
+
+    with tempfile.NamedTemporaryFile("wt", suffix=".json") as config_file:
+        json.dump(config, config_file)
+        config_file.flush()
+
+        task: luigi.Task = StartExport(
+            config_file=config_file.name,
+            local_export_path=export_path,
+            export_id=export_id,
+            margin=margin,
+            object_types=parsed_object_types,
         )
-    if soft < want_fd:
-        want_fd = min(want_fd, hard)
-        logger.info(
-            "Soft limit of open file descriptors (%d) is too low, increasing to %d",
-            soft,
-            want_fd,
+        if not task.complete():
+            task.run()
+
+        kwargs = dict(
+            config_file=config_file.name,
+            local_export_path=export_path,
+            local_sensitive_export_path=sensitive_export_path,
+            export_id=export_id,
+            processes=processes,
+            formats=formats,
+            object_types=parsed_object_types,
         )
-        resource.setrlimit(resource.RLIMIT_NOFILE, (want_fd, hard))
 
-    def importcls(clspath):
-        mod, cls = clspath.split(":")
-        m = import_module(mod)
-        return getattr(m, cls)
-
-    exporter_cls = dict(
-        (fmt, importcls(clspath))
-        for (fmt, clspath) in AVAILABLE_EXPORTERS.items()
-        if fmt in export_formats
-    )
-
-    with tempfile.TemporaryDirectory() as csv_dir:
-        dup_dir = pathlib.Path(csv_dir) / "duplicates"
-        dup_dir.mkdir(parents=True, exist_ok=True)
-        dedup_dir = pathlib.Path(csv_dir) / "deduplicated"
-        dedup_dir.mkdir(parents=True, exist_ok=True)
-
-        # Run the exporter for each edge type.
-        parallel_exporters = {}
-        for obj_type in object_types:
-            if obj_type in exclude_obj_types:
-                continue
-            exporters = [
-                functools.partial(
-                    exporter_cls[f],
-                    config=config,
-                    export_path=export_path / f,
-                    sensitive_export_path=sensitive_export_path / f,
-                )
-                for f in export_formats
-            ]
-            parallel_exporters[obj_type] = ParallelJournalProcessor(
-                config,
-                masked_swhids,
-                exporters,
-                export_id,
-                obj_type,
-                node_sets_path=export_path / ".node_sets",
-                dup_dir=dup_dir,
-                dedup_dir=dedup_dir,
-                processes=processes,
-                offset_margin=margin,
+        for object_type in parsed_object_types:
+            task = ExportTopic(
+                **{
+                    **kwargs,
+                    "object_types": [object_type],
+                }
             )
-            # Fetch all offsets before we start exporting to minimize the time interval
-            # between the offsets of each topic
-            parallel_exporters[obj_type].get_offsets()
+            if not task.complete():
+                task.run()
 
-        for obj_type, parallel_exporter in parallel_exporters.items():
-            parallel_exporter.run()
-
-        if config["journal"].get("privileged"):
-            fullnames_export_path = sensitive_export_path / "orc" / "person"
-            fullnames_export_path.mkdir(parents=True, exist_ok=True)
-            fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
-            process_fullnames(fullnames_orc, dedup_dir)
+        task = ExportPersonsTable(**kwargs)
+        if not task.complete():
+            task.run()
 
 
 @graph.command("sort")
