@@ -332,10 +332,12 @@ class StartExport(luigi.Task):
         import datetime
         import json
 
+        import yaml
+
         from .journalprocessor import ParallelJournalProcessor
 
         with open(self.config_file) as f:
-            config = json.load(f)
+            config = yaml.safe_load(f)
 
         logger = logging.getLogger(__name__)
 
@@ -457,10 +459,12 @@ class ExportTopic(luigi.Task):
         import json
         import shutil
 
+        import yaml
+
         from .journalprocessor import ParallelJournalProcessor
 
         with open(self.config_file) as f:
-            config = json.load(f)
+            config = yaml.safe_load(f)
         logger = logging.getLogger(__name__)
 
         masked_swhids = get_masked_swhids(logger, config)
