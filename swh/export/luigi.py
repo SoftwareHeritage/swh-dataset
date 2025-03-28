@@ -418,9 +418,7 @@ class ExportTopic(luigi.Task):
         in other words, start earlier than last committed position.
         """,
     )
-    object_types = luigi.EnumListParameter(
-        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
-    )
+    object_types = luigi.EnumListParameter(enum=ObjectType, default=list(ObjectType))
 
     def _stamp_files(self) -> List[Path]:
         stamp_dir = Path(self.local_export_path) / "tmp" / "stamps"
@@ -602,7 +600,7 @@ class ExportPersonsTable(luigi.Task):
                 formats=self.formats,
                 processes=self.processes,
                 margin=self.margin,
-                object_types=self.object_types,
+                object_types=[obj_type],
             )
             for obj_type in self.object_types
             if obj_type in (ObjectType.revision, ObjectType.release)  # type: ignore[attr-defined]
@@ -710,7 +708,6 @@ class ExportGraph(luigi.Task):
             local_export_path=self.local_export_path,
             export_id=export_id,
             margin=self.margin,
-            object_types=self.object_types,
         )
         dependencies: Dict[str, luigi.Task] = {
             obj_type: ExportTopic(
@@ -718,10 +715,14 @@ class ExportGraph(luigi.Task):
                 local_sensitive_export_path=self.local_sensitive_export_path,
                 processes=self.processes,
                 formats=self.formats,
+                object_types=[obj_type],
             )
             for obj_type in self.object_types
         }
-        dependencies["START"] = StartExport(**kwargs)
+        dependencies["START"] = StartExport(
+            **kwargs,
+            object_types=self.object_types,
+        )
         return dependencies
 
     def run(self) -> None:
