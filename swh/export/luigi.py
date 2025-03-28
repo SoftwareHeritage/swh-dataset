@@ -304,6 +304,7 @@ class StartExport(luigi.Task):
         group_id config file option. If group_id is not set in the
         'journal' section of the config file, defaults to 'swh-export-export-'.
         """,
+        significant=False,  # prevents starting two exports to the same directory
     )
     margin: float = FractionalFloatParameter(  # type: ignore[assignment]
         default=1.0,
@@ -326,6 +327,20 @@ class StartExport(luigi.Task):
                 self.local_export_path / "tmp" / "offsets.json"
             ),
         }
+
+    def complete(self) -> bool:
+        import json
+
+        if not super().complete():
+            return False
+
+        with self.output()["stamp"].open() as f:
+            export_id = json.load(f)["export_id"]
+        assert (
+            export_id == self.export_id
+        ), "Export was not started with the same export_id as the current task"
+
+        return True
 
     def run(self) -> None:
         """Writes the offsets file"""
@@ -369,6 +384,7 @@ class StartExport(luigi.Task):
         with self.output()["stamp"].open("w") as f:
             json.dump(
                 {
+                    "export_id": self.export_id,
                     "start_date": datetime.datetime.now(
                         tz=datetime.timezone.utc
                     ).isoformat(),
@@ -674,11 +690,25 @@ class ExportGraph(luigi.Task):
     def _meta(self):
         return luigi.LocalTarget(self.local_export_path / "meta" / "export.json")
 
+    def get_export_id(self) -> str:
+        import json
+        import uuid
+
+        if self.export_id:
+            return self.export_id
+        else:
+            start_stamp_path = self.local_export_path / "tmp" / "stamps" / "START.json"
+            if start_stamp_path.exists():
+                return json.loads(start_stamp_path.read_text())["export_id"]
+            else:
+                return str(uuid.uuid4())
+
     def requires(self) -> Dict[str, luigi.Task]:
+        export_id = self.get_export_id()
         kwargs = dict(
             config_file=self.config_file,
             local_export_path=self.local_export_path,
-            export_id=self.export_id,
+            export_id=export_id,
             margin=self.margin,
             object_types=self.object_types,
         )
