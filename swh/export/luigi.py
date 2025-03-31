@@ -304,7 +304,7 @@ class StartExport(luigi.Task):
         group_id config file option. If group_id is not set in the
         'journal' section of the config file, defaults to 'swh-export-export-'.
         """,
-        significant=False,  # prevents starting two exports to the same directory
+        significant=False,  # to prevent starting two exports to the same directory
     )
     margin: float = FractionalFloatParameter(  # type: ignore[assignment]
         default=1.0,
@@ -336,9 +336,10 @@ class StartExport(luigi.Task):
 
         with self.output()["stamp"].open() as f:
             export_id = json.load(f)["export_id"]
-        assert (
-            export_id == self.export_id
-        ), "Export was not started with the same export_id as the current task"
+        assert export_id == self.export_id, (
+            f"Export was started with export_id {export_id} "
+            f"but the current task is for {self.export_id}"
+        )
 
         return True
 
@@ -422,7 +423,7 @@ class ExportTopic(luigi.Task):
 
     def _stamp_files(self) -> List[Path]:
         stamp_dir = Path(self.local_export_path) / "tmp" / "stamps"
-        return [stamp_dir / f"{obj_type}.json" for obj_type in self.object_types]
+        return [stamp_dir / f"{obj_type.name}.json" for obj_type in self.object_types]
 
     def requires(self) -> Dict[str, luigi.Task]:
         return {
@@ -669,6 +670,7 @@ class ExportGraph(luigi.Task):
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
+    export_name = luigi.Parameter(significant=False)
 
     def output(self) -> List[luigi.LocalTarget]:
         """Returns path of `meta/export.json` on the local FS."""
@@ -690,16 +692,23 @@ class ExportGraph(luigi.Task):
 
     def get_export_id(self) -> str:
         import json
+        import logging
         import uuid
 
+        logger = logging.getLogger(__name__)
+
         if self.export_id:
+            logger.info("Using configured export id %s", self.export_id)
             return self.export_id
         else:
             start_stamp_path = self.local_export_path / "tmp" / "stamps" / "START.json"
             if start_stamp_path.exists():
-                return json.loads(start_stamp_path.read_text())["export_id"]
+                export_id = json.loads(start_stamp_path.read_text())["export_id"]
+                logger.info("Reusing export id %s", export_id)
             else:
-                return str(uuid.uuid4())
+                export_id = f"{self.export_name}-{uuid.uuid4()}"
+                logger.info("Creating new export with id %s", export_id)
+            return export_id
 
     def requires(self) -> Dict[str, luigi.Task]:
         export_id = self.get_export_id()
@@ -835,7 +844,7 @@ class UploadExportToS3(luigi.Task):
         # recursively copy local files to S3, and end with stamps and export metadata
         for format_ in self.formats:
             for dirname in os.listdir(self.local_export_path / format_.name):
-                if dirname == "stamps":
+                if dirname in ("stamps", "tmp"):
                     # used as stamps while exporting, pointless to copy them
                     continue
                 if dirname == "meta":
