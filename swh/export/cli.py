@@ -151,12 +151,12 @@ def run_export_graph(
     processes: int,
     margin: Optional[float],
 ):
-    import json
     import logging
     import tempfile
     import uuid
 
     import luigi
+    import yaml
 
     from .luigi import (
         ExportGraph,
@@ -180,8 +180,8 @@ def run_export_graph(
 
     formats = [Format[format_] for format_ in export_formats]
 
-    with tempfile.NamedTemporaryFile("wt", suffix=".json") as config_file:
-        json.dump(config, config_file)
+    with tempfile.NamedTemporaryFile("wt", suffix=".yaml") as config_file:
+        yaml.dump(config, config_file)
         config_file.flush()
 
         task: luigi.Task = StartExport(
