@@ -515,6 +515,14 @@ class ExportTopic(luigi.Task):
 
         parallel_exporters = {}
         for obj_type in self.object_types:
+            subdirectories = [obj_type]
+            if obj_type == "directory":
+                subdirectories += ["directory_entry"]
+            elif obj_type == "snapshot":
+                subdirectories += ["snapshot_branch"]
+            elif obj_type == "revision":
+                subdirectories += ["revision_history", "revision_extra_headers"]
+
             # remove any leftover from a failed previous run
             for f in self.formats:
                 try:
