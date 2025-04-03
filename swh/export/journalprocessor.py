@@ -553,7 +553,7 @@ class JournalProcessorWorker:
                     elif hasattr(obj, "origin_swhid"):
                         extended_swhid = obj.origin_swhid()
                     else:
-                        continue
+                        extended_swhid = None
                     if extended_swhid in self.masked_swhids:
                         continue
                     self.process_message(object_type, partition, key, obj)
