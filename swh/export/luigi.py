@@ -253,7 +253,7 @@ def stamps_paths(formats: List[Format], object_types: List[ObjectType]) -> List[
     exported.
     """
     return [
-       f"tmp/stamps/{object_type.name.lower()}"
+        f"tmp/stamps/{object_type.name.lower()}"
         for format_ in formats
         for object_type in object_types
     ]
