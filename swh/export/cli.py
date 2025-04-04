@@ -66,6 +66,13 @@ AVAILABLE_EXPORTERS = {
     ),
 )
 @click.option(
+    "--export-name",
+    "-n",
+    required=True,
+    type=str,
+    help=("Unique name of the export run."),
+)
+@click.option(
     "--formats",
     "-f",
     type=click.STRING,
@@ -150,6 +157,7 @@ def run_export_graph(
     export_id: Optional[str],
     processes: int,
     margin: Optional[float],
+    export_name: str,
 ):
     import logging
     import tempfile
@@ -227,7 +235,7 @@ def run_export_graph(
             logger.info("Exporting persons")
             task.run()
 
-        task = ExportGraph(**kwargs)
+        task = ExportGraph(**{**kwargs, "export_name": export_name})
         if task.complete():
             logger.info("Skipping cleanup, already done")
         else:
