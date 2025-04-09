@@ -121,6 +121,13 @@ class JournalClientOffsetRanges(JournalClient):
         try:
             if self.assignment:
                 super().process(worker_fn)
+        except Exception:
+            logger.exception(
+                "Exception after processing %s '%s' messages",
+                self.count,
+                self.topic_name,
+            )
+            raise
         finally:
             self.progress_queue.put(None)
 
