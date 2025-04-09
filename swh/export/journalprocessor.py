@@ -384,11 +384,9 @@ class ParallelJournalProcessor:
                 pbar.update(progress - pbar.n)
 
         # Write final consumer offsets to a save file
-        (
-            self.node_sets_path
-            / self.obj_type
-            / f"offsets-final-{int(time.time())}.json"
-        ).write_text(json.dumps(d))
+        dir_path = self.node_sets_path / self.obj_type
+        dir_path.mkdir(exist_ok=True, parents=True)
+        (dir_path / f"offsets-final-{int(time.time())}.json").write_text(json.dumps(d))
 
     def export_worker(self, assignment, csv_file, progress_queue) -> None:
         assert self.offsets is not None
