@@ -318,15 +318,22 @@ class StartExport(luigi.Task):
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
 
-    def output(self) -> Dict[str, luigi.LocalTarget]:
-        return {
+    def output(self) -> Dict[Union[str, ObjectType], luigi.LocalTarget]:
+        results: Dict[Union[str, ObjectType], luigi.LocalTarget] = {
             "stamp": luigi.LocalTarget(
                 self.local_export_path / "tmp" / "stamps" / "START.json"
-            ),
-            "offsets": luigi.LocalTarget(
-                self.local_export_path / "tmp" / "offsets.json"
-            ),
+            )
         }
+
+        offsets_dir = self.local_export_path / "tmp" / "offsets"
+        offsets_dir.mkdir(exist_ok=True, parents=True)
+        results.update(
+            {
+                obj_type: luigi.LocalTarget(offsets_dir / f"{obj_type.name}.json")
+                for obj_type in self.object_types
+            }
+        )
+        return results
 
     def complete(self) -> bool:
         import json
@@ -361,7 +368,19 @@ class StartExport(luigi.Task):
 
         # {obj_type: {partition: (low, high)}
         offsets: Dict[str, Dict[int, Tuple[int, int]]] = {}
-        for obj_type in self.object_types:
+        for obj_type in [  # order matter, in order to avoid holes
+            ObjectType.content,  # type: ignore[attr-defined]
+            ObjectType.skipped_content,  # type: ignore[attr-defined]
+            ObjectType.directory,  # type: ignore[attr-defined]
+            ObjectType.revision,  # type: ignore[attr-defined]
+            ObjectType.release,  # type: ignore[attr-defined]
+            ObjectType.snapshot,  # type: ignore[attr-defined]
+            ObjectType.origin,  # type: ignore[attr-defined]
+            ObjectType.origin_visit,  # type: ignore[attr-defined]
+            ObjectType.origin_visit_status,  # type: ignore[attr-defined]
+        ]:
+            if obj_type not in self.object_types:
+                continue
             journal_processor = ParallelJournalProcessor(
                 config,
                 masked_swhids,
@@ -374,14 +393,15 @@ class StartExport(luigi.Task):
             )
             journal_processor.get_offsets()
             assert journal_processor.offsets is not None
-            offsets[obj_type.name] = journal_processor.offsets
+            offsets[obj_type] = journal_processor.offsets
 
         (self.local_export_path / "tmp" / "dup_persons").mkdir(
             parents=True, exist_ok=True
         )
 
-        with self.output()["offsets"].open("w") as f:
-            json.dump(offsets, f)
+        for obj_type in self.object_types:
+            with self.output()[obj_type].open("w") as f:
+                json.dump({"offsets": offsets[obj_type]}, f)
         with self.output()["stamp"].open("w") as f:
             json.dump(
                 {
@@ -484,15 +504,16 @@ class ExportTopic(luigi.Task):
 
         masked_swhids = get_masked_swhids(logger, config)
 
-        with self.input()["start"]["offsets"].open("r") as f:
-            # {obj_type: {partition: (low, high)}
-            offsets: Dict[ObjectType, Dict[int, Tuple[int, int]]] = {
-                ObjectType[obj_type]: {
+        offsets: Dict[ObjectType, Dict[int, Tuple[int, int]]] = {}
+        for obj_type in self.object_types:
+            with self.input()["start"][obj_type].open("r") as f:
+                # {obj_type: {partition: (low, high)}
+                offsets[obj_type] = {
                     int(partition): (low, high)
-                    for (partition, (low, high)) in partition_offsets.items()
+                    for (partition, (low, high)) in json.load(f)["offsets"].items()
                 }
-                for obj_type, partition_offsets in json.load(f).items()
-            }
+
+        print(list(offsets))
 
         self._setrlimit(
             sum(
@@ -600,20 +621,32 @@ class ExportPersonsTable(luigi.Task):
     )
 
     def requires(self) -> Dict[str, luigi.Task]:
-        return {
-            obj_type: ExportTopic(
+        requirements: Dict[str, luigi.Task] = {
+            "start": StartExport(
                 config_file=self.config_file,
                 local_export_path=self.local_export_path,
-                local_sensitive_export_path=self.local_sensitive_export_path,
                 export_id=self.export_id,
-                formats=self.formats,
-                processes=self.processes,
                 margin=self.margin,
-                object_types=[obj_type],
+                object_types=self.object_types,
             )
-            for obj_type in self.object_types
-            if obj_type in (ObjectType.revision, ObjectType.release)  # type: ignore[attr-defined]
         }
+        requirements.update(
+            {
+                obj_type: ExportTopic(
+                    config_file=self.config_file,
+                    local_export_path=self.local_export_path,
+                    local_sensitive_export_path=self.local_sensitive_export_path,
+                    export_id=self.export_id,
+                    formats=self.formats,
+                    processes=self.processes,
+                    margin=self.margin,
+                    object_types=[obj_type],
+                )
+                for obj_type in self.object_types
+                if obj_type in (ObjectType.revision, ObjectType.release)  # type: ignore[attr-defined]
+            }
+        )
+        return requirements
 
     def output(self) -> Dict[str, luigi.LocalTarget]:
         return {
