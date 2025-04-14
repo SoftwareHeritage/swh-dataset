@@ -16,22 +16,24 @@ from tqdm import tqdm
 
 def process_fullnames(fullnames_orc: Path, dedup_dir: Path) -> None:
     with tempfile.NamedTemporaryFile(suffix=".csv") as result_file:
-        env = {**os.environ, "LC_ALL": "C", "LC_COLLATE": "C", "LANG": "C"}
-        # fmt: off
-        subprocess.run(
-            [
-                "sort",
-                "-t", ",",
-                "-k", "2",
-                "-u",
-                "-S", "100M",
-                "-m",
-                *dedup_dir.iterdir(),
-                "-o", result_file.name,
-            ],
-            env=env,
-        )
-        # fmt: on
+        entries = list(dedup_dir.iterdir())
+        if entries:
+            env = {**os.environ, "LC_ALL": "C", "LC_COLLATE": "C", "LANG": "C"}
+            # fmt: off
+            subprocess.run(
+                [
+                    "sort",
+                    "-t", ",",
+                    "-k", "2",
+                    "-u",
+                    "-S", "100M",
+                    "-m",
+                    *entries,
+                    "-o", result_file.name,
+                ],
+                env=env,
+            )
+            # fmt: on
 
         with open(fullnames_orc, "wb") as output:
             with open(result_file.name, "r") as input:
