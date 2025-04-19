@@ -1,4 +1,4 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import queue
 import subprocess
+import tempfile
 import time
 from typing import (
     Any,
@@ -333,7 +334,9 @@ class ParallelJournalProcessor:
         with ProcessPoolExecutor(self.processes + 1) as pool:
             futures = []
             for i in range(self.processes):
-                persons_file = self.persons_dir / f"fullnames-{i}.csv"
+                (_fd, persons_file) = tempfile.mkstemp(
+                    dir=self.persons_dir, suffix=".csv"
+                )
                 futures.append(
                     pool.submit(
                         self.export_worker,
