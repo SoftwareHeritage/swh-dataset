@@ -369,15 +369,15 @@ class StartExport(luigi.Task):
         # {obj_type: {partition: (low, high)}
         offsets: Dict[str, Dict[int, Tuple[int, int]]] = {}
         for obj_type in [  # order matter, in order to avoid holes
-            ObjectType.content,  # type: ignore[attr-defined]
-            ObjectType.skipped_content,  # type: ignore[attr-defined]
-            ObjectType.directory,  # type: ignore[attr-defined]
-            ObjectType.revision,  # type: ignore[attr-defined]
-            ObjectType.release,  # type: ignore[attr-defined]
-            ObjectType.snapshot,  # type: ignore[attr-defined]
-            ObjectType.origin,  # type: ignore[attr-defined]
-            ObjectType.origin_visit,  # type: ignore[attr-defined]
             ObjectType.origin_visit_status,  # type: ignore[attr-defined]
+            ObjectType.origin_visit,  # type: ignore[attr-defined]
+            ObjectType.origin,  # type: ignore[attr-defined]
+            ObjectType.snapshot,  # type: ignore[attr-defined]
+            ObjectType.release,  # type: ignore[attr-defined]
+            ObjectType.revision,  # type: ignore[attr-defined]
+            ObjectType.directory,  # type: ignore[attr-defined]
+            ObjectType.skipped_content,  # type: ignore[attr-defined]
+            ObjectType.content,  # type: ignore[attr-defined]
         ]:
             if obj_type not in self.object_types:
                 continue
