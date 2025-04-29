@@ -773,6 +773,10 @@ class ExportGraph(luigi.Task):
             **kwargs,
             object_types=self.object_types,
         )
+        dependencies["PERSONS"] = ExportPersonsTable(
+            **kwargs,
+            object_types=self.object_types,
+        )
         return dependencies
 
     def run(self) -> None:
