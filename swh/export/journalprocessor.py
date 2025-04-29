@@ -122,6 +122,13 @@ class JournalClientOffsetRanges(JournalClient):
         try:
             if self.assignment:
                 super().process(worker_fn)
+        except Exception:
+            logger.exception(
+                "Exception after processing %s '%s' messages",
+                self.count,
+                self.topic_name,
+            )
+            raise
         finally:
             self.progress_queue.put(None)
 
@@ -386,7 +393,7 @@ class ParallelJournalProcessor:
 
         # Write final consumer offsets to a save file
         dir_path = self.node_sets_path / self.obj_type
-        dir_path.mkdir(parents=True, exist_ok=True)
+        dir_path.mkdir(exist_ok=True, parents=True)
         (dir_path / f"offsets-final-{int(time.time())}.json").write_text(json.dumps(d))
 
     def export_worker(self, assignment, persons_file, progress_queue) -> None:
