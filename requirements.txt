@@ -3,6 +3,7 @@
 # dependency lines, see https://pip.readthedocs.org/en/1.1/requirements.html
 boto3
 click
+luigi != 3.5.2
 tqdm
 pyorc ; python_version>="3.8"
 pyorc<0.9 ; python_version<"3.8"

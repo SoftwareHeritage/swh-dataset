@@ -1,4 +1,4 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2025  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import queue
 import subprocess
+import tempfile
 import time
 from typing import (
     Any,
@@ -218,8 +219,7 @@ class ParallelJournalProcessor:
         export_id: str,
         obj_type: str,
         node_sets_path: Path,
-        dup_dir: Path,
-        dedup_dir: Path,
+        persons_dir: Path,
         processes: int = 1,
         offset_margin: Optional[float] = None,
     ):
@@ -245,8 +245,7 @@ class ParallelJournalProcessor:
         self.node_sets_path = node_sets_path
         self.offsets: Optional[Dict[int, Tuple[int, int]]] = None
         self.offset_margin = offset_margin
-        self.dup_dir = dup_dir
-        self.dedup_dir = dedup_dir
+        self.persons_dir = persons_dir
 
     def get_offsets(self) -> Dict[int, Tuple[int, int]]:
         """
@@ -342,12 +341,14 @@ class ParallelJournalProcessor:
         with ProcessPoolExecutor(self.processes + 1) as pool:
             futures = []
             for i in range(self.processes):
-                csv_file = self.dup_dir / f"fullnames-{i}.csv"
+                (_fd, persons_file) = tempfile.mkstemp(
+                    dir=self.persons_dir, suffix=".csv"
+                )
                 futures.append(
                     pool.submit(
                         self.export_worker,
                         assignment=to_assign[i :: self.processes],
-                        csv_file=csv_file,
+                        persons_file=persons_file,
                         progress_queue=q,
                     )
                 )
@@ -395,7 +396,7 @@ class ParallelJournalProcessor:
         dir_path.mkdir(exist_ok=True, parents=True)
         (dir_path / f"offsets-final-{int(time.time())}.json").write_text(json.dumps(d))
 
-    def export_worker(self, assignment, csv_file, progress_queue) -> None:
+    def export_worker(self, assignment, persons_file, progress_queue) -> None:
         assert self.offsets is not None
         worker = JournalProcessorWorker(
             self.config,
@@ -407,8 +408,7 @@ class ParallelJournalProcessor:
             assignment,
             progress_queue,
             self.node_sets_path,
-            csv_file,
-            self.dedup_dir,
+            persons_file,
         )
         with worker:
             worker.run()
@@ -431,8 +431,7 @@ class JournalProcessorWorker:
         assignment: Sequence[int],
         progress_queue: multiprocessing.Queue,
         node_sets_path: Path,
-        csv_file: Path,
-        dedup_dir: Path,
+        persons_file: Path,
     ):
         self.config = config
         self.masked_swhids = masked_swhids
@@ -449,14 +448,12 @@ class JournalProcessorWorker:
         self.exporters = [exporter_factory() for exporter_factory in exporter_factories]
         self.exit_stack: contextlib.ExitStack = contextlib.ExitStack()
 
-        self.csv_file = csv_file
-        self.dedup_dir = dedup_dir
+        self.persons_file = persons_file
 
     def __enter__(self) -> "JournalProcessorWorker":
         self.exit_stack.__enter__()
         for exporter in self.exporters:
             self.exit_stack.enter_context(exporter)
-        dedup_csv = self.dedup_dir / self.csv_file.name
         self.persons_sorter = subprocess.Popen(
             # fmt: off
             [
@@ -466,7 +463,7 @@ class JournalProcessorWorker:
                 "-S", "100M",
                 "-u",
                 "-o",
-                dedup_csv,
+                self.persons_file,
             ],
             # fmt: on
             env={**os.environ, "LC_ALL": "C", "LC_COLLATE": "C", "LANG": "C"},
@@ -566,7 +563,7 @@ class JournalProcessorWorker:
                     elif hasattr(obj, "origin_swhid"):
                         extended_swhid = obj.origin_swhid()
                     else:
-                        continue
+                        extended_swhid = None
                     if extended_swhid in self.masked_swhids:
                         continue
                     self.process_message(object_type, partition, key, obj)
