@@ -319,6 +319,7 @@ class StartExport(luigi.Task):
     )
 
     def output(self) -> Dict[Union[str, ObjectType], luigi.LocalTarget]:
+        """The locations of the stamp files."""
         results: Dict[Union[str, ObjectType], luigi.LocalTarget] = {
             "stamp": luigi.LocalTarget(
                 self.local_export_path / "tmp" / "stamps" / "START.json"
@@ -446,6 +447,7 @@ class ExportTopic(luigi.Task):
         return [stamp_dir / f"{obj_type.name}.json" for obj_type in self.object_types]
 
     def requires(self) -> Dict[str, luigi.Task]:
+        """The Tasks that this Task depends on."""
         return {
             "start": StartExport(
                 config_file=self.config_file,
@@ -457,6 +459,7 @@ class ExportTopic(luigi.Task):
         }
 
     def output(self) -> List[luigi.LocalTarget]:
+        """The locations of the stamp files."""
         return list(map(luigi.LocalTarget, self._stamp_files()))
 
     def _setrlimit(self, nb_shards):
@@ -621,6 +624,7 @@ class ExportPersonsTable(luigi.Task):
     )
 
     def requires(self) -> Dict[str, luigi.Task]:
+        """The Tasks that this Task depends on."""
         requirements: Dict[str, luigi.Task] = {
             "start": StartExport(
                 config_file=self.config_file,
@@ -649,6 +653,7 @@ class ExportPersonsTable(luigi.Task):
         return requirements
 
     def output(self) -> Dict[str, luigi.LocalTarget]:
+        """The location of the stamp."""
         return {
             "stamp": luigi.LocalTarget(
                 Path(self.local_export_path) / "tmp" / "stamps" / "person.json"
@@ -656,8 +661,8 @@ class ExportPersonsTable(luigi.Task):
         }
 
     def run(self):
-        """Aggregates lists of persons exported by :class:`ExportTopic` into a single table
-        with no duplicates."""
+        """Aggregates lists of persons exported by :class:`ExportTopic` into a single
+        table with no duplicates."""
         import json
         import uuid
 
