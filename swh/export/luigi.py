@@ -758,6 +758,8 @@ class ExportGraph(luigi.Task):
             return export_id
 
     def requires(self) -> Dict[str, luigi.Task]:
+        """Returns an instance of :class:`StartExport`, and an instance of :class:`ExportTopic`
+        for each value in ``self.object_types``"""
         export_id = self.get_export_id()
         kwargs = dict(
             config_file=self.config_file,
