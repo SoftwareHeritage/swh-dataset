@@ -319,7 +319,7 @@ class StartExport(luigi.Task):
     )
 
     def output(self) -> Dict[Union[str, ObjectType], luigi.LocalTarget]:
-        """The locations of the stamp files."""
+        """Returns a stamp file for each step, in `self.local_export_path/tmp/stamps/`"""
         results: Dict[Union[str, ObjectType], luigi.LocalTarget] = {
             "stamp": luigi.LocalTarget(
                 self.local_export_path / "tmp" / "stamps" / "START.json"
@@ -447,7 +447,7 @@ class ExportTopic(luigi.Task):
         return [stamp_dir / f"{obj_type.name}.json" for obj_type in self.object_types]
 
     def requires(self) -> Dict[str, luigi.Task]:
-        """The Tasks that this Task depends on."""
+        """Returns an instance of :cls:`StartExport`"""
         return {
             "start": StartExport(
                 config_file=self.config_file,
@@ -459,7 +459,7 @@ class ExportTopic(luigi.Task):
         }
 
     def output(self) -> List[luigi.LocalTarget]:
-        """The locations of the stamp files."""
+        """Returns a :cls:`luigi.LocalTarget` instance for each stamp file"""
         return list(map(luigi.LocalTarget, self._stamp_files()))
 
     def _setrlimit(self, nb_shards):
@@ -624,7 +624,8 @@ class ExportPersonsTable(luigi.Task):
     )
 
     def requires(self) -> Dict[str, luigi.Task]:
-        """The Tasks that this Task depends on."""
+        """Returns an instance of :cls:`StartExport`, and an instance of :cls:`ExportTopic`
+        for each value in `self.object_types`"""
         requirements: Dict[str, luigi.Task] = {
             "start": StartExport(
                 config_file=self.config_file,
@@ -653,7 +654,7 @@ class ExportPersonsTable(luigi.Task):
         return requirements
 
     def output(self) -> Dict[str, luigi.LocalTarget]:
-        """The location of the stamp."""
+        """Returns `{self.local_export_path}/tmp/stamps/person.json`"""
         return {
             "stamp": luigi.LocalTarget(
                 Path(self.local_export_path) / "tmp" / "stamps" / "person.json"
