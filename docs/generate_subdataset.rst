@@ -65,6 +65,9 @@ First, make sure that your base dataset containing the entire graph is
 available as a database on AWS Athena, which can be set up by
 following the steps described in :ref:`swh-graph-athena`.
 
+The queries executed in this step will read the entirety of the base dataset.
+Consequently, the associated AWS Athena usage costs will correspond to scanning the complete base dataset.
+
 The subdataset can then be generated with the ``swh export athena
 gensubdataset`` command::
 
