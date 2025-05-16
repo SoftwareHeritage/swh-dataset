@@ -160,7 +160,7 @@ class JournalClientOffsetRanges(JournalClient):
                 #   rd_kafka_assignment_partition_stopped:
                 #       Assertion `rktp->rktp_started' failed
                 #
-                # in case the unsubscription from parition_id do actually tries
+                # in case the unsubscription from partition_id do actually tries
                 # to subscribe an already depleted partition.
                 self._partitions_to_unsubscribe.add(partition_id)
 

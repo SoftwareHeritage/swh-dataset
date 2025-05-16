@@ -30,7 +30,7 @@ from ..utils import ZSTFile, remove_pull_requests
 
 def swhid(object_type, object_id):
     # We use string interpolation here instead of using ExtendedSWHID to format,
-    # as building temporary ExtendedSWHID objects has a non-negligeable impact
+    # as building temporary ExtendedSWHID objects has a non-negligible impact
     # on performance.
     return f"swh:1:{object_type.value}:{hash_to_hex(object_id)}"
 

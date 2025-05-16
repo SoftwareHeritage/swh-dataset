@@ -62,7 +62,7 @@ MAIN_TABLES = {
         ("id", "string"),
         ("raw_manifest", "binary"),
     ],
-    # direcory_entry is in RELATED_TABLES
+    # directory_entry is in RELATED_TABLES
     "content": [
         ("sha1", "string"),
         ("sha1_git", "string"),
