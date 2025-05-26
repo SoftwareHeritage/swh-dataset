@@ -32,7 +32,7 @@ class Exporter:
         self,
         config: Dict[str, Any],
         export_path,
-        sensitive_export_path,
+        sensitive_export_path=None,
         *args: Any,
         **kwargs: Any,
     ) -> None:

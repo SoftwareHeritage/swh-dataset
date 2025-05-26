@@ -132,6 +132,7 @@ from typing import (
     Hashable,
     Iterator,
     List,
+    Optional,
     Set,
     Tuple,
     TypeVar,
@@ -298,6 +299,9 @@ class StartExport(luigi.Task):
 
     config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
     local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
+        default=None
+    )
     export_id = luigi.OptionalParameter(
         description="""
         Unique ID of the export run. This is appended to the kafka
@@ -422,7 +426,9 @@ class ExportTopic(luigi.Task):
 
     config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
     local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
-    local_sensitive_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
+        default=None
+    )
     export_id = luigi.OptionalParameter(
         description="""
         Unique ID of the export run. This is appended to the kafka
@@ -452,6 +458,7 @@ class ExportTopic(luigi.Task):
             "start": StartExport(
                 config_file=self.config_file,
                 local_export_path=self.local_export_path,
+                local_sensitive_export_path=self.local_sensitive_export_path,
                 export_id=self.export_id,
                 margin=self.margin,
                 object_types=self.object_types,
@@ -553,12 +560,13 @@ class ExportTopic(luigi.Task):
                     shutil.rmtree(self.local_export_path / f.name / obj_type.name)
                 except FileNotFoundError:
                     pass
-                try:
-                    shutil.rmtree(
-                        self.local_sensitive_export_path / f.name / obj_type.name
-                    )
-                except FileNotFoundError:
-                    pass
+                if self.local_sensitive_export_path is not None:
+                    try:
+                        shutil.rmtree(
+                            self.local_sensitive_export_path / f.name / obj_type.name
+                        )
+                    except FileNotFoundError:
+                        pass
 
             exporters = [
                 functools.partial(
@@ -601,7 +609,9 @@ class ExportPersonsTable(luigi.Task):
 
     config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
     local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
-    local_sensitive_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
+        default=None
+    )
     export_id = luigi.OptionalParameter(
         description="""
         Unique ID of the export run. This is appended to the kafka
@@ -630,6 +640,7 @@ class ExportPersonsTable(luigi.Task):
             "start": StartExport(
                 config_file=self.config_file,
                 local_export_path=self.local_export_path,
+                local_sensitive_export_path=self.local_sensitive_export_path,
                 export_id=self.export_id,
                 margin=self.margin,
                 object_types=self.object_types,
@@ -695,7 +706,9 @@ class ExportGraph(luigi.Task):
 
     config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
     local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
-    local_sensitive_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
+        default=None
+    )
     export_id = luigi.OptionalParameter(
         default=None,
         description="""
@@ -764,13 +777,13 @@ class ExportGraph(luigi.Task):
         kwargs = dict(
             config_file=self.config_file,
             local_export_path=self.local_export_path,
+            local_sensitive_export_path=self.local_sensitive_export_path,
             export_id=export_id,
             margin=self.margin,
         )
         dependencies: Dict[str, luigi.Task] = {
             obj_type: ExportTopic(
                 **kwargs,
-                local_sensitive_export_path=self.local_sensitive_export_path,
                 processes=self.processes,
                 formats=self.formats,
                 object_types=[obj_type],
@@ -1028,7 +1041,9 @@ class LocalExport(luigi.Task):
     """
 
     local_export_path: Path = PathParameter(is_dir=True)  # type: ignore[assignment]
-    local_sensitive_export_path: Path = PathParameter(is_dir=True)  # type: ignore[assignment]
+    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
+        default=None
+    )
     formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
@@ -1044,7 +1059,6 @@ class LocalExport(luigi.Task):
         """Returns an instance of either :class:`ExportGraph` or
         :class:`DownloadExportFromS3` depending on the value of
         :attr:`export_task_type`."""
-
         if issubclass(self.export_task_type, ExportGraph):
             return [
                 ExportGraph(

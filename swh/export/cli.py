@@ -103,7 +103,7 @@ AVAILABLE_EXPORTERS = {
 )
 @click.option(
     "--sensitive-export-path",
-    type=click.STRING,
+    type=click.Path(),
     help="Path where sensitive data (eg. fullnames) will be exported to.",
 )
 @click.pass_context
