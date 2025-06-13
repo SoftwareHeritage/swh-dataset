@@ -796,6 +796,7 @@ class ExportGraph(luigi.Task):
         )
         dependencies["PERSONS"] = ExportPersonsTable(
             **kwargs,
+            formats=self.formats,
             object_types=self.object_types,
         )
         return dependencies
