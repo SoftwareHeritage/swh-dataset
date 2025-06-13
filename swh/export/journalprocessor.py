@@ -55,6 +55,9 @@ from .utils import LevelDBSet
 
 logger = logging.getLogger(__name__)
 
+FULLNAME_SIZE_LIMIT = 32000
+"""Exclude fullnames bigger than this number of bytes."""
+
 
 class JournalClientOffsetRanges(JournalClient):
     """
@@ -602,6 +605,13 @@ class JournalProcessorWorker:
                 )
 
     def _add_person(self, person: Person):
+        if len(person.fullname) > FULLNAME_SIZE_LIMIT:
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    f"{person.fullname.decode(errors='replace')} is too long, skipping"
+                )
+            return
+
         self.persons_writer.writerow(
             (
                 base64.b64encode(person.fullname).decode(),
