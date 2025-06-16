@@ -138,3 +138,13 @@ retrieved by querying the Software Heritage API.
   - ``status`` (string): the integer identifier of the snapshot archived in
     this visit, either ``partial`` for partial visits or ``full`` for full
     visits.
+
+- **person**: the full names of authors and committers. It contains a
+  deduplicated list of each release's and revision's author's (and committer's)
+  full name. Full names over 32 kB are excluded.
+  Due to the sensitive nature of the data in it, this table is not publicly
+  available.
+
+  - ``fullname`` (bytes): the full name of a person, usually in the format
+    ``Name <email>``
+  - ``sha256_fullname`` (bytes): the SHA 256 of the person's full name

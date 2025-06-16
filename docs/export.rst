@@ -25,6 +25,11 @@ export with the ``--formats`` option. You also need an export ID, a unique
 identifier used by the Kafka server to store the current progress of the
 export.
 
+When exporting the full dataset, another ORC table is exported (`person`). It
+is not exported in the same directory as the rest of the dataset, but in a
+(configurable) sensitive export directory. It is also not uploaded to S3 due to
+its sensitive nature.
+
 **Note**: exporting as the ``edges`` format is discouraged, as it is redundant
 and can easily be generated directly from the ORC format.
 
