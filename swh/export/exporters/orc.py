@@ -45,13 +45,11 @@ from ..utils import remove_pull_requests
 
 ObjNotFoundError: Type[Exception]
 get_objstorage: Optional[Callable]
-ID_HASH_ALGO: str
 try:
     from swh.objstorage.factory import get_objstorage
-    from swh.objstorage.objstorage import ID_HASH_ALGO, ObjNotFoundError
+    from swh.objstorage.objstorage import ObjNotFoundError
 except ImportError:
     get_objstorage = None
-    ID_HASH_ALGO = ""
     ObjNotFoundError = Exception  # helps keep mypy happy
 
 
@@ -385,13 +383,16 @@ class ORCExporter(ExporterDispatch):
         content_writer = self.get_writer_for("content")
         data = None
         if self.with_data:
+            obj_id = content.hashes()
             try:
-                data = self.objstorage.get(content.hashes())
+                data = self.objstorage.get(obj_id)
             except ObjNotFoundError:
-                # WARNING: I'm not sure this is right
-                logger.warning(
-                    "Missing object %s", hash_to_hex(content.get_hash(ID_HASH_ALGO))
-                )
+                if logger.isEnabledFor(logging.WARNING):
+                    formatted_id = ";".join(
+                        f"{algo}:{hash.hex()}" for algo, hash in sorted(obj_id.items())
+                    )
+
+                    logger.warning("Missing object %s", formatted_id)
 
         content_writer.write(
             (
