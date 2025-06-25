@@ -606,16 +606,17 @@ class JournalProcessorWorker:
 
     def _add_person(self, person: Person):
         if len(person.fullname) > FULLNAME_SIZE_LIMIT:
+            fullname = person.fullname[:FULLNAME_SIZE_LIMIT]
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(
-                    f"{person.fullname.decode(errors='replace')} is too long, skipping"
+                    f"{person.fullname.decode(errors='replace')} is too long, truncating"
                 )
-            return
-
+        else:
+            fullname = person.fullname
         self.persons_writer.writerow(
             (
-                base64.b64encode(person.fullname).decode(),
-                base64.b64encode((hashlib.sha256(person.fullname)).digest()).decode(),
+                base64.b64encode(fullname).decode(),
+                base64.b64encode((hashlib.sha256(fullname)).digest()).decode(),
             )
         )
 

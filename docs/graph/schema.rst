@@ -141,7 +141,7 @@ retrieved by querying the Software Heritage API.
 
 - **person**: the full names of authors and committers. It contains a
   deduplicated list of each release's and revision's author's (and committer's)
-  full name. Full names over 32 kB are excluded.
+  full name. Full names over 32 kB are truncated at 32 kB.
   Due to the sensitive nature of the data in it, this table is not publicly
   available.
 
