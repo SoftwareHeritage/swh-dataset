@@ -233,12 +233,20 @@ A full export of the graph dated from May 2025
 - **Columnar tables (Apache ORC)**:
 
   - **Total size**: 27 TiB
-  - **S3**: ``s3://softwareheritage/graph/2024-12-06/orc``
+  - **S3**: ``s3://softwareheritage/graph/2025-05-18/orc``
 
 - **Compressed graph**:
 
   - **Total size**: 14 TiB
-  - **S3**: ``s3://softwareheritage/graph/2024-12-06/compressed``
+  - **S3**: ``s3://softwareheritage/graph/2025-05-18/compressed``
+
+- **"History and hosting" Compressed graph**:
+
+  - This is a compressed graph of only the "history and hosting" layer (origins,
+    snapshots, releases, revisions) and the root directory (or rarely content) of
+    every revision/release; but most directories and contents are excluded
+  - **Total size**: 1.5 TiB
+  - **S3**: ``s3://softwareheritage/graph/2025-05-18-history-hosting/compressed``
 
 .. _graph-dataset-2024-12-06:
 
