@@ -553,11 +553,14 @@ class ExportTopic(luigi.Task):
                 subdirectories += ["snapshot_branch"]
             elif obj_type == "revision":
                 subdirectories += ["revision_history", "revision_extra_headers"]
+            elif obj_type == "content":
+                subdirectories += ["skipped_content"]
 
             # remove any leftover from a failed previous run
             for f in self.formats:
                 try:
-                    shutil.rmtree(self.local_export_path / f.name / obj_type.name)
+                    for subdirectory in subdirectories:
+                        shutil.rmtree(self.local_export_path / f.name / subdirectory)
                 except FileNotFoundError:
                     pass
                 if self.local_sensitive_export_path is not None:
