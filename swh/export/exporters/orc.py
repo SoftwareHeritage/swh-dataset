@@ -41,7 +41,7 @@ from swh.model.model import (
 
 from ..exporter import ExporterDispatch
 from ..relational import BLOOM_FILTER_COLUMNS, MAIN_TABLES, TABLES
-from ..utils import remove_pull_requests
+from ..utils import remove_pull_requests, subdirectories_for_object_type
 
 ObjNotFoundError: Type[Exception]
 get_objstorage: Optional[Callable]
@@ -162,6 +162,11 @@ class ORCExporter(ExporterDispatch):
                     "The 'objstorage' configuration entry is mandatory when 'with_data' is set."
                 )
             self.objstorage = get_objstorage(**config["objstorage"])
+
+        for object_type in self.object_types:
+            for subdir in subdirectories_for_object_type(object_type.lower()):
+                (self.export_path / subdir).mkdir(parents=True, exist_ok=True)
+
         self._reset()
 
     def _reset(self):
@@ -214,7 +219,6 @@ class ORCExporter(ExporterDispatch):
         self.maybe_close_writer_for(table_name)
         if table_name not in self.writers:
             object_type_dir = self.export_path / table_name
-            object_type_dir.mkdir(exist_ok=True)
             if unique_id is None:
                 unique_id = self.get_unique_file_id()
                 self.uuid_main_table[unique_id] = table_name

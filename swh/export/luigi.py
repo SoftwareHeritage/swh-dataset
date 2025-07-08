@@ -143,6 +143,7 @@ import luigi
 
 from swh.export import cli
 from swh.export.relational import MAIN_TABLES
+from swh.export.utils import subdirectories_for_object_type
 
 if TYPE_CHECKING:
     from swh.model.swhids import ExtendedSWHID
@@ -546,15 +547,7 @@ class ExportTopic(luigi.Task):
 
         parallel_exporters = {}
         for obj_type in self.object_types:
-            subdirectories = [obj_type]
-            if obj_type == "directory":
-                subdirectories += ["directory_entry"]
-            elif obj_type == "snapshot":
-                subdirectories += ["snapshot_branch"]
-            elif obj_type == "revision":
-                subdirectories += ["revision_history", "revision_extra_headers"]
-            elif obj_type == "content":
-                subdirectories += ["skipped_content"]
+            subdirectories = subdirectories_for_object_type(obj_type.name.lower())
 
             # remove any leftover from a failed previous run
             for f in self.formats:
@@ -575,6 +568,7 @@ class ExportTopic(luigi.Task):
                 functools.partial(
                     exporter_cls[f.name],
                     config=config,
+                    object_types=[obj_type.name],
                     export_path=self.local_export_path / f.name,
                     sensitive_export_path=self.local_sensitive_export_path / f.name,
                 )

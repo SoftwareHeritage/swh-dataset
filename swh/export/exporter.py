@@ -6,7 +6,7 @@
 import contextlib
 import pathlib
 from types import TracebackType
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 import uuid
 
 from swh.model.model import BaseModel, ModelObjectType
@@ -31,12 +31,14 @@ class Exporter:
     def __init__(
         self,
         config: Dict[str, Any],
+        object_types: List[str],
         export_path,
         sensitive_export_path=None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         self.config: Dict[str, Any] = config
+        self.object_types = object_types
         self.export_path = pathlib.Path(export_path)
         if sensitive_export_path is not None:
             self.sensitive_export_path = pathlib.Path(sensitive_export_path)

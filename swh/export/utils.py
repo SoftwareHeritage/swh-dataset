@@ -5,6 +5,7 @@
 
 import sqlite3
 import subprocess
+from typing import List, Literal
 
 from swh.model.model import Snapshot, TargetType
 
@@ -151,3 +152,35 @@ def remove_pull_requests(snapshot: Snapshot) -> Snapshot:
         ):
             snapshot_dict["branches"].pop(original_branch_name)
     return Snapshot.from_dict(snapshot_dict)
+
+
+TableName = Literal[
+    "origin",
+    "snapshot",
+    "snapshot_branch",
+    "release",
+    "revision",
+    "revision_history",
+    "revision_extra_headers",
+    "directory",
+    "directory_entry",
+    "content",
+    "skipped_content",
+]
+
+
+def subdirectories_for_object_type(
+    obj_type: Literal[
+        "origin", "snapshot", "release", "revision", "directory", "content"
+    ],
+) -> List[TableName]:
+    subdirectories: List[TableName] = [obj_type]
+    if obj_type == "directory":
+        subdirectories += ["directory_entry"]
+    elif obj_type == "snapshot":
+        subdirectories += ["snapshot_branch"]
+    elif obj_type == "revision":
+        subdirectories += ["revision_history", "revision_extra_headers"]
+    elif obj_type == "content":
+        subdirectories += ["skipped_content"]
+    return subdirectories

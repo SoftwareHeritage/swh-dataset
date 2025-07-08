@@ -51,12 +51,14 @@ def orc_sensitive_tmpdir(tmpdir):
 
 
 @contextmanager
-def orc_export(messages, config=None, tmpdir=None, sensitive_tmpdir=None):
+def orc_export(messages, object_types, config=None, tmpdir=None, sensitive_tmpdir=None):
     with orc_tmpdir(tmpdir) as tmpdir:
         with orc_sensitive_tmpdir(sensitive_tmpdir) as sensitive_tmpdir:
             if config is None:
                 config = {}
-            with orc.ORCExporter(config, tmpdir, sensitive_tmpdir) as exporter:
+            with orc.ORCExporter(
+                config, object_types, tmpdir, sensitive_tmpdir
+            ) as exporter:
                 for object_type, objects in messages.items():
                     for obj in objects:
                         exporter.process_object(object_type, obj)
@@ -78,14 +80,16 @@ def orc_load(rootdir):
     return res
 
 
-def exporter(messages, config=None, tmpdir=None):
-    with orc_export(messages, config, tmpdir) as exportdir:
+def exporter(messages, object_types, config=None, tmpdir=None):
+    with orc_export(messages, object_types, config, tmpdir) as exportdir:
         return orc_load(exportdir)
 
 
 def test_export_origin():
     obj_type = Origin.object_type
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]})
+    output = exporter(
+        {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
+    )
     for obj in TEST_OBJECTS[obj_type]:
         sha1 = hashlib.sha1(obj.url.encode()).hexdigest()
         assert (sha1, obj.url) in output[obj_type.value]
@@ -93,7 +97,9 @@ def test_export_origin():
 
 def test_export_origin_visit():
     obj_type = OriginVisit.object_type
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]})
+    output = exporter(
+        {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
+    )
     for obj in TEST_OBJECTS[obj_type]:
         assert (
             obj.origin,
@@ -105,7 +111,9 @@ def test_export_origin_visit():
 
 def test_export_origin_visit_status():
     obj_type = OriginVisitStatus.object_type
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]})
+    output = exporter(
+        {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
+    )
     for obj in TEST_OBJECTS[obj_type]:
         assert (
             obj.origin,
@@ -119,7 +127,9 @@ def test_export_origin_visit_status():
 
 def test_export_snapshot():
     obj_type = Snapshot.object_type
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]})
+    output = exporter(
+        {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
+    )
     for obj in TEST_OBJECTS[obj_type]:
         assert (orc.hash_to_hex_or_none(obj.id),) in output["snapshot"]
         for branch_name, branch in obj.branches.items():
@@ -135,7 +145,9 @@ def test_export_snapshot():
 
 def test_export_release():
     obj_type = Release.object_type
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]})
+    output = exporter(
+        {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
+    )
     for obj in TEST_OBJECTS[obj_type]:
         assert (
             orc.hash_to_hex_or_none(obj.id),
@@ -151,7 +163,9 @@ def test_export_release():
 
 def test_export_revision():
     obj_type = Revision.object_type
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]})
+    output = exporter(
+        {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
+    )
     for obj in TEST_OBJECTS[obj_type]:
         assert (
             orc.hash_to_hex_or_none(obj.id),
@@ -174,7 +188,9 @@ def test_export_revision():
 
 def test_export_directory():
     obj_type = Directory.object_type
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]})
+    output = exporter(
+        {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
+    )
     for obj in TEST_OBJECTS[obj_type]:
         assert (orc.hash_to_hex_or_none(obj.id), obj.raw_manifest) in output[
             "directory"
@@ -191,7 +207,9 @@ def test_export_directory():
 
 def test_export_content():
     obj_type = Content.object_type
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]})
+    output = exporter(
+        {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
+    )
     for obj in TEST_OBJECTS[obj_type]:
         assert (
             orc.hash_to_hex_or_none(obj.sha1),
@@ -206,7 +224,9 @@ def test_export_content():
 
 def test_export_skipped_content():
     obj_type = SkippedContent.object_type
-    output = exporter({obj_type: TEST_OBJECTS[obj_type]})
+    output = exporter(
+        {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
+    )
     for obj in TEST_OBJECTS[obj_type]:
         assert (
             orc.hash_to_hex_or_none(obj.sha1),
@@ -284,6 +304,7 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
         config["orc"]["max_rows"] = {obj_type.value: max_rows}
     exporter(
         {obj_type: TEST_OBJECTS[obj_type]},
+        [TEST_OBJECTS[obj_type][0].object_type.name],
         config=config,
         tmpdir=tmpdir,
     )
@@ -335,7 +356,11 @@ def test_export_related_files(max_rows, obj_type, tmpdir):
     (ModelObjectType(obj_type) for obj_type in MAIN_TABLES.keys()),
 )
 def test_export_related_files_separated(obj_type, tmpdir):
-    exporter({obj_type: TEST_OBJECTS[obj_type]}, tmpdir=tmpdir)
+    exporter(
+        {obj_type: TEST_OBJECTS[obj_type]},
+        [TEST_OBJECTS[obj_type][0].object_type.name],
+        tmpdir=tmpdir,
+    )
     # check there are as many ORC files as objects
     orcfiles = [
         fname for fname in (tmpdir / obj_type.value).listdir(f"{obj_type}-*.orc")
@@ -353,7 +378,7 @@ def test_export_related_files_separated(obj_type, tmpdir):
 def test_export_invalid_max_rows(table_name):
     config = {"orc": {"max_rows": {table_name: 10}}}
     with pytest.raises(ValueError):
-        exporter({}, config=config)
+        exporter({}, [], config=config)
 
 
 def test_export_content_with_data(monkeypatch, tmpdir):
@@ -376,6 +401,7 @@ def test_export_content_with_data(monkeypatch, tmpdir):
 
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]},
+        [TEST_OBJECTS[obj_type][0].object_type.name],
         config=config,
         tmpdir=tmpdir,
     )

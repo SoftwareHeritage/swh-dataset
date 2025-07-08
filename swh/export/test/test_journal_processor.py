@@ -93,6 +93,7 @@ def test_parallel_journal_processor(
                 functools.partial(
                     ListExporter,
                     objects,
+                    object_types=["revision"],
                     config=config,
                     export_path=export_path,
                     sensitive_export_path=sensitive_export_path,
@@ -129,6 +130,7 @@ def test_parallel_journal_processor_origin(
                 functools.partial(
                     ListExporter,
                     objects,
+                    object_types=["origin"],
                     config=config,
                     export_path=export_path,
                     sensitive_export_path=sensitive_export_path,
@@ -168,6 +170,7 @@ def test_parallel_journal_processor_origin_visit_status(
                 functools.partial(
                     ListExporter,
                     objects,
+                    object_types=["origin"],
                     config=config,
                     export_path=export_path,
                     sensitive_export_path=sensitive_export_path,
@@ -206,6 +209,7 @@ def test_parallel_journal_processor_offsets(
                 functools.partial(
                     ListExporter,
                     objects,
+                    object_types=["revision"],
                     config=config,
                     export_path=export_path,
                     sensitive_export_path=sensitive_export_path,
@@ -247,6 +251,7 @@ def test_parallel_journal_processor_masked(
                 functools.partial(
                     ListExporter,
                     objects,
+                    object_types=["revision"],
                     config=config,
                     export_path=export_path,
                     sensitive_export_path=sensitive_export_path,
@@ -288,6 +293,7 @@ def test_parallel_journal_processor_masked_origin(
                 functools.partial(
                     ListExporter,
                     objects,
+                    object_types=["origin"],
                     config=config,
                     export_path=export_path,
                     sensitive_export_path=sensitive_export_path,
@@ -332,6 +338,7 @@ def test_parallel_journal_processor_masked_origin_visit_statuses(
                 functools.partial(
                     ListExporter,
                     objects,
+                    object_types=["origin_visit_status"],
                     config=config,
                     export_path=export_path,
                     sensitive_export_path=sensitive_export_path,
