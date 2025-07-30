@@ -581,10 +581,18 @@ class JournalProcessorWorker:
         It uses an on-disk set to make sure that each object is only ever
         processed once.
         """
-        if getattr(obj, "author", None) is not None:
-            self._add_person(obj.author)  # type: ignore
-        if getattr(obj, "committer", None) is not None:
-            self._add_person(obj.committer)  # type: ignore
+        if (author := getattr(obj, "author", None)) is not None:
+            if (truncated_author := self._truncate_person(author)) is not None:
+                obj = obj.evolve(author=truncated_author)
+                self._add_person(truncated_author)
+            else:
+                self._add_person(author)
+        if (committer := getattr(obj, "committer", None)) is not None:
+            if (truncated_committer := self._truncate_person(committer)) is not None:
+                obj = obj.evolve(committer=truncated_committer)
+                self._add_person(truncated_committer)
+            else:
+                self._add_person(committer)
 
         node_set = self.get_node_set_for_object(object_type, partition, obj_key)
         if not node_set.add(obj_key):
@@ -604,19 +612,22 @@ class JournalProcessorWorker:
                     str(obj),
                 )
 
-    def _add_person(self, person: Person):
+    def _truncate_person(self, person: Person) -> Optional[Person]:
         if len(person.fullname) > FULLNAME_SIZE_LIMIT:
-            fullname = person.fullname[:FULLNAME_SIZE_LIMIT]
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug(
                     f"{person.fullname.decode(errors='replace')} is too long, truncating"
                 )
-        else:
-            fullname = person.fullname
+            return Person(
+                fullname=person.fullname[:FULLNAME_SIZE_LIMIT], name=None, email=None
+            )
+        return None
+
+    def _add_person(self, person: Person):
         self.persons_writer.writerow(
             (
-                base64.b64encode(fullname).decode(),
-                base64.b64encode((hashlib.sha256(fullname)).digest()).decode(),
+                base64.b64encode(person.fullname).decode(),
+                base64.b64encode((hashlib.sha256(person.fullname)).digest()).decode(),
             )
         )
 
