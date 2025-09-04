@@ -9,7 +9,7 @@ from importlib.metadata import version
 import logging
 import math
 from types import TracebackType
-from typing import Any, Callable, Optional, Tuple, Type, Union, cast
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union, cast
 
 from pyorc import (
     BigInt,
@@ -387,7 +387,7 @@ class ORCExporter(ExporterDispatch):
         content_writer = self.get_writer_for("content")
         data = None
         if self.with_data:
-            obj_id = content.hashes()
+            obj_id = cast(Dict[str, bytes], content.hashes())
             try:
                 data = self.objstorage.get(obj_id)
             except ObjNotFoundError:
