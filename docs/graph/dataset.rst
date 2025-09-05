@@ -174,6 +174,12 @@ Summary of dataset versions
      - Columnar
      - Compressed
 
+   * - `2025-05-18-popular-1k`_
+     - 328,715,950
+     - 11,785,152,130
+     - ✔
+     - ✔
+
    * - `2024-08-23-popular-500-python`_
      - 60,286,526
      - 1,630,768,493
@@ -486,6 +492,31 @@ If the above datasets are too big, we also provide "teaser"
 datasets that can get you started and have a smaller size fingerprint.
 
 
+.. _graph-dataset-2025-05-18-popular-1k:
+
+2025-05-18-popular-1k
+~~~~~~~~~~~~~~~~~~~~~
+
+This is a subgraph of the 2025-05-18 export, filtered by rooting from 1000 popular origins:
+
+- 900 among the most starred Github repositories (as of July 1st 2025)
+- 100 among the most frequently installed Debian packages (according to the
+  `Debian Popularity Contest <https://popcon.debian.org/>`_ database published on Sept 3rd 2025).
+
+The corresponding origins list is in
+``s3://softwareheritage/graph/2025-05-18-popular-1k/origins.txt``.
+
+- **Columnar (Apache ORC)**:
+
+  - **Total size**: 349 GiB
+  - **S3**: ``s3://softwareheritage/graph/2025-05-18-popular-1k/orc/``
+
+- **Compressed graph**:
+
+  - **Total size**: 202 GiB
+  - **S3**: ``s3://softwareheritage/graph/2025-05-18-popular-1k/compressed/``
+
+
 .. _graph-dataset-2024-08-23_popular-500-python:
 
 2024-08-23-popular-500-python
@@ -493,7 +524,7 @@ datasets that can get you started and have a smaller size fingerprint.
 
 The ``2024-08-23-popular-500-python`` teaser contains a subset of the 443 repositories
 archived by |swh| as of 2024-08-23, among the 700 GitHub repositories
-**tagged as being written in **Python** with the most stars.
+**tagged as being written in Python** with the most stars.
 
 - **Columnar (Apache ORC)**:
 
@@ -517,7 +548,7 @@ Typescript, C#, C++, PHP, Shell, C, Ruby), from GitHub,
 Gitlab.com, Packagist, PyPI and Debian. The selection criteria to pick the software origins
 for each language was the following:
 
-- the 50 most popular Gitlab.com projects written in that languagethat have 2 stars or more,
+- the 50 most popular Gitlab.com projects written in that language that have 2 stars or more,
 - for Python, the 50 most popular PyPI projects (by usage statistics, according to the
   `Top PyPI Packages <https://hugovk.github.io/top-pypi-packages/>`_ database),
 - for PHP, the 50 most popular Packagist projects (by usage statistics, according to
