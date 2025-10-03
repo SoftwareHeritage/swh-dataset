@@ -309,7 +309,6 @@ class StartExport(luigi.Task):
         group_id config file option. If group_id is not set in the
         'journal' section of the config file, defaults to 'swh-export-export-'.
         """,
-        significant=False,  # to prevent starting two exports to the same directory
     )
     margin: float = FractionalFloatParameter(  # type: ignore[assignment]
         default=1.0,
@@ -727,7 +726,7 @@ class ExportGraph(luigi.Task):
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
-    export_name = luigi.Parameter(significant=False)
+    export_name = luigi.Parameter()
 
     def output(self) -> List[luigi.LocalTarget]:
         """Returns path of `meta/export.json` on the local FS."""
