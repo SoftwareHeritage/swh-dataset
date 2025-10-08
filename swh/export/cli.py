@@ -131,15 +131,16 @@ def export_graph(
                 option_name="formats", message=f"{f} is not an available format."
             )
     export_path = pathlib.Path(export_path)
-    if sensitive_export_path is not None:
-        sensitive_export_path = pathlib.Path(sensitive_export_path)
-    else:
-        sensitive_export_path = export_path.parent / f"{export_path.name}-sensitive"
+    sensitive_export_path = (
+        pathlib.Path(sensitive_export_path)
+        if sensitive_export_path is not None
+        else None
+    )
 
     run_export_graph(
         config,
         pathlib.Path(export_path),
-        pathlib.Path(sensitive_export_path),
+        sensitive_export_path,
         export_formats,
         list(object_types),
         exclude_obj_types=exclude_obj_types,
@@ -150,7 +151,7 @@ def export_graph(
 def run_export_graph(
     config: Dict[str, Any],
     export_path: pathlib.Path,
-    sensitive_export_path: pathlib.Path,
+    sensitive_export_path: pathlib.Path | None,
     export_formats: List[str],
     object_types: List[str],
     exclude_obj_types: Set[str],
