@@ -3,21 +3,15 @@
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import base64
 import collections
 import concurrent.futures
 from concurrent.futures import FIRST_EXCEPTION, ProcessPoolExecutor
 import contextlib
-import csv
-import hashlib
 import json
 import logging
 import multiprocessing
-import os
 from pathlib import Path
 import queue
-import subprocess
-import tempfile
 import time
 from typing import (
     Any,
@@ -43,7 +37,6 @@ from swh.model.model import (
     Directory,
     DirectoryEntry,
     ModelObjectType,
-    Person,
     Timestamp,
     TimestampOverflowException,
 )
@@ -51,12 +44,10 @@ from swh.model.swhids import ExtendedSWHID
 from swh.storage.fixer import fix_objects
 
 from .exporter import Exporter
+from .fullnames import FullnameWriter, ParallelFullnameWriter
 from .utils import LevelDBSet
 
 logger = logging.getLogger(__name__)
-
-FULLNAME_SIZE_LIMIT = 32000
-"""Exclude fullnames bigger than this number of bytes."""
 
 
 class JournalClientOffsetRanges(JournalClient):
@@ -222,7 +213,6 @@ class ParallelJournalProcessor:
         export_id: str,
         obj_type: str,
         node_sets_path: Path,
-        persons_dir: Path,
         processes: int = 1,
         offset_margin: Optional[float] = None,
     ):
@@ -248,7 +238,7 @@ class ParallelJournalProcessor:
         self.node_sets_path = node_sets_path
         self.offsets: Optional[Dict[int, Tuple[int, int]]] = None
         self.offset_margin = offset_margin
-        self.persons_dir = persons_dir
+        self.fullname_writer = ParallelFullnameWriter()
 
     def get_offsets(self) -> Dict[int, Tuple[int, int]]:
         """
@@ -344,14 +334,11 @@ class ParallelJournalProcessor:
         with ProcessPoolExecutor(self.processes + 1) as pool:
             futures = []
             for i in range(self.processes):
-                (_fd, persons_file) = tempfile.mkstemp(
-                    dir=self.persons_dir, suffix=".csv"
-                )
                 futures.append(
                     pool.submit(
                         self.export_worker,
                         assignment=to_assign[i :: self.processes],
-                        persons_file=persons_file,
+                        fullname_writer=self.fullname_writer.get_thread_writer(),
                         progress_queue=q,
                     )
                 )
@@ -399,7 +386,9 @@ class ParallelJournalProcessor:
         dir_path.mkdir(exist_ok=True, parents=True)
         (dir_path / f"offsets-final-{int(time.time())}.json").write_text(json.dumps(d))
 
-    def export_worker(self, assignment, persons_file, progress_queue) -> None:
+    def export_worker(
+        self, assignment, fullname_writer: FullnameWriter, progress_queue
+    ) -> None:
         assert self.offsets is not None
         worker = JournalProcessorWorker(
             self.config,
@@ -411,7 +400,7 @@ class ParallelJournalProcessor:
             assignment,
             progress_queue,
             self.node_sets_path,
-            persons_file,
+            fullname_writer,
         )
         with worker:
             worker.run()
@@ -434,7 +423,7 @@ class JournalProcessorWorker:
         assignment: Sequence[int],
         progress_queue: multiprocessing.Queue,
         node_sets_path: Path,
-        persons_file: Path,
+        fullname_writer: FullnameWriter,
     ):
         self.config = config
         self.masked_swhids = masked_swhids
@@ -443,6 +432,7 @@ class JournalProcessorWorker:
         self.offsets = offsets
         self.assignment = assignment
         self.progress_queue = progress_queue
+        self.fullname_writer = fullname_writer
 
         self.node_sets_path = node_sets_path
         self.node_sets_path.mkdir(exist_ok=True, parents=True)
@@ -451,40 +441,16 @@ class JournalProcessorWorker:
         self.exporters = [exporter_factory() for exporter_factory in exporter_factories]
         self.exit_stack: contextlib.ExitStack = contextlib.ExitStack()
 
-        self.persons_file = persons_file
-
     def __enter__(self) -> "JournalProcessorWorker":
         self.exit_stack.__enter__()
         for exporter in self.exporters:
             self.exit_stack.enter_context(exporter)
-        self.persons_sorter = subprocess.Popen(
-            # fmt: off
-            [
-                "sort",
-                "-t", ",",
-                "-k", "2",
-                "-S", "100M",
-                "-u",
-                "-o",
-                self.persons_file,
-            ],
-            # fmt: on
-            env={**os.environ, "LC_ALL": "C", "LC_COLLATE": "C", "LANG": "C"},
-            universal_newlines=True,
-            stdin=subprocess.PIPE,
-        )
-        assert self.persons_sorter.stdin is not None
-        self.persons_writer = csv.writer(self.persons_sorter.stdin)
+        self.exit_stack.enter_context(self.fullname_writer)
 
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
-        assert self.persons_sorter.stdin is not None
-        self.persons_sorter.stdin.close()
-        logger.debug("Starting persons partial deduplication")
-        self.persons_sorter.wait()
-        logger.debug("Persons partial deduplication done")
 
     def get_node_set_for_object(
         self, obj_type: str, partition_id: int, object_id: bytes
@@ -582,17 +548,21 @@ class JournalProcessorWorker:
         processed once.
         """
         if (author := getattr(obj, "author", None)) is not None:
-            if (truncated_author := self._truncate_person(author)) is not None:
+            if (
+                truncated_author := self.fullname_writer.truncate_person(author)
+            ) is not None:
                 obj = obj.evolve(author=truncated_author)
-                self._add_person(truncated_author)
+                self.fullname_writer.add_person(truncated_author)
             else:
-                self._add_person(author)
+                self.fullname_writer.add_person(author)
         if (committer := getattr(obj, "committer", None)) is not None:
-            if (truncated_committer := self._truncate_person(committer)) is not None:
+            if (
+                truncated_committer := self.fullname_writer.truncate_person(committer)
+            ) is not None:
                 obj = obj.evolve(committer=truncated_committer)
-                self._add_person(truncated_committer)
+                self.fullname_writer.add_person(truncated_committer)
             else:
-                self._add_person(committer)
+                self.fullname_writer.add_person(committer)
 
         node_set = self.get_node_set_for_object(object_type, partition, obj_key)
         if not node_set.add(obj_key):
@@ -611,25 +581,6 @@ class JournalProcessorWorker:
                     exporter.__class__.__name__,
                     str(obj),
                 )
-
-    def _truncate_person(self, person: Person) -> Optional[Person]:
-        if len(person.fullname) > FULLNAME_SIZE_LIMIT:
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug(
-                    f"{person.fullname.decode(errors='replace')} is too long, truncating"
-                )
-            return Person(
-                fullname=person.fullname[:FULLNAME_SIZE_LIMIT], name=None, email=None
-            )
-        return None
-
-    def _add_person(self, person: Person):
-        self.persons_writer.writerow(
-            (
-                base64.b64encode(person.fullname).decode(),
-                base64.b64encode((hashlib.sha256(person.fullname)).digest()).decode(),
-            )
-        )
 
 
 def _turn_message_into_objects(

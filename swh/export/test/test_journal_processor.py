@@ -83,8 +83,6 @@ def test_parallel_journal_processor(
         (tmp_path / "node_sets" / "revision").mkdir(parents=True)
         export_path = tmp_path / "export"
         sensitive_export_path = tmp_path / "sensitive" / "export"
-        persons_dir = tmp_path / "duplicates"
-        persons_dir.mkdir(parents=True, exist_ok=True)
         config = {"journal": journal_client_config}
         processor = ParallelJournalProcessor(
             config=config,
@@ -102,7 +100,6 @@ def test_parallel_journal_processor(
             export_id="test_parallel_journal_processor",
             obj_type="revision",
             node_sets_path=tmp_path / "node_sets",
-            persons_dir=persons_dir,
         )
 
         processor.run()
@@ -120,8 +117,6 @@ def test_parallel_journal_processor_origin(
         (tmp_path / "node_sets" / "origin").mkdir(parents=True)
         export_path = tmp_path / "export"
         sensitive_export_path = tmp_path / "sensitive" / "export"
-        persons_dir = tmp_path / "duplicates"
-        persons_dir.mkdir(parents=True, exist_ok=True)
         config = {"journal": journal_client_config}
         processor = ParallelJournalProcessor(
             config=config,
@@ -139,7 +134,6 @@ def test_parallel_journal_processor_origin(
             export_id="test_parallel_journal_processor",
             obj_type="origin",
             node_sets_path=tmp_path / "node_sets",
-            persons_dir=persons_dir,
         )
 
         processor.run()
@@ -160,8 +154,6 @@ def test_parallel_journal_processor_origin_visit_status(
         (tmp_path / "node_sets" / "origin_visit_status").mkdir(parents=True)
         export_path = tmp_path / "export"
         sensitive_export_path = tmp_path / "sensitive" / "export"
-        persons_dir = tmp_path / "duplicates"
-        persons_dir.mkdir(parents=True, exist_ok=True)
         config = {"journal": journal_client_config}
         processor = ParallelJournalProcessor(
             config=config,
@@ -179,7 +171,6 @@ def test_parallel_journal_processor_origin_visit_status(
             export_id="test_parallel_journal_processor",
             obj_type="origin_visit_status",
             node_sets_path=tmp_path / "node_sets",
-            persons_dir=persons_dir,
         )
 
         processor.run()
@@ -199,8 +190,6 @@ def test_parallel_journal_processor_offsets(
         (tmp_path / "node_sets" / "revision").mkdir(parents=True)
         export_path = tmp_path / "export"
         sensitive_export_path = tmp_path / "sensitive" / "export"
-        persons_dir = tmp_path / "duplicates"
-        persons_dir.mkdir(parents=True, exist_ok=True)
         config = {"journal": journal_client_config}
         processor = ParallelJournalProcessor(
             config=config,
@@ -218,7 +207,6 @@ def test_parallel_journal_processor_offsets(
             export_id="test_parallel_journal_processor",
             obj_type="revision",
             node_sets_path=tmp_path / "node_sets",
-            persons_dir=persons_dir,
         )
 
         processor.get_offsets()  # fills the processor.offsets cache
@@ -241,8 +229,6 @@ def test_parallel_journal_processor_masked(
         (tmp_path / "node_sets" / "revision").mkdir(parents=True)
         export_path = tmp_path / "export"
         sensitive_export_path = tmp_path / "sensitive" / "export"
-        persons_dir = tmp_path / "duplicates"
-        persons_dir.mkdir(parents=True, exist_ok=True)
         config = {"journal": journal_client_config}
         processor = ParallelJournalProcessor(
             config=config,
@@ -260,7 +246,6 @@ def test_parallel_journal_processor_masked(
             export_id="test_parallel_journal_processor",
             obj_type="revision",
             node_sets_path=tmp_path / "node_sets",
-            persons_dir=persons_dir,
         )
 
         processor.run()
@@ -283,8 +268,6 @@ def test_parallel_journal_processor_masked_origin(
         (tmp_path / "node_sets" / "origin").mkdir(parents=True)
         export_path = tmp_path / "export"
         sensitive_export_path = tmp_path / "sensitive" / "export"
-        persons_dir = tmp_path / "duplicates"
-        persons_dir.mkdir(parents=True, exist_ok=True)
         config = {"journal": journal_client_config}
         processor = ParallelJournalProcessor(
             config=config,
@@ -302,7 +285,6 @@ def test_parallel_journal_processor_masked_origin(
             export_id="test_parallel_journal_processor",
             obj_type="origin",
             node_sets_path=tmp_path / "node_sets",
-            persons_dir=persons_dir,
         )
 
         processor.run()
@@ -328,8 +310,6 @@ def test_parallel_journal_processor_masked_origin_visit_statuses(
         (tmp_path / "node_sets" / "origin_visit_status").mkdir(parents=True)
         export_path = tmp_path / "export"
         sensitive_export_path = tmp_path / "sensitive" / "export"
-        persons_dir = tmp_path / "duplicates"
-        persons_dir.mkdir(parents=True, exist_ok=True)
         config = {"journal": journal_client_config}
         processor = ParallelJournalProcessor(
             config=config,
@@ -347,7 +327,6 @@ def test_parallel_journal_processor_masked_origin_visit_statuses(
             export_id="test_parallel_journal_processor",
             obj_type="origin_visit_status",
             node_sets_path=tmp_path / "node_sets",
-            persons_dir=persons_dir,
         )
 
         processor.run()

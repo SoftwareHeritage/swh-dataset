@@ -393,7 +393,6 @@ class StartExport(luigi.Task):
                 self.export_id,
                 obj_type.name,
                 node_sets_path=self.local_export_path / ".node_sets",
-                persons_dir=self.local_export_path / "unused",  # placeholder
                 processes=4,  # very quick, no need for more
             )
             journal_processor.get_offsets()
@@ -580,7 +579,6 @@ class ExportTopic(luigi.Task):
                 self.export_id,
                 obj_type.name,
                 node_sets_path=self.local_export_path / ".node_sets",
-                persons_dir=self.local_export_path / "tmp" / "dup_persons",
                 processes=self.processes,
             )
             journal_processor.offsets = offsets[obj_type]
