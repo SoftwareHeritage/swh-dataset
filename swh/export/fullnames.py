@@ -81,7 +81,7 @@ class ParallelFullnameWriter:
 
     def write_to_orc(self, fullnames_orc: Path) -> None:
         with tempfile.NamedTemporaryFile(suffix=".csv") as result_file:
-            entries = list(self.dedup_dir.iterdir())
+            entries = list(Path(self.dedup_dir.name).iterdir())
             if entries:
                 env = {**os.environ, "LC_ALL": "C", "LC_COLLATE": "C", "LANG": "C"}
                 # fmt: off
