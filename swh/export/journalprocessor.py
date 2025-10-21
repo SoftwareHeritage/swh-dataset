@@ -584,15 +584,15 @@ class JournalProcessorWorker:
         if (author := getattr(obj, "author", None)) is not None:
             if (truncated_author := self._truncate_person(author)) is not None:
                 obj = obj.evolve(author=truncated_author)
-                self._add_person(truncated_author)
+                _add_person(self.persons_writer, truncated_author)
             else:
-                self._add_person(author)
+                _add_person(self.persons_writer, author)
         if (committer := getattr(obj, "committer", None)) is not None:
             if (truncated_committer := self._truncate_person(committer)) is not None:
                 obj = obj.evolve(committer=truncated_committer)
-                self._add_person(truncated_committer)
+                _add_person(self.persons_writer, truncated_committer)
             else:
-                self._add_person(committer)
+                _add_person(self.persons_writer, committer)
 
         node_set = self.get_node_set_for_object(object_type, partition, obj_key)
         if not node_set.add(obj_key):
@@ -623,13 +623,14 @@ class JournalProcessorWorker:
             )
         return None
 
-    def _add_person(self, person: Person):
-        self.persons_writer.writerow(
-            (
-                base64.b64encode(person.fullname).decode(),
-                base64.b64encode((hashlib.sha256(person.fullname)).digest()).decode(),
-            )
+
+def _add_person(persons_writer, person: Person):
+    persons_writer.writerow(
+        (
+            base64.b64encode(person.fullname).decode(),
+            base64.b64encode((hashlib.sha256(person.fullname)).digest()).decode(),
         )
+    )
 
 
 def _turn_message_into_objects(
