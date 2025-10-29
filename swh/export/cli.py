@@ -37,6 +37,8 @@ def export_cli_group(ctx, config_file):
     from swh.core import config
 
     ctx.ensure_object(dict)
+    if not config_file:
+        config_file = os.environ.get("SWH_CONFIG_FILENAME")
     conf = config.read(config_file)
     ctx.obj["config"] = conf
 
