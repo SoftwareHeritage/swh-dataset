@@ -181,6 +181,4 @@ def subdirectories_for_object_type(
         subdirectories += ["snapshot_branch"]
     elif obj_type == "revision":
         subdirectories += ["revision_history", "revision_extra_headers"]
-    elif obj_type == "content":
-        subdirectories += ["skipped_content"]
     return subdirectories

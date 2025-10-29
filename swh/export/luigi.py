@@ -548,13 +548,17 @@ class ExportTopic(luigi.Task):
         for obj_type in self.object_types:
             subdirectories = subdirectories_for_object_type(obj_type.name.lower())
 
-            # remove any leftover from a failed previous run
             for f in self.formats:
-                try:
-                    for subdirectory in subdirectories:
-                        shutil.rmtree(self.local_export_path / f.name / subdirectory)
-                except FileNotFoundError:
-                    pass
+                for subdirectory in subdirectories:
+                    export_directory = self.local_export_path / f.name / subdirectory
+                    try:
+                        # remove any leftover from a failed previous run
+                        shutil.rmtree(export_directory)
+                    except FileNotFoundError:
+                        pass
+                    # ensure export directory exists as it is expected by the graph compression
+                    # tool but it will not be created if the journal topic to export is empty
+                    export_directory.mkdir(parents=True)
                 if self.local_sensitive_export_path is not None:
                     try:
                         shutil.rmtree(
