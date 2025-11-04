@@ -573,7 +573,11 @@ class ExportTopic(luigi.Task):
                     config=config,
                     object_types=[obj_type.name],
                     export_path=self.local_export_path / f.name,
-                    sensitive_export_path=self.local_sensitive_export_path / f.name,
+                    sensitive_export_path=(
+                        self.local_sensitive_export_path / f.name
+                        if self.local_sensitive_export_path is not None
+                        else None
+                    ),
                 )
                 for f in self.formats
             ]
@@ -680,10 +684,13 @@ class ExportPersonsTable(luigi.Task):
 
         from .fullnames import process_fullnames
 
-        fullnames_export_path = self.local_sensitive_export_path / "orc" / "person"
-        fullnames_export_path.mkdir(parents=True, exist_ok=True)
-        fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
-        process_fullnames(fullnames_orc, self.local_export_path / "tmp" / "dup_persons")
+        if self.local_sensitive_export_path is not None:
+            fullnames_export_path = self.local_sensitive_export_path / "orc" / "person"
+            fullnames_export_path.mkdir(parents=True, exist_ok=True)
+            fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
+            process_fullnames(
+                fullnames_orc, self.local_export_path / "tmp" / "dup_persons"
+            )
 
         with self.output()["stamp"].open("w") as f:
             json.dump({}, f)
