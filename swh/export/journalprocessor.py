@@ -457,34 +457,36 @@ class JournalProcessorWorker:
         self.exit_stack.__enter__()
         for exporter in self.exporters:
             self.exit_stack.enter_context(exporter)
-        self.persons_sorter = subprocess.Popen(
-            # fmt: off
-            [
-                "sort",
-                "-t", ",",
-                "-k", "2",
-                "-S", "100M",
-                "-u",
-                "-o",
-                self.persons_file,
-            ],
-            # fmt: on
-            env={**os.environ, "LC_ALL": "C", "LC_COLLATE": "C", "LANG": "C"},
-            universal_newlines=True,
-            stdin=subprocess.PIPE,
-        )
-        assert self.persons_sorter.stdin is not None
-        self.persons_writer = csv.writer(self.persons_sorter.stdin)
+        if self.config["journal"].get("privileged"):
+            self.persons_sorter = subprocess.Popen(
+                # fmt: off
+                [
+                    "sort",
+                    "-t", ",",
+                    "-k", "2",
+                    "-S", "100M",
+                    "-u",
+                    "-o",
+                    self.persons_file,
+                ],
+                # fmt: on
+                env={**os.environ, "LC_ALL": "C", "LC_COLLATE": "C", "LANG": "C"},
+                universal_newlines=True,
+                stdin=subprocess.PIPE,
+            )
+            assert self.persons_sorter.stdin is not None
+            self.persons_writer = csv.writer(self.persons_sorter.stdin)
 
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.exit_stack.__exit__(exc_type, exc_value, traceback)
-        assert self.persons_sorter.stdin is not None
-        self.persons_sorter.stdin.close()
-        logger.debug("Starting persons partial deduplication")
-        self.persons_sorter.wait()
-        logger.debug("Persons partial deduplication done")
+        if self.config["journal"].get("privileged"):
+            assert self.persons_sorter.stdin is not None
+            self.persons_sorter.stdin.close()
+            logger.debug("Starting persons partial deduplication")
+            self.persons_sorter.wait()
+            logger.debug("Persons partial deduplication done")
 
     def get_node_set_for_object(
         self, obj_type: str, partition_id: int, object_id: bytes
@@ -581,18 +583,21 @@ class JournalProcessorWorker:
         It uses an on-disk set to make sure that each object is only ever
         processed once.
         """
-        if (author := getattr(obj, "author", None)) is not None:
-            if (truncated_author := self._truncate_person(author)) is not None:
-                obj = obj.evolve(author=truncated_author)
-                _add_person(self.persons_writer, truncated_author)
-            else:
-                _add_person(self.persons_writer, author)
-        if (committer := getattr(obj, "committer", None)) is not None:
-            if (truncated_committer := self._truncate_person(committer)) is not None:
-                obj = obj.evolve(committer=truncated_committer)
-                _add_person(self.persons_writer, truncated_committer)
-            else:
-                _add_person(self.persons_writer, committer)
+        if self.config["journal"].get("privileged"):
+            if (author := getattr(obj, "author", None)) is not None:
+                if (truncated_author := self._truncate_person(author)) is not None:
+                    obj = obj.evolve(author=truncated_author)
+                    _add_person(self.persons_writer, truncated_author)
+                else:
+                    _add_person(self.persons_writer, author)
+            if (committer := getattr(obj, "committer", None)) is not None:
+                if (
+                    truncated_committer := self._truncate_person(committer)
+                ) is not None:
+                    obj = obj.evolve(committer=truncated_committer)
+                    _add_person(self.persons_writer, truncated_committer)
+                else:
+                    _add_person(self.persons_writer, committer)
 
         node_set = self.get_node_set_for_object(object_type, partition, obj_key)
         if not node_set.add(obj_key):
