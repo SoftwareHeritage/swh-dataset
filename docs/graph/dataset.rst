@@ -96,6 +96,12 @@ Summary of dataset versions
      - Columnar
      - Compressed
 
+   * - `2025-10-08`_
+     - 53,529,848,761
+     - 1,003,518,287,197
+     - ✔
+     - ✔
+
    * - `2025-05-18`_
      - 49,903,891,086
      - 905,462,853,965
@@ -228,6 +234,31 @@ Full graph datasets
 
 Because of their size, some of the latest datasets are only available for
 download from Amazon S3.
+
+.. _graph-dataset-2025-10-08:
+
+2025-10-08
+~~~~~~~~~~
+
+A full export of the graph dated from May 2025
+
+- **Columnar tables (Apache ORC)**:
+
+  - **Total size**: 30 TiB
+  - **S3**: ``s3://softwareheritage/graph/2025-10-08/orc``
+
+- **Compressed graph**:
+
+  - **Total size**: 15 TiB
+  - **S3**: ``s3://softwareheritage/graph/2025-10-08/compressed``
+
+- **"History and hosting" Compressed graph**:
+
+  - This is a compressed graph of only the "history and hosting" layer (origins,
+    snapshots, releases, revisions) and the root directory (or rarely content) of
+    every revision/release; but most directories and contents are excluded
+  - **Total size**: 1.7 TiB
+  - **S3**: ``s3://softwareheritage/graph/2025-10-08-history-hosting/compressed``
 
 .. _graph-dataset-2025-05-18:
 
