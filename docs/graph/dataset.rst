@@ -260,6 +260,12 @@ A full export of the graph dated from May 2025
   - **Total size**: 1.7 TiB
   - **S3**: ``s3://softwareheritage/graph/2025-10-08-history-hosting/compressed``
 
+- Erratum: this graph was published on 2025-12-08T12:35Z. On the same day, we found a defect that
+  causes the compression of the ``.graph`` files in these graphs (and their respective ``.ef`` index)
+  to be 40% larger than they should be.
+  Even though this did not affect their correctness, we reuploaded better compressed files on 2025-12-08
+  between 16:00Z and 19:00Z.
+
 .. _graph-dataset-2025-05-18:
 
 2025-05-18
@@ -284,6 +290,10 @@ A full export of the graph dated from May 2025
     every revision/release; but most directories and contents are excluded
   - **Total size**: 1.5 TiB
   - **S3**: ``s3://softwareheritage/graph/2025-05-18-history-hosting/compressed``
+
+- Erratum: compression of the ``.graph`` files in this graph have a defect that causes them
+  (and their respective ``.ef`` index) to be 40% larger than they should be.
+  This does not affect their correctness.
 
 .. _graph-dataset-2024-12-06:
 
@@ -310,6 +320,10 @@ A full export of the graph dated from December 2024
   - **Total size**: 1.4 TiB
   - **S3**: ``s3://softwareheritage/graph/2024-12-06-history-hosting/compressed``
 
+- Erratum: compression of the ``.graph`` files in this graph have a defect that causes them
+  (and their respective ``.ef`` index) to be 40% larger than they should be.
+  This does not affect their correctness.
+
 
 .. _graph-dataset-2024-08-23:
 
@@ -330,6 +344,10 @@ A full export of the graph dated from August 2024
   - This graph changed the MPH from GOV/Cmph to PTHash; Rust code hardcoding ``GOVMPH`` needs
     to replace it with ``DynMph`` or ``SwhidPthash``.
     Java is no longer supported to read this graph.
+
+- Erratum: compression of the ``.graph`` files in this graph have a defect that causes them
+  (and their respective ``.ef`` index) to be 40% larger than they should be.
+  This does not affect their correctness.
 
 .. _graph-dataset-2024-05-16:
 
@@ -357,6 +375,9 @@ A full export of the graph dated from May 2024
     every revision/release; but most directories and contents are excluded
   - **S3**: ``s3://softwareheritage/graph/2024-05-16-history-hosting/compressed``
 
+- Erratum: compression of the ``.graph`` files in this graph have a defect that causes them
+  (and their respective ``.ef`` index) to be 40% larger than they should be.
+  This does not affect their correctness.
 
 .. _graph-dataset-2023-09-06:
 
