@@ -82,6 +82,20 @@ decompressed with ``unzstd`` before they can be used with swh-graph.
 
 .. _awscli: https://github.com/aws/aws-cli
 
+
+Changelog
+---------
+
+- Graphs **2024-05-16, 2024-08-23, 2024-12-06, 2025-05-18** and their related history-hosting
+  and teaser graphs were compressed inefficiently, causing their ``.graph`` and ``.ef``
+  files to be 40% thand they should be.
+  This issue was fixed in the 2025-10-08 graph.
+  This does not affect their correctness.
+- **2024-08-23** and newer: starting with this graph, the MPH changed from GOV/Cmph to PTHash.
+  Rust code hardcoding ``GOVMPH`` needs to replace it with ``DynMph`` or ``SwhidPthash``.
+  Java is no longer supported to read this graph.
+
+
 Summary of dataset versions
 ---------------------------
 
@@ -260,6 +274,12 @@ A full export of the graph dated from May 2025
   - **Total size**: 1.7 TiB
   - **S3**: ``s3://softwareheritage/graph/2025-10-08-history-hosting/compressed``
 
+- Erratum: this graph was published on 2025-12-08T12:35Z. On the same day, we found a defect that
+  causes the compression of the ``.graph`` files in these graphs (and their respective ``.ef`` index)
+  to be 40% larger than they should be.
+  Even though this did not affect their correctness, we reuploaded better compressed files on 2025-12-08
+  between 16:00Z and 19:00Z.
+
 .. _graph-dataset-2025-05-18:
 
 2025-05-18
@@ -327,9 +347,6 @@ A full export of the graph dated from August 2024
 
   - **Total size**: 11 TiB
   - **S3**: ``s3://softwareheritage/graph/2024-08-23/compressed``
-  - This graph changed the MPH from GOV/Cmph to PTHash; Rust code hardcoding ``GOVMPH`` needs
-    to replace it with ``DynMph`` or ``SwhidPthash``.
-    Java is no longer supported to read this graph.
 
 .. _graph-dataset-2024-05-16:
 
@@ -356,7 +373,6 @@ A full export of the graph dated from May 2024
     snapshots, releases, revisions) and the root directory (or rarely content) of
     every revision/release; but most directories and contents are excluded
   - **S3**: ``s3://softwareheritage/graph/2024-05-16-history-hosting/compressed``
-
 
 .. _graph-dataset-2023-09-06:
 
