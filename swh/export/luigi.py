@@ -165,6 +165,22 @@ def merge_lists(lists: Iterator[List[T]]) -> List[T]:
     return list(res)
 
 
+def parse_offsets(
+    paths: Dict[Any, luigi.LocalTarget], object_types: List[ObjectType]
+) -> Dict[ObjectType, Dict[int, Tuple[int, int]]]:
+    """returns ``{obj_type: {partition: (low, high)}``"""
+    import json
+
+    offsets = {}
+    for obj_type in object_types:
+        with paths[obj_type].open("r") as f:
+            offsets[obj_type] = {
+                int(partition): (low, high)
+                for (partition, (low, high)) in json.load(f)["offsets"].items()
+            }
+    return offsets
+
+
 class PathParameter(luigi.PathParameter):
     """
     A parameter that is a local filesystem path.
@@ -514,16 +530,7 @@ class ExportTopic(luigi.Task):
 
         masked_swhids = get_masked_swhids(logger, config)
 
-        offsets: Dict[ObjectType, Dict[int, Tuple[int, int]]] = {}
-        for obj_type in self.object_types:
-            with self.input()["start"][obj_type].open("r") as f:
-                # {obj_type: {partition: (low, high)}
-                offsets[obj_type] = {
-                    int(partition): (low, high)
-                    for (partition, (low, high)) in json.load(f)["offsets"].items()
-                }
-
-        print(list(offsets))
+        offsets = parse_offsets(self.input()["start"], self.object_types)
 
         self._setrlimit(
             sum(
@@ -809,7 +816,7 @@ class ExportGraph(luigi.Task):
         return dependencies
 
     def run(self) -> None:
-        """Runs the full export, then writes stamps, then :file:`meta.json`."""
+        """Runs the full export, then writes stamps, then :file:`meta/export.json`."""
         import datetime
         from importlib.metadata import version
         import json
@@ -838,6 +845,12 @@ class ExportGraph(luigi.Task):
             "prefix": conf["journal"]["prefix"],
             "formats": [format_.name for format_ in self.formats],
             "object_types": [object_type.name for object_type in self.object_types],
+            "offsets": {
+                object_type.name: offsets
+                for (object_type, offsets) in parse_offsets(
+                    self.input()["START"], self.object_types
+                ).items()
+            },
             "privileged": conf["journal"].get("privileged"),
             "hostname": socket.getfqdn(),
             "tool": {
@@ -907,7 +920,7 @@ class UploadExportToS3(luigi.Task):
         )
 
     def run(self) -> None:
-        """Copies all files: first the export itself, then :file:`meta.json`."""
+        """Copies all files: first the export itself, then :file:`meta/export.json`."""
         import os
 
         import luigi.contrib.s3
@@ -996,7 +1009,7 @@ class DownloadExportFromS3(luigi.Task):
         return luigi.LocalTarget(self.local_export_path / "meta" / "export.json")
 
     def run(self) -> None:
-        """Copies all files: first the export itself, then :file:`meta.json`."""
+        """Copies all files: first the export itself, then :file:`meta/export.json`."""
         import collections
         import multiprocessing.dummy
 
