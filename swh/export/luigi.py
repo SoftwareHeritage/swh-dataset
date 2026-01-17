@@ -1224,7 +1224,9 @@ class RunExportAll(luigi.WrapperTask):
     """
 
     formats = luigi.EnumListParameter(
-        enum=Format, batch_method=merge_lists, default=list(Format)
+        enum=Format,
+        batch_method=merge_lists,
+        default=[Format.orc],  # type: ignore[attr-defined]
     )
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
