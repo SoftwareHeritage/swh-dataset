@@ -436,7 +436,11 @@ class ExportTopic(luigi.Task):
         'journal' section of the config file, defaults to 'swh-export-export-'.
         """,
     )
-    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(
+        enum=Format,
+        batch_method=merge_lists,
+        default=[Format.orc],  # type: ignore[attr-defined]
+    )
     processes = luigi.IntParameter(default=1, significant=False)
     margin: float = FractionalFloatParameter(  # type: ignore[assignment]
         default=1.0,
@@ -623,7 +627,11 @@ class ExportPersonsTable(luigi.Task):
         'journal' section of the config file, defaults to 'swh-export-export-'.
         """,
     )
-    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(
+        enum=Format,
+        batch_method=merge_lists,
+        default=[Format.orc],  # type: ignore[attr-defined]
+    )
     processes = luigi.IntParameter(default=1, significant=False)
     margin: float = FractionalFloatParameter(  # type: ignore[assignment]
         default=1.0,
@@ -724,7 +732,11 @@ class ExportGraph(luigi.Task):
         'journal' section of the config file, defaults to 'swh-export-export-'.
         """,
     )
-    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(
+        enum=Format,
+        batch_method=merge_lists,
+        default=[Format.orc],  # type: ignore[attr-defined]
+    )
     processes = luigi.IntParameter(default=1, significant=False)
     margin: float = FractionalFloatParameter(  # type: ignore[assignment]
         default=1.0,
@@ -864,7 +876,11 @@ class UploadExportToS3(luigi.Task):
     """
 
     local_export_path: Path = PathParameter(is_dir=True, create=True, significant=False)  # type: ignore[assignment]
-    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(
+        enum=Format,
+        batch_method=merge_lists,
+        default=[Format.orc],  # type: ignore[attr-defined]
+    )
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
@@ -964,7 +980,11 @@ class DownloadExportFromS3(luigi.Task):
     """
 
     local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
-    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(
+        enum=Format,
+        batch_method=merge_lists,
+        default=[Format.orc],  # type: ignore[attr-defined]
+    )
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
@@ -1052,7 +1072,11 @@ class LocalExport(luigi.Task):
     local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
         default=None
     )
-    formats = luigi.EnumListParameter(enum=Format, batch_method=merge_lists)
+    formats = luigi.EnumListParameter(
+        enum=Format,
+        batch_method=merge_lists,
+        default=[Format.orc],  # type: ignore[attr-defined]
+    )
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
     )
