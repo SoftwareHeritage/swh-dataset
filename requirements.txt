@@ -1,9 +1,9 @@
 # Add here external Python modules dependencies, one per line. Module names
 # should match https://pypi.python.org/pypi names. For the full spec or
-# dependency lines, see https://pip.readthedocs.org/en/1.1/requirements.html
+# dependency lines, see https://pip.pypa.io/en/stable/reference/requirements-file-format/
 boto3
 click
-luigi != 3.5.2
+luigi != 3.5.2, != 3.7.0, != 3.7.1 # https://github.com/spotify/luigi/issues/3312 and https://github.com/spotify/luigi/issues/3376
 tqdm
 pyorc ; python_version>="3.8"
 pyorc<0.9 ; python_version<"3.8"
