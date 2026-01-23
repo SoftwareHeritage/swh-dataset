@@ -506,6 +506,7 @@ class ExportTopic(luigi.Task):
         import functools
         from importlib import import_module
         import json
+        import logging
         import shutil
 
         import yaml
@@ -526,8 +527,6 @@ class ExportTopic(luigi.Task):
                     int(partition): (low, high)
                     for (partition, (low, high)) in json.load(f)["offsets"].items()
                 }
-
-        print(list(offsets))
 
         self._setrlimit(
             sum(
@@ -555,21 +554,26 @@ class ExportTopic(luigi.Task):
             for f in self.formats:
                 for subdirectory in subdirectories:
                     export_directory = self.local_export_path / f.name / subdirectory
-                    try:
+                    if export_directory.exists():
                         # remove any leftover from a failed previous run
+                        logger.warning(
+                            "Removing existing directory %s", export_directory
+                        )
                         shutil.rmtree(export_directory)
-                    except FileNotFoundError:
-                        pass
+
                     # ensure export directory exists as it is expected by the graph compression
                     # tool but it will not be created if the journal topic to export is empty
                     export_directory.mkdir(parents=True)
+
                 if self.local_sensitive_export_path is not None:
-                    try:
-                        shutil.rmtree(
-                            self.local_sensitive_export_path / f.name / obj_type.name
+                    sensitive_export_directory = (
+                        self.local_sensitive_export_path / f.name / obj_type.name
+                    )
+                    if sensitive_export_directory.exists():
+                        logger.warning(
+                            "Removing existing directory %s", sensitive_export_directory
                         )
-                    except FileNotFoundError:
-                        pass
+                        shutil.rmtree(sensitive_export_directory)
 
             exporters = [
                 functools.partial(
@@ -688,13 +692,23 @@ class ExportPersonsTable(luigi.Task):
         """Aggregates lists of persons exported by :class:`ExportTopic` into a single
         table with no duplicates."""
         import json
+        import logging
+        import shutil
         import uuid
 
         from .fullnames import process_fullnames
 
+        logger = logging.getLogger(__name__)
+
         if self.local_sensitive_export_path is not None:
             fullnames_export_path = self.local_sensitive_export_path / "orc" / "person"
-            fullnames_export_path.mkdir(parents=True, exist_ok=True)
+
+            if fullnames_export_path.exists():
+                # remove any leftover from a failed previous run
+                logger.warning("Removing existing directory %s", fullnames_export_path)
+                shutil.rmtree(fullnames_export_path)
+
+            fullnames_export_path.mkdir(parents=True)
             fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
             process_fullnames(
                 fullnames_orc, self.local_export_path / "tmp" / "dup_persons"
