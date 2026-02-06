@@ -14,6 +14,7 @@ import os
 import sys
 import textwrap
 import time
+from pathlib import Path
 
 import boto3
 import botocore.exceptions
@@ -306,9 +307,9 @@ def generate_subdataset(
 
 
 def generate_subdataset_datafusion(
-    dataset_path: str,
-    output_path: str,
-    swhids_file: str,
+    dataset_path: Path,
+    output_path: Path,
+    swhids_file: Path,
 ):
     """Generate a subdataset by filtering local ORC files using DataFusion."""
     import hashlib
@@ -358,8 +359,8 @@ def generate_subdataset_datafusion(
     # Register each source ORC table using pyarrow.dataset for lazy loading
     registered_tables = set()
     for table_name in TABLES:
-        orc_dir = os.path.join(dataset_path, table_name)
-        if not os.path.isdir(orc_dir):
+        orc_dir = dataset_path / table_name
+        if not orc_dir.is_dir():
             continue
         dataset = ds.dataset(orc_dir, format=ds.OrcFileFormat())
         ctx.register_dataset(table_name, dataset)
@@ -379,9 +380,9 @@ def generate_subdataset_datafusion(
 
         print(f"Filtering {table_name}...", file=sys.stderr, end="", flush=True)
         df = ctx.sql(query_str)
-        output_dir = os.path.join(output_path, table_name)
-        os.makedirs(output_dir, exist_ok=True)
-        output_file = os.path.join(output_dir, f"{table_name}.orc")
+        output_dir = output_path / table_name
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / f"{table_name}.orc"
 
         # DataFrames are directly iterable, yielding RecordBatch objects lazily
         # ORCWriter.write() takes Table, so convert each batch
@@ -389,7 +390,7 @@ def generate_subdataset_datafusion(
         for batch in df:
             arrow_table = pyarrow.Table.from_batches([batch.to_pyarrow()])
             if writer is None:
-                writer = pa_orc.ORCWriter(output_file, compression="ZSTD")
+                writer = pa_orc.ORCWriter(str(output_file), compression="ZSTD")
             writer.write(arrow_table)
         if writer is not None:
             writer.close()
