@@ -36,7 +36,7 @@ _TABLES_JOIN_FIELD_SIMPLE = [
     ("skipped_content", "sha1_git"),
 ]
 
-# Origin tables: Athena computes hash from URL, DataFusion uses sha1_hex UDF
+# Origin tables: Athena computes hash from URL, DataFusion uses joins
 _ORIGIN_TABLES_JOIN_FIELD = {
     "athena": [
         ("origin", "lower(to_hex(sha1(to_utf8(url))))"),
@@ -46,9 +46,9 @@ _ORIGIN_TABLES_JOIN_FIELD = {
     "datafusion": [
         # origin table has id = sha1(url), use it directly
         ("origin", "id"),
-        # origin_visit/status use sha1_hex UDF registered in the function
-        ("origin_visit", "sha1_hex(origin)"),
-        ("origin_visit_status", "sha1_hex(origin)"),
+        # origin_visit/status join with filtered origin table instead of computing hash
+        ("origin_visit", "origin"),
+        ("origin_visit_status", "origin"),
     ],
 }
 
@@ -312,34 +312,31 @@ def generate_subdataset_datafusion(
     swhids_file: Path,
 ):
     """Generate a subdataset by filtering local ORC files using DataFusion."""
-    import hashlib
-
-    from datafusion import SessionContext, udf
+    from datafusion import SessionContext
     import pyarrow
     import pyarrow.dataset as ds
     import pyarrow.orc as pa_orc
 
-    # UDF to compute sha1 hash of a string and return lowercase hex
-    def sha1_hex_impl(arr: pyarrow.Array) -> pyarrow.Array:
-        result: list = []
-        for val in arr.to_pylist():
-            if val is None:
-                result.append(None)
-            else:
-                h = hashlib.sha1(val.encode("utf-8")).hexdigest()
-                result.append(h)
-        return pyarrow.array(result, type=pyarrow.string())
+    def filter_and_write_table(table_name: str, query_str: str, ctx: SessionContext):
+        """Execute query and write results to ORC file."""
+        print(f"Filtering {table_name}...", file=sys.stderr, end="", flush=True)
+        df = ctx.sql(query_str)
+        output_dir = output_path / table_name
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / f"{table_name}.orc"
 
-    sha1_hex = udf(
-        sha1_hex_impl,  # type: ignore[arg-type]
-        [pyarrow.string()],
-        pyarrow.string(),
-        "immutable",
-        name="sha1_hex",
-    )
+        writer = None
+        for batch in df:
+            arrow_table = pyarrow.Table.from_batches([batch.to_pyarrow()])
+            if writer is None:
+                writer = pa_orc.ORCWriter(str(output_file), compression="ZSTD")
+            writer.write(arrow_table)
+        if writer is not None:
+            writer.close()
+        print(" done.", file=sys.stderr)
+        return writer is not None
 
     ctx = SessionContext()
-    ctx.register_udf(sha1_hex)
 
     # Register SWHID table from colon-delimited file
     ctx.sql(
@@ -366,32 +363,45 @@ def generate_subdataset_datafusion(
         ctx.register_dataset(table_name, dataset)
         registered_tables.add(table_name)
 
-    # Filter each table and stream Arrow batches to ORC via pyarrow
+    # First, filter the origin table and register it for joining
+    # This way we only compute SHA1 once (via the id field) instead of three times
+    filtered_origin_registered = False
+    if "origin" in registered_tables:
+        origin_query = """
+            SELECT * FROM origin
+            WHERE id IN (SELECT hash FROM swhids)
+        """
+        has_data = filter_and_write_table("origin", origin_query, ctx)
+        if has_data:
+            # Register the filtered origin table for joins
+            filtered_dataset = ds.dataset(
+                output_path / "origin", format=ds.OrcFileFormat()
+            )
+            ctx.register_dataset("filtered_origin", filtered_dataset)
+            filtered_origin_registered = True
+
+    # Filter remaining tables
     for table_name, join_field in get_tables_join_field("datafusion"):
         if table_name not in registered_tables:
             continue
-        query_str = f"""
-            SELECT * FROM {table_name}
-            WHERE {join_field} IN (SELECT hash FROM swhids)
-        """
+        # Skip origin since we already processed it
+        if table_name == "origin":
+            continue
+
+        # For origin_visit and origin_visit_status, join with filtered origins
+        if table_name in ("origin_visit", "origin_visit_status") and filtered_origin_registered:
+            query_str = f"""
+                SELECT t.* FROM {table_name} t
+                INNER JOIN filtered_origin fo ON t.origin = fo.url
+            """
+        else:
+            query_str = f"""
+                SELECT * FROM {table_name}
+                WHERE {join_field} IN (SELECT hash FROM swhids)
+            """
+
         if table_name in ("revision", "release"):
             # message is binary type, use length() for binary data
             query_str += " AND length(message) < 100000"
 
-        print(f"Filtering {table_name}...", file=sys.stderr, end="", flush=True)
-        df = ctx.sql(query_str)
-        output_dir = output_path / table_name
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f"{table_name}.orc"
-
-        # DataFrames are directly iterable, yielding RecordBatch objects lazily
-        # ORCWriter.write() takes Table, so convert each batch
-        writer = None
-        for batch in df:
-            arrow_table = pyarrow.Table.from_batches([batch.to_pyarrow()])
-            if writer is None:
-                writer = pa_orc.ORCWriter(str(output_file), compression="ZSTD")
-            writer.write(arrow_table)
-        if writer is not None:
-            writer.close()
-        print(" done.", file=sys.stderr)
+        filter_and_write_table(table_name, query_str, ctx)
