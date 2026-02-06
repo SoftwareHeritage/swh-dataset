@@ -319,21 +319,23 @@ def generate_subdataset_datafusion(
 
     def filter_and_write_table(table_name: str, query_str: str, ctx: SessionContext):
         """Execute query and write results to ORC file."""
-        print(f"Filtering {table_name}...", file=sys.stderr, end="", flush=True)
+        import tqdm
+
         df = ctx.sql(query_str)
         output_dir = output_path / table_name
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / f"{table_name}.orc"
 
         writer = None
-        for batch in df:
-            arrow_table = pyarrow.Table.from_batches([batch.to_pyarrow()])
-            if writer is None:
-                writer = pa_orc.ORCWriter(str(output_file), compression="ZSTD")
-            writer.write(arrow_table)
+        with tqdm.tqdm(desc=f"Filtering {table_name}", unit="rows", unit_scale=True) as pbar:
+            for batch in df:
+                arrow_table = pyarrow.Table.from_batches([batch.to_pyarrow()])
+                if writer is None:
+                    writer = pa_orc.ORCWriter(str(output_file), compression="ZSTD")
+                writer.write(arrow_table)
+                pbar.update(arrow_table.num_rows)
         if writer is not None:
             writer.close()
-        print(" done.", file=sys.stderr)
         return writer is not None
 
     ctx = SessionContext()
