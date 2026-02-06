@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -19,6 +19,42 @@ import boto3
 import botocore.exceptions
 
 from .relational import TABLES
+
+# Join field for each table when filtering by SWHID hash.
+# Tables where join field is just a column name (same in all SQL dialects)
+_TABLES_JOIN_FIELD_SIMPLE = [
+    ("snapshot", "id"),
+    ("snapshot_branch", "snapshot_id"),
+    ("release", "id"),
+    ("revision", "id"),
+    ("revision_history", "id"),
+    ("revision_extra_headers", "id"),
+    ("directory", "id"),
+    ("directory_entry", "directory_id"),
+    ("content", "sha1_git"),
+    ("skipped_content", "sha1_git"),
+]
+
+# Origin tables: Athena computes hash from URL, DataFusion uses sha1_hex UDF
+_ORIGIN_TABLES_JOIN_FIELD = {
+    "athena": [
+        ("origin", "lower(to_hex(sha1(to_utf8(url))))"),
+        ("origin_visit", "lower(to_hex(sha1(to_utf8(origin))))"),
+        ("origin_visit_status", "lower(to_hex(sha1(to_utf8(origin))))"),
+    ],
+    "datafusion": [
+        # origin table has id = sha1(url), use it directly
+        ("origin", "id"),
+        # origin_visit/status use sha1_hex UDF registered in the function
+        ("origin_visit", "sha1_hex(origin)"),
+        ("origin_visit_status", "sha1_hex(origin)"),
+    ],
+}
+
+
+def get_tables_join_field(dialect: str):
+    """Return (table, join_field) pairs for the given SQL dialect."""
+    return _ORIGIN_TABLES_JOIN_FIELD[dialect] + _TABLES_JOIN_FIELD_SIMPLE
 
 
 def create_database(database_name):
@@ -246,22 +282,8 @@ def generate_subdataset(
         WHERE {field} IN (select hash from swhids)
         """
     )
-    tables_join_field = [
-        ("origin", "lower(to_hex(sha1(to_utf8(url))))"),
-        ("origin_visit", "lower(to_hex(sha1(to_utf8(origin))))"),
-        ("origin_visit_status", "lower(to_hex(sha1(to_utf8(origin))))"),
-        ("snapshot", "id"),
-        ("snapshot_branch", "snapshot_id"),
-        ("release", "id"),
-        ("revision", "id"),
-        ("revision_history", "id"),
-        ("directory", "id"),
-        ("directory_entry", "directory_id"),
-        ("content", "sha1_git"),
-        ("skipped_content", "sha1_git"),
-    ]
 
-    for table, join_field in tables_join_field:
+    for table, join_field in get_tables_join_field("athena"):
         ctas_query = query_tpl.format(
             newdb=subdataset_db,
             basedb=dataset_db,
@@ -281,3 +303,94 @@ def generate_subdataset(
             ctas_query,
             desc="Creating join table {}".format(table),
         )
+
+
+def generate_subdataset_datafusion(
+    dataset_path: str,
+    output_path: str,
+    swhids_file: str,
+):
+    """Generate a subdataset by filtering local ORC files using DataFusion."""
+    import hashlib
+
+    from datafusion import SessionContext, udf
+    import pyarrow
+    import pyarrow.dataset as ds
+    import pyarrow.orc as pa_orc
+
+    # UDF to compute sha1 hash of a string and return lowercase hex
+    def sha1_hex_impl(arr: pyarrow.Array) -> pyarrow.Array:
+        result: list = []
+        for val in arr.to_pylist():
+            if val is None:
+                result.append(None)
+            else:
+                h = hashlib.sha1(val.encode("utf-8")).hexdigest()
+                result.append(h)
+        return pyarrow.array(result, type=pyarrow.string())
+
+    sha1_hex = udf(
+        sha1_hex_impl,  # type: ignore[arg-type]
+        [pyarrow.string()],
+        pyarrow.string(),
+        "immutable",
+        name="sha1_hex",
+    )
+
+    ctx = SessionContext()
+    ctx.register_udf(sha1_hex)
+
+    # Register SWHID table from colon-delimited file
+    ctx.sql(
+        f"""
+        CREATE EXTERNAL TABLE swhids (
+            swhprefix STRING,
+            version INT,
+            type STRING,
+            hash STRING
+        )
+        STORED AS CSV
+        OPTIONS ('format.has_header' 'false', 'format.delimiter' ':')
+        LOCATION '{swhids_file}'
+    """
+    )
+
+    # Register each source ORC table using pyarrow.dataset for lazy loading
+    registered_tables = set()
+    for table_name in TABLES:
+        orc_dir = os.path.join(dataset_path, table_name)
+        if not os.path.isdir(orc_dir):
+            continue
+        dataset = ds.dataset(orc_dir, format=ds.OrcFileFormat())
+        ctx.register_dataset(table_name, dataset)
+        registered_tables.add(table_name)
+
+    # Filter each table and stream Arrow batches to ORC via pyarrow
+    for table_name, join_field in get_tables_join_field("datafusion"):
+        if table_name not in registered_tables:
+            continue
+        query_str = f"""
+            SELECT * FROM {table_name}
+            WHERE {join_field} IN (SELECT hash FROM swhids)
+        """
+        if table_name in ("revision", "release"):
+            # message is binary type, use length() for binary data
+            query_str += " AND length(message) < 100000"
+
+        print(f"Filtering {table_name}...", file=sys.stderr, end="", flush=True)
+        df = ctx.sql(query_str)
+        output_dir = os.path.join(output_path, table_name)
+        os.makedirs(output_dir, exist_ok=True)
+        output_file = os.path.join(output_dir, f"{table_name}.orc")
+
+        # DataFrames are directly iterable, yielding RecordBatch objects lazily
+        # ORCWriter.write() takes Table, so convert each batch
+        writer = None
+        for batch in df:
+            arrow_table = pyarrow.Table.from_batches([batch.to_pyarrow()])
+            if writer is None:
+                writer = pa_orc.ORCWriter(output_file, compression="ZSTD")
+            writer.write(arrow_table)
+        if writer is not None:
+            writer.close()
+        print(" done.", file=sys.stderr)
