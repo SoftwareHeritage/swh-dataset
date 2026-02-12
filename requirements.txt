@@ -3,7 +3,7 @@
 # dependency lines, see https://pip.pypa.io/en/stable/reference/requirements-file-format/
 boto3
 click
-luigi != 3.5.2, != 3.7.0, != 3.7.1 # https://github.com/spotify/luigi/issues/3312 and https://github.com/spotify/luigi/issues/3376
+luigi != 3.5.2, < 3.7.0 # 3.5.2 is buggy: https://github.com/spotify/luigi/issues/3312 . 3.7.0 to 3.7.2 are buggy: https://github.com/spotify/luigi/issues/3376 and https://github.com/spotify/luigi/issues/3382 . And we can't make mypy pass for both <3.7.0 and >= 3.7.3, and 3.7.x does not support Python 3.13 (https://github.com/spotify/luigi/issues/3390) so we stick to <3.7.0 for now.
 tqdm
 pyorc ; python_version>="3.8"
 pyorc<0.9 ; python_version<"3.8"
