@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2025  The Software Heritage developers
+# Copyright (C) 2020-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -35,7 +35,7 @@ from typing import (
 from confluent_kafka import Message, TopicPartition
 import tqdm
 
-from swh.journal.client import JournalClient
+from swh.journal.client import EofBehavior, JournalClient
 from swh.journal.serializers import kafka_to_value
 from swh.model.model import (
     SWH_MODEL_OBJECT_TYPES,
@@ -93,7 +93,7 @@ class JournalClientOffsetRanges(JournalClient):
         self._partitions_to_unsubscribe: Set[int] = set()
         self.count = None
         self.topic_name: Optional[str] = None
-        kwargs["stop_on_eof"] = True  # Stop when the assignment is empty
+        kwargs["on_eof"] = EofBehavior.STOP  # Stop when the assignment is empty
         super().__init__(*args, **kwargs)
 
     def subscribe(self):
