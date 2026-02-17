@@ -1,58 +1,19 @@
-# Copyright (C) 2024  The Software Heritage developers
+# Copyright (C) 2024-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
 import functools
-import gc
 import multiprocessing
 from multiprocessing.managers import ListProxy
 from typing import Sequence, Tuple
 
-import pytest
-
 from swh.export.exporter import Exporter
 from swh.export.journalprocessor import ParallelJournalProcessor
-from swh.journal.writer import get_journal_writer
 from swh.model import model
 from swh.model.tests import swh_model_data
 
-
-@pytest.fixture
-def journal_client_config(
-    kafka_server: str, kafka_prefix: str, kafka_consumer_group: str
-):
-    return dict(
-        brokers=kafka_server,
-        group_id=kafka_consumer_group,
-        prefix=kafka_prefix,
-    )
-
-
-@pytest.fixture
-def journal_writer(kafka_server: str, kafka_prefix: str):
-    return get_journal_writer(
-        cls="kafka",
-        brokers=[kafka_server],
-        client_id="kafka_writer",
-        prefix=kafka_prefix,
-        anonymize=False,
-    )
-
-
-def disable_gc(f):
-    """Decorator for test functions; prevents segfaults in confluent-kafka.
-    See https://github.com/confluentinc/confluent-kafka-python/issues/1761"""
-
-    @functools.wraps(f)
-    def newf(*args, **kwargs):
-        gc.disable()
-        try:
-            return f(*args, **kwargs)
-        finally:
-            gc.enable()
-
-    return newf
+from .utils import disable_gc
 
 
 class ListExporter(Exporter):
@@ -73,6 +34,7 @@ def assert_exported_objects(
     assert set(obj[1] for obj in exported_objects) == set(expected_objects)
 
 
+@disable_gc
 def test_parallel_journal_processor(
     journal_client_config, journal_writer, tmp_path
 ) -> None:
@@ -110,6 +72,7 @@ def test_parallel_journal_processor(
         assert_exported_objects(objects, swh_model_data.REVISIONS)
 
 
+@disable_gc
 def test_parallel_journal_processor_origin(
     journal_client_config, journal_writer, tmp_path
 ) -> None:

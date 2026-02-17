@@ -1,11 +1,9 @@
-# Copyright (C) 2020-2025  The Software Heritage developers
+# Copyright (C) 2020-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
 
-import collections
 from contextlib import contextmanager
-import hashlib
 import math
 from pathlib import Path
 import tempfile
@@ -30,6 +28,19 @@ from swh.model.model import (
 )
 from swh.model.tests.swh_model_data import TEST_OBJECTS
 from swh.objstorage.factory import get_objstorage
+
+from .utils import (
+    assert_contents_exported_to_orc,
+    assert_directories_exported_to_orc,
+    assert_origin_visit_statuses_exported_to_orc,
+    assert_origin_visits_exported_to_orc,
+    assert_origins_exported_to_orc,
+    assert_releases_exported_to_orc,
+    assert_revisions_exported_to_orc,
+    assert_skipped_contents_exported_to_orc,
+    assert_snapshots_exported_to_orc,
+    orc_load,
+)
 
 
 @contextmanager
@@ -65,21 +76,6 @@ def orc_export(messages, object_types, config=None, tmpdir=None, sensitive_tmpdi
             yield tmpdir
 
 
-def orc_load(rootdir):
-    res = collections.defaultdict(list)
-    res["rootdir"] = rootdir
-    for obj_type_dir in rootdir.iterdir():
-        for orc_file in obj_type_dir.iterdir():
-            with orc_file.open("rb") as orc_obj:
-                reader = pyorc.Reader(
-                    orc_obj,
-                    converters={pyorc.TypeKind.TIMESTAMP: orc.SWHTimestampConverter},
-                )
-                obj_type = reader.user_metadata["swh_object_type"].decode()
-                res[obj_type].extend(reader)
-    return res
-
-
 def exporter(messages, object_types, config=None, tmpdir=None):
     with orc_export(messages, object_types, config, tmpdir) as exportdir:
         return orc_load(exportdir)
@@ -90,9 +86,7 @@ def test_export_origin():
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
-    for obj in TEST_OBJECTS[obj_type]:
-        sha1 = hashlib.sha1(obj.url.encode()).hexdigest()
-        assert (sha1, obj.url) in output[obj_type.value]
+    assert_origins_exported_to_orc(TEST_OBJECTS[obj_type], output["origin"])
 
 
 def test_export_origin_visit():
@@ -100,13 +94,7 @@ def test_export_origin_visit():
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
-    for obj in TEST_OBJECTS[obj_type]:
-        assert (
-            obj.origin,
-            obj.visit,
-            orc.datetime_to_tuple(obj.date),
-            obj.type,
-        ) in output[obj_type.value]
+    assert_origin_visits_exported_to_orc(TEST_OBJECTS[obj_type], output["origin_visit"])
 
 
 def test_export_origin_visit_status():
@@ -114,15 +102,9 @@ def test_export_origin_visit_status():
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
-    for obj in TEST_OBJECTS[obj_type]:
-        assert (
-            obj.origin,
-            obj.visit,
-            orc.datetime_to_tuple(obj.date),
-            obj.status,
-            orc.hash_to_hex_or_none(obj.snapshot),
-            obj.type,
-        ) in output[obj_type.value]
+    assert_origin_visit_statuses_exported_to_orc(
+        TEST_OBJECTS[obj_type], output["origin_visit_status"]
+    )
 
 
 def test_export_snapshot():
@@ -130,17 +112,9 @@ def test_export_snapshot():
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
-    for obj in TEST_OBJECTS[obj_type]:
-        assert (orc.hash_to_hex_or_none(obj.id),) in output["snapshot"]
-        for branch_name, branch in obj.branches.items():
-            if branch is None:
-                continue
-            assert (
-                orc.hash_to_hex_or_none(obj.id),
-                branch_name,
-                orc.hash_to_hex_or_none(branch.target),
-                str(branch.target_type.value),
-            ) in output["snapshot_branch"]
+    assert_snapshots_exported_to_orc(
+        TEST_OBJECTS[obj_type], output["snapshot"], output["snapshot_branch"]
+    )
 
 
 def test_export_release():
@@ -148,17 +122,7 @@ def test_export_release():
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
-    for obj in TEST_OBJECTS[obj_type]:
-        assert (
-            orc.hash_to_hex_or_none(obj.id),
-            obj.name,
-            obj.message,
-            orc.hash_to_hex_or_none(obj.target),
-            obj.target_type.value,
-            obj.author.fullname if obj.author else None,
-            *orc.swh_date_to_tuple(getattr(obj, "date", None)),
-            obj.raw_manifest,
-        ) in output[obj_type.value]
+    assert_releases_exported_to_orc(TEST_OBJECTS[obj_type], output["release"])
 
 
 def test_export_revision():
@@ -166,24 +130,9 @@ def test_export_revision():
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
-    for obj in TEST_OBJECTS[obj_type]:
-        assert (
-            orc.hash_to_hex_or_none(obj.id),
-            obj.message,
-            obj.author.fullname,
-            *orc.swh_date_to_tuple(getattr(obj, "date", None)),
-            obj.committer.fullname,
-            *orc.swh_date_to_tuple(getattr(obj, "committer_date", None)),
-            orc.hash_to_hex_or_none(obj.directory),
-            obj.type.value,
-            obj.raw_manifest,
-        ) in output["revision"]
-        for i, parent in enumerate(obj.parents):
-            assert (
-                orc.hash_to_hex_or_none(obj.id),
-                orc.hash_to_hex_or_none(parent),
-                i,
-            ) in output["revision_history"]
+    assert_revisions_exported_to_orc(
+        TEST_OBJECTS[obj_type], output["revision"], output["revision_history"]
+    )
 
 
 def test_export_directory():
@@ -191,18 +140,9 @@ def test_export_directory():
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
-    for obj in TEST_OBJECTS[obj_type]:
-        assert (orc.hash_to_hex_or_none(obj.id), obj.raw_manifest) in output[
-            "directory"
-        ]
-        for entry in obj.entries:
-            assert (
-                orc.hash_to_hex_or_none(obj.id),
-                entry.name,
-                entry.type,
-                orc.hash_to_hex_or_none(entry.target),
-                entry.perms,
-            ) in output["directory_entry"]
+    assert_directories_exported_to_orc(
+        TEST_OBJECTS[obj_type], output["directory"], output["directory_entry"]
+    )
 
 
 def test_export_content():
@@ -210,16 +150,7 @@ def test_export_content():
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
-    for obj in TEST_OBJECTS[obj_type]:
-        assert (
-            orc.hash_to_hex_or_none(obj.sha1),
-            orc.hash_to_hex_or_none(obj.sha1_git),
-            orc.hash_to_hex_or_none(obj.sha256),
-            orc.hash_to_hex_or_none(obj.blake2s256),
-            obj.length,
-            obj.status,
-            None,
-        ) in output[obj_type.value]
+    assert_contents_exported_to_orc(TEST_OBJECTS[obj_type], output["content"])
 
 
 def test_export_skipped_content():
@@ -227,16 +158,9 @@ def test_export_skipped_content():
     output = exporter(
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
-    for obj in TEST_OBJECTS[obj_type]:
-        assert (
-            orc.hash_to_hex_or_none(obj.sha1),
-            orc.hash_to_hex_or_none(obj.sha1_git),
-            orc.hash_to_hex_or_none(obj.sha256),
-            orc.hash_to_hex_or_none(obj.blake2s256),
-            obj.length,
-            obj.status,
-            obj.reason,
-        ) in output[obj_type.value]
+    assert_skipped_contents_exported_to_orc(
+        TEST_OBJECTS[obj_type], output["skipped_content"]
+    )
 
 
 def test_date_to_tuple():
