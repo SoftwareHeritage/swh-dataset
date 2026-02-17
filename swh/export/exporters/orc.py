@@ -1,4 +1,4 @@
-# Copyright (C) 2020-2025  The Software Heritage developers
+# Copyright (C) 2020-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -98,7 +98,7 @@ def datetime_to_tuple(obj: Optional[datetime]) -> Optional[Tuple[int, int]]:
     return (math.floor(obj.timestamp()), obj.microsecond)
 
 
-class SWHTimestampConverter:
+class SWHTimestampConverter(ORCConverter):
     """This is an ORCConverter compatible class to convert timestamps from/to ORC files
 
     timestamps in python are given as a couple (seconds, microseconds) and are
@@ -230,7 +230,7 @@ class ORCExporter(ExporterDispatch):
                 EXPORT_SCHEMA[table_name],
                 compression=CompressionKind.ZSTD,
                 converters={
-                    TypeKind.TIMESTAMP: cast(Type[ORCConverter], SWHTimestampConverter)
+                    TypeKind.TIMESTAMP: SWHTimestampConverter,
                 },
                 bloom_filter_columns=BLOOM_FILTER_COLUMNS[table_name],
             )
