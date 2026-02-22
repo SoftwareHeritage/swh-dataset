@@ -254,7 +254,7 @@ download from Amazon S3.
 2025-10-08
 ~~~~~~~~~~
 
-A full export of the graph dated from May 2025
+A full export of the graph dated from October 2025
 
 - **Columnar tables (Apache ORC)**:
 
