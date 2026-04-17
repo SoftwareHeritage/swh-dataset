@@ -5,6 +5,7 @@ boto3
 click
 luigi >= 3.8.1
 tqdm
+pyarrow
 pyorc ; python_version>="3.8"
 pyorc<0.9 ; python_version<"3.8"
 plyvel

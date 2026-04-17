@@ -11,46 +11,46 @@ from swh.export.cli import export_cli_group
 from swh.model.tests import swh_model_data
 
 from .utils import (
-    assert_contents_exported_to_orc,
-    assert_directories_exported_to_orc,
-    assert_origin_visit_statuses_exported_to_orc,
-    assert_origin_visits_exported_to_orc,
-    assert_origins_exported_to_orc,
-    assert_releases_exported_to_orc,
-    assert_revisions_exported_to_orc,
-    assert_skipped_contents_exported_to_orc,
-    assert_snapshots_exported_to_orc,
+    assert_contents_exported,
+    assert_directories_exported,
+    assert_origin_visit_statuses_exported,
+    assert_origin_visits_exported,
+    assert_origins_exported,
+    assert_releases_exported,
+    assert_revisions_exported,
+    assert_skipped_contents_exported,
+    assert_snapshots_exported,
     disable_gc,
-    orc_load,
+    load,
 )
 
 
 @disable_gc
 @pytest.mark.parametrize(
-    "objects,object_type,assert_objects_exported_to_orc",
+    "objects,object_type,assert_objects_exported",
     [
-        (swh_model_data.CONTENTS, "content", assert_contents_exported_to_orc),
+        (swh_model_data.CONTENTS, "content", assert_contents_exported),
         (
             swh_model_data.SKIPPED_CONTENTS,
             "skipped_content",
-            assert_skipped_contents_exported_to_orc,
+            assert_skipped_contents_exported,
         ),
-        (swh_model_data.DIRECTORIES, "directory", assert_directories_exported_to_orc),
-        (swh_model_data.RELEASES, "release", assert_releases_exported_to_orc),
-        (swh_model_data.REVISIONS, "revision", assert_revisions_exported_to_orc),
-        (swh_model_data.SNAPSHOTS, "snapshot", assert_snapshots_exported_to_orc),
-        (swh_model_data.ORIGINS, "origin", assert_origins_exported_to_orc),
+        (swh_model_data.DIRECTORIES, "directory", assert_directories_exported),
+        (swh_model_data.RELEASES, "release", assert_releases_exported),
+        (swh_model_data.REVISIONS, "revision", assert_revisions_exported),
+        (swh_model_data.SNAPSHOTS, "snapshot", assert_snapshots_exported),
+        (swh_model_data.ORIGINS, "origin", assert_origins_exported),
         (
             # FIXME: Some visits for an origin with same date but with different ids
             #        are not exported, only the first one is
             swh_model_data.ORIGIN_VISITS[:-2],
             "origin_visit",
-            assert_origin_visits_exported_to_orc,
+            assert_origin_visits_exported,
         ),
         (
             swh_model_data.ORIGIN_VISIT_STATUSES,
             "origin_visit_status",
-            assert_origin_visit_statuses_exported_to_orc,
+            assert_origin_visit_statuses_exported,
         ),
     ],
     ids=[
@@ -65,14 +65,14 @@ from .utils import (
         "origin_visit_status",
     ],
 )
-def test_cli_graph_export_to_orc(
+def test_cli_graph_export(
     journal_client_config,
     journal_writer,
     cli_runner,
     tmp_path,
     objects,
     object_type,
-    assert_objects_exported_to_orc,
+    assert_objects_exported,
 ):
 
     journal_writer.write_additions(object_type, objects)
@@ -106,7 +106,7 @@ def test_cli_graph_export_to_orc(
     )
     assert result.exit_code == 0, result.output
 
-    orcs = orc_load(export_path / "orc")
+    orcs = load("orc", export_path / "orc")
 
     assert object_type in orcs
 
@@ -119,4 +119,4 @@ def test_cli_graph_export_to_orc(
     elif object_type == "snapshot":
         assert_params.append(orcs["snapshot_branch"])
 
-    assert_objects_exported_to_orc(*assert_params)
+    assert_objects_exported(*assert_params)

@@ -19,19 +19,19 @@ relational tables representing the Software Heritage Graph, as documented in
 :ref:`swh-graph-dataset`. It can be run using the ``swh export graph export``
 command.
 
-This dataset can be exported in two different formats: ``orc`` and ``edges``.
+This dataset can be exported in three different formats: ``orc``, ``parquet``, and ``edges``.
 To export a graph, you need to provide a comma-separated list of formats to
 export with the ``--formats`` option. You also need an export ID, a unique
 identifier used by the Kafka server to store the current progress of the
 export.
 
-When exporting the full dataset, another ORC table is exported (`person`). It
+When exporting the full dataset, another ORC/Parquet table is exported (`person`). It
 is not exported in the same directory as the rest of the dataset, but in a
 (configurable) sensitive export directory. It is also not uploaded to S3 due to
 its sensitive nature.
 
 **Note**: exporting as the ``edges`` format is discouraged, as it is redundant
-and can easily be generated directly from the ORC format.
+and can easily be generated directly from the ORC and Parquet formats.
 
 Here is an example command to start a graph dataset export::
 

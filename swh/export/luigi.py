@@ -164,6 +164,14 @@ def merge_lists(lists: Iterable[List[T]]) -> List[T]:
     return list(res)
 
 
+def importcls(clspath):
+    from importlib import import_module
+
+    mod, cls = clspath.split(":")
+    m = import_module(mod)
+    return getattr(m, cls)
+
+
 def parse_offsets(
     paths: Dict[Any, luigi.LocalTarget], object_types: Tuple[ObjectType, ...]
 ) -> Dict[ObjectType, Dict[int, Tuple[int, int]]]:
@@ -515,7 +523,6 @@ class ExportTopic(luigi.Task):
         """Consumes all of the ``self.OBJECT_TYPE`` topic into
         ``self.export_path / self.OBJECT_TYPE``."""
         import functools
-        from importlib import import_module
         import json
         import logging
         import shutil
@@ -540,16 +547,11 @@ class ExportTopic(luigi.Task):
             )
         )
 
-        def importcls(clspath):
-            mod, cls = clspath.split(":")
-            m = import_module(mod)
-            return getattr(m, cls)
-
         exporter_cls = dict(
             (fmt, importcls(clspath))
             for (fmt, clspath) in cli.AVAILABLE_EXPORTERS.items()
-            if Format[fmt] in self.formats
         )
+        exporter_cls = {fmt.name: exporter_cls[fmt.name] for fmt in self.formats}
 
         parallel_exporters = {}
         for obj_type in self.object_types:
@@ -698,18 +700,28 @@ class ExportPersonsTable(luigi.Task):
         logger = logging.getLogger(__name__)
 
         if self.local_sensitive_export_path is not None:
-            fullnames_export_path = self.local_sensitive_export_path / "orc" / "person"
-
-            if fullnames_export_path.exists():
-                # remove any leftover from a failed previous run
-                logger.warning("Removing existing directory %s", fullnames_export_path)
-                shutil.rmtree(fullnames_export_path)
-
-            fullnames_export_path.mkdir(parents=True)
-            fullnames_orc = fullnames_export_path / f"{uuid.uuid4()}.orc"
-            process_fullnames(
-                fullnames_orc, self.local_export_path / "tmp" / "dup_persons"
+            exporter_cls = dict(
+                (fmt, importcls(clspath))
+                for (fmt, clspath) in cli.AVAILABLE_EXPORTERS.items()
             )
+            for fmt in self.formats:
+                exporter_cls = exporter_cls[fmt.name]
+                fullnames_export_path = (
+                    self.local_sensitive_export_path / fmt.name / "person"
+                )
+
+                if fullnames_export_path.exists():
+                    # remove any leftover from a failed previous run
+                    logger.warning(
+                        "Removing existing directory %s", fullnames_export_path
+                    )
+                    shutil.rmtree(fullnames_export_path)
+
+                fullnames_export_path.mkdir(parents=True)
+                writer = exporter_cls.new_person_writer(uuid.uuid4())
+                process_fullnames(
+                    writer, self.local_export_path / "tmp" / "dup_persons"
+                )
 
         with self.output()["stamp"].open("w") as f:
             json.dump({}, f)
