@@ -13,6 +13,7 @@ from typing import Any, Dict, Sequence, Tuple
 import pyorc
 
 from swh.export.exporters import orc
+from swh.export.exporters.arrow import hash_to_hex_or_none
 from swh.model import model
 
 
@@ -79,7 +80,7 @@ def assert_origin_visit_statuses_exported_to_orc(
             visit_status.visit,
             orc.datetime_to_tuple(visit_status.date),
             visit_status.status,
-            orc.hash_to_hex_or_none(visit_status.snapshot),
+            hash_to_hex_or_none(visit_status.snapshot),
             visit_status.type,
         ) in orc_origin_visit_statuses
 
@@ -90,14 +91,14 @@ def assert_snapshots_exported_to_orc(
     orc_snapshot_branches: Sequence[Tuple[Any, ...]],
 ):
     for snp in snapshots:
-        assert (orc.hash_to_hex_or_none(snp.id),) in orc_snapshots
+        assert (hash_to_hex_or_none(snp.id),) in orc_snapshots
         for branch_name, branch in snp.branches.items():
             if branch is None:
                 continue
             assert (
-                orc.hash_to_hex_or_none(snp.id),
+                hash_to_hex_or_none(snp.id),
                 branch_name,
-                orc.hash_to_hex_or_none(branch.target),
+                hash_to_hex_or_none(branch.target),
                 str(branch.target_type.value),
             ) in orc_snapshot_branches
 
@@ -108,10 +109,10 @@ def assert_releases_exported_to_orc(
 ):
     for rel in releases:
         assert (
-            orc.hash_to_hex_or_none(rel.id),
+            hash_to_hex_or_none(rel.id),
             rel.name,
             rel.message,
-            orc.hash_to_hex_or_none(rel.target),
+            hash_to_hex_or_none(rel.target),
             rel.target_type.value,
             rel.author.fullname if rel.author else None,
             *orc.swh_date_to_tuple(getattr(rel, "date", None)),
@@ -126,20 +127,20 @@ def assert_revisions_exported_to_orc(
 ):
     for rev in revisions:
         assert (
-            orc.hash_to_hex_or_none(rev.id),
+            hash_to_hex_or_none(rev.id),
             rev.message,
             rev.author.fullname if rev.author else None,
             *orc.swh_date_to_tuple(getattr(rev, "date", None)),
             rev.committer.fullname if rev.committer else None,
             *orc.swh_date_to_tuple(getattr(rev, "committer_date", None)),
-            orc.hash_to_hex_or_none(rev.directory),
+            hash_to_hex_or_none(rev.directory),
             rev.type.value,
             rev.raw_manifest,
         ) in orc_revisions
         for i, parent in enumerate(rev.parents):
             assert (
-                orc.hash_to_hex_or_none(rev.id),
-                orc.hash_to_hex_or_none(parent),
+                hash_to_hex_or_none(rev.id),
+                hash_to_hex_or_none(parent),
                 i,
             ) in orc_revisions_history
 
@@ -150,13 +151,13 @@ def assert_directories_exported_to_orc(
     orc_directories_entries: Sequence[Tuple[Any, ...]],
 ):
     for dir_ in directories:
-        assert (orc.hash_to_hex_or_none(dir_.id), dir_.raw_manifest) in orc_directories
+        assert (hash_to_hex_or_none(dir_.id), dir_.raw_manifest) in orc_directories
         for entry in dir_.entries:
             assert (
-                orc.hash_to_hex_or_none(dir_.id),
+                hash_to_hex_or_none(dir_.id),
                 entry.name,
                 entry.type,
-                orc.hash_to_hex_or_none(entry.target),
+                hash_to_hex_or_none(entry.target),
                 entry.perms,
             ) in orc_directories_entries
 
@@ -167,10 +168,10 @@ def assert_contents_exported_to_orc(
 ):
     for cnt in contents:
         assert (
-            orc.hash_to_hex_or_none(cnt.sha1),
-            orc.hash_to_hex_or_none(cnt.sha1_git),
-            orc.hash_to_hex_or_none(cnt.sha256),
-            orc.hash_to_hex_or_none(cnt.blake2s256),
+            hash_to_hex_or_none(cnt.sha1),
+            hash_to_hex_or_none(cnt.sha1_git),
+            hash_to_hex_or_none(cnt.sha256),
+            hash_to_hex_or_none(cnt.blake2s256),
             cnt.length,
             cnt.status,
             None,
@@ -183,10 +184,10 @@ def assert_skipped_contents_exported_to_orc(
 ):
     for cnt in skipped_contents:
         assert (
-            orc.hash_to_hex_or_none(cnt.sha1),
-            orc.hash_to_hex_or_none(cnt.sha1_git),
-            orc.hash_to_hex_or_none(cnt.sha256),
-            orc.hash_to_hex_or_none(cnt.blake2s256),
+            hash_to_hex_or_none(cnt.sha1),
+            hash_to_hex_or_none(cnt.sha1_git),
+            hash_to_hex_or_none(cnt.sha256),
+            hash_to_hex_or_none(cnt.blake2s256),
             cnt.length,
             cnt.status,
             cnt.reason,
