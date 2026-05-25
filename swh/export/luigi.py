@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2025  The Software Heritage developers
+# Copyright (C) 2022-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -130,9 +130,8 @@ from typing import (
     Any,
     Dict,
     Hashable,
-    Iterator,
+    Iterable,
     List,
-    Optional,
     Set,
     Tuple,
     TypeVar,
@@ -157,7 +156,7 @@ Format = enum.Enum("Format", list(cli.AVAILABLE_EXPORTERS))  # type: ignore[misc
 T = TypeVar("T", bound=Hashable)
 
 
-def merge_lists(lists: Iterator[List[T]]) -> List[T]:
+def merge_lists(lists: Iterable[List[T]]) -> List[T]:
     """Returns a list made of all items of the arguments, with no duplicate."""
     res = set()
     for list_ in lists:
@@ -166,7 +165,7 @@ def merge_lists(lists: Iterator[List[T]]) -> List[T]:
 
 
 def parse_offsets(
-    paths: Dict[Any, luigi.LocalTarget], object_types: List[ObjectType]
+    paths: Dict[Any, luigi.LocalTarget], object_types: Tuple[ObjectType, ...]
 ) -> Dict[ObjectType, Dict[int, Tuple[int, int]]]:
     """returns ``{obj_type: {partition: (low, high)}``"""
     import json
@@ -279,7 +278,7 @@ def stamps_paths(formats: List[Format], object_types: List[ObjectType]) -> List[
 
 def _export_metadata_has_object_types(
     export_metadata: Union[luigi.LocalTarget, "luigi.contrib.s3.S3Target"],
-    object_types: List[ObjectType],
+    object_types: Tuple[ObjectType, ...],
 ) -> bool:
     import json
 
@@ -314,11 +313,9 @@ class StartExport(luigi.Task):
     """Pseudo-task that computes the journal offsets from and to which objects should
     be exported"""
 
-    config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
-    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
-    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
-        default=None
-    )
+    config_file = PathParameter(is_file=True)
+    local_export_path = PathParameter(is_dir=True, create=True)
+    local_sensitive_export_path = luigi.OptionalPathParameter(default=None)
     export_id = luigi.OptionalParameter(
         description="""
         Unique ID of the export run. This is appended to the kafka
@@ -326,7 +323,7 @@ class StartExport(luigi.Task):
         'journal' section of the config file, defaults to 'swh-export-export-'.
         """,
     )
-    margin: float = FractionalFloatParameter(  # type: ignore[assignment]
+    margin = FractionalFloatParameter(
         default=1.0,
         description="""
         Offset margin to start consuming from. E.g. is set to '0.95',
@@ -335,7 +332,7 @@ class StartExport(luigi.Task):
         """,
     )
     object_types = luigi.EnumListParameter(
-        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=tuple(ObjectType), batch_method=merge_lists
     )
 
     def output(self) -> Dict[Union[str, ObjectType], luigi.LocalTarget]:
@@ -388,7 +385,7 @@ class StartExport(luigi.Task):
         masked_swhids = get_masked_swhids(logger, config)
 
         # {obj_type: {partition: (low, high)}
-        offsets: Dict[str, Dict[int, Tuple[int, int]]] = {}
+        offsets: Dict[ObjectType, Dict[int, Tuple[int, int]]] = {}
         for obj_type in [  # order matter, in order to avoid holes
             ObjectType.origin_visit_status,  # type: ignore[attr-defined]
             ObjectType.origin_visit,  # type: ignore[attr-defined]
@@ -440,11 +437,9 @@ class StartExport(luigi.Task):
 class ExportTopic(luigi.Task):
     """Exports a single topic, given already computed offsets in the journal."""
 
-    config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
-    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
-    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
-        default=None
-    )
+    config_file = PathParameter(is_file=True)
+    local_export_path = PathParameter(is_dir=True, create=True)
+    local_sensitive_export_path = luigi.OptionalPathParameter(default=None)
     export_id = luigi.OptionalParameter(
         description="""
         Unique ID of the export run. This is appended to the kafka
@@ -455,10 +450,10 @@ class ExportTopic(luigi.Task):
     formats = luigi.EnumListParameter(
         enum=Format,
         batch_method=merge_lists,
-        default=[Format.orc],  # type: ignore[attr-defined]
+        default=(Format.orc,),  # type: ignore[attr-defined]
     )
     processes = luigi.IntParameter(default=1, significant=False)
-    margin: float = FractionalFloatParameter(  # type: ignore[assignment]
+    margin = FractionalFloatParameter(
         default=1.0,
         description="""
         Offset margin to start consuming from. E.g. is set to '0.95',
@@ -466,7 +461,7 @@ class ExportTopic(luigi.Task):
         in other words, start earlier than last committed position.
         """,
     )
-    object_types = luigi.EnumListParameter(enum=ObjectType, default=list(ObjectType))
+    object_types = luigi.EnumListParameter(enum=ObjectType, default=tuple(ObjectType))
 
     def _stamp_files(self) -> List[Path]:
         stamp_dir = Path(self.local_export_path) / "tmp" / "stamps"
@@ -497,7 +492,7 @@ class ExportTopic(luigi.Task):
         # ParallelJournalProcessor opens 256 LevelDBs in total. Depending on the number of
         # processes, this can exceed the maximum number of file descriptors (soft limit
         # defaults to 1024 on Debian), so let's increase it.
-        (soft, hard) = resource.getrlimit(resource.RLIMIT_NOFILE)
+        soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
         open_fds_per_shard = 61  # estimated with plyvel==1.3.0 and libleveldb1d==1.22-3
         spare = 1024  # for everything other than LevelDB
         want_fd = nb_shards * open_fds_per_shard + spare
@@ -558,7 +553,7 @@ class ExportTopic(luigi.Task):
 
         parallel_exporters = {}
         for obj_type in self.object_types:
-            subdirectories = subdirectories_for_object_type(obj_type.name.lower())
+            subdirectories = subdirectories_for_object_type(obj_type.name.lower())  # type: ignore[arg-type]
 
             for f in self.formats:
                 for subdirectory in subdirectories:
@@ -628,11 +623,9 @@ class ExportPersonsTable(luigi.Task):
     """Aggregates lists of persons exported by :class:`ExportTopic` into a single table
     with no duplicates."""
 
-    config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
-    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
-    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
-        default=None
-    )
+    config_file = PathParameter(is_file=True)
+    local_export_path = PathParameter(is_dir=True, create=True)
+    local_sensitive_export_path = luigi.OptionalPathParameter(default=None)
     export_id = luigi.OptionalParameter(
         description="""
         Unique ID of the export run. This is appended to the kafka
@@ -643,10 +636,10 @@ class ExportPersonsTable(luigi.Task):
     formats = luigi.EnumListParameter(
         enum=Format,
         batch_method=merge_lists,
-        default=[Format.orc],  # type: ignore[attr-defined]
+        default=(Format.orc,),  # type: ignore[attr-defined]
     )
     processes = luigi.IntParameter(default=1, significant=False)
-    margin: float = FractionalFloatParameter(  # type: ignore[assignment]
+    margin = FractionalFloatParameter(
         default=1.0,
         description="""
         Offset margin to start consuming from. E.g. is set to '0.95',
@@ -655,7 +648,7 @@ class ExportPersonsTable(luigi.Task):
         """,
     )
     object_types = luigi.EnumListParameter(
-        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=tuple(ObjectType), batch_method=merge_lists
     )
 
     def requires(self) -> Dict[str, luigi.Task]:
@@ -673,7 +666,7 @@ class ExportPersonsTable(luigi.Task):
         }
         requirements.update(
             {
-                obj_type: ExportTopic(
+                obj_type.name: ExportTopic(
                     config_file=self.config_file,
                     local_export_path=self.local_export_path,
                     local_sensitive_export_path=self.local_sensitive_export_path,
@@ -742,11 +735,9 @@ class ExportGraph(luigi.Task):
         swh export --config-file graph.prod.yml graph export export/ --formats=edges
     """
 
-    config_file: Path = PathParameter(is_file=True)  # type: ignore[assignment]
-    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
-    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
-        default=None
-    )
+    config_file = PathParameter(is_file=True)
+    local_export_path = PathParameter(is_dir=True, create=True)
+    local_sensitive_export_path = luigi.OptionalPathParameter(default=None)
     export_id = luigi.OptionalParameter(
         default=None,
         description="""
@@ -758,10 +749,10 @@ class ExportGraph(luigi.Task):
     formats = luigi.EnumListParameter(
         enum=Format,
         batch_method=merge_lists,
-        default=[Format.orc],  # type: ignore[attr-defined]
+        default=(Format.orc,),  # type: ignore[attr-defined]
     )
     processes = luigi.IntParameter(default=1, significant=False)
-    margin: float = FractionalFloatParameter(  # type: ignore[assignment]
+    margin = FractionalFloatParameter(
         default=1.0,
         description="""
         Offset margin to start consuming from. E.g. is set to '0.95',
@@ -770,7 +761,7 @@ class ExportGraph(luigi.Task):
         """,
     )
     object_types = luigi.EnumListParameter(
-        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=tuple(ObjectType), batch_method=merge_lists
     )
     export_name = luigi.Parameter()
 
@@ -824,7 +815,7 @@ class ExportGraph(luigi.Task):
             margin=self.margin,
         )
         dependencies: Dict[str, luigi.Task] = {
-            obj_type: ExportTopic(
+            obj_type.name: ExportTopic(
                 **kwargs,
                 processes=self.processes,
                 formats=self.formats,
@@ -904,16 +895,16 @@ class UploadExportToS3(luigi.Task):
                 --s3-export-path=s3://softwareheritage/graph/swh_2022-11-08
     """
 
-    local_export_path: Path = PathParameter(is_dir=True, create=True, significant=False)  # type: ignore[assignment]
+    local_export_path = PathParameter(is_dir=True, create=True, significant=False)
     formats = luigi.EnumListParameter(
         enum=Format,
         batch_method=merge_lists,
-        default=[Format.orc],  # type: ignore[attr-defined]
+        default=(Format.orc,),  # type: ignore[attr-defined]
     )
     object_types = luigi.EnumListParameter(
-        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=tuple(ObjectType), batch_method=merge_lists
     )
-    s3_export_path: str = S3PathParameter()  # type: ignore[assignment]
+    s3_export_path = S3PathParameter()
 
     def requires(self) -> List[luigi.Task]:
         """Returns a :class:`ExportGraph` task that writes local files at the
@@ -1008,16 +999,16 @@ class DownloadExportFromS3(luigi.Task):
                 --s3-export-path=s3://softwareheritage/graph/swh_2022-11-08
     """
 
-    local_export_path: Path = PathParameter(is_dir=True, create=True)  # type: ignore[assignment]
+    local_export_path = PathParameter(is_dir=True, create=True)
     formats = luigi.EnumListParameter(
         enum=Format,
         batch_method=merge_lists,
-        default=[Format.orc],  # type: ignore[attr-defined]
+        default=(Format.orc,),  # type: ignore[attr-defined]
     )
     object_types = luigi.EnumListParameter(
-        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=tuple(ObjectType), batch_method=merge_lists
     )
-    s3_export_path: str = S3PathParameter(significant=False)  # type: ignore[assignment]
+    s3_export_path = S3PathParameter(significant=False)
     parallelism = luigi.IntParameter(default=10, significant=False)
 
     def requires(self) -> List[luigi.Task]:
@@ -1097,17 +1088,15 @@ class LocalExport(luigi.Task):
     :class:`ExportGraph` or via :class:`DownloadExportFromS3`.
     """
 
-    local_export_path: Path = PathParameter(is_dir=True)  # type: ignore[assignment]
-    local_sensitive_export_path: Optional[Path] = luigi.OptionalPathParameter(
-        default=None
-    )
+    local_export_path = PathParameter(is_dir=True)
+    local_sensitive_export_path = luigi.OptionalPathParameter(default=None)
     formats = luigi.EnumListParameter(
         enum=Format,
         batch_method=merge_lists,
-        default=[Format.orc],  # type: ignore[attr-defined]
+        default=(Format.orc,),  # type: ignore[attr-defined]
     )
     object_types = luigi.EnumListParameter(
-        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=tuple(ObjectType), batch_method=merge_lists
     )
     export_task_type = luigi.TaskParameter(
         default=DownloadExportFromS3,
@@ -1211,7 +1200,7 @@ class CreateAthena(luigi.Task):
     """
 
     object_types = luigi.EnumListParameter(
-        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=tuple(ObjectType), batch_method=merge_lists
     )
     s3_export_path = S3PathParameter()
     s3_athena_output_location = S3PathParameter()
@@ -1279,10 +1268,10 @@ class RunExportAll(luigi.WrapperTask):
     formats = luigi.EnumListParameter(
         enum=Format,
         batch_method=merge_lists,
-        default=[Format.orc],  # type: ignore[attr-defined]
+        default=(Format.orc,),  # type: ignore[attr-defined]
     )
     object_types = luigi.EnumListParameter(
-        enum=ObjectType, default=list(ObjectType), batch_method=merge_lists
+        enum=ObjectType, default=tuple(ObjectType), batch_method=merge_lists
     )
     s3_export_path = S3PathParameter()
     s3_athena_output_location = S3PathParameter()
