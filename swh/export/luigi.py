@@ -236,7 +236,7 @@ class PathParameter(luigi.PathParameter):
         return path
 
 
-class S3PathParameter(luigi.Parameter):
+class S3PathParameter(luigi.StrParameter):
     """A parameter that strip trailing slashes"""
 
     def __init__(self, *args, **kwargs):
@@ -763,7 +763,7 @@ class ExportGraph(luigi.Task):
     object_types = luigi.EnumListParameter(
         enum=ObjectType, default=tuple(ObjectType), batch_method=merge_lists
     )
-    export_name = luigi.Parameter()
+    export_name = luigi.StrParameter()
 
     def output(self) -> List[luigi.LocalTarget]:
         """Returns path of `meta/export.json` on the local FS."""
@@ -1204,7 +1204,7 @@ class CreateAthena(luigi.Task):
     )
     s3_export_path = S3PathParameter()
     s3_athena_output_location = S3PathParameter()
-    athena_db_name = luigi.Parameter()
+    athena_db_name = luigi.StrParameter()
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1275,7 +1275,7 @@ class RunExportAll(luigi.WrapperTask):
     )
     s3_export_path = S3PathParameter()
     s3_athena_output_location = S3PathParameter()
-    athena_db_name = luigi.Parameter()
+    athena_db_name = luigi.StrParameter()
 
     def requires(self) -> List[luigi.Task]:
         """Returns instances of :class:`CreateAthena` and :class:`UploadExportToS3`."""
