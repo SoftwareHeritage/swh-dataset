@@ -1,4 +1,4 @@
-# Copyright (C) 2021  The Software Heritage developers
+# Copyright (C) 2021-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -30,16 +30,14 @@ def drop_table(database_name, table):
 
 
 def create_table(database_name, table, location_prefix):
-    req = textwrap.dedent(
-        """\
+    req = textwrap.dedent("""\
         CREATE EXTERNAL TABLE IF NOT EXISTS {db}.{table} (
         {fields}
         )
         STORED AS ORC
         LOCATION '{location}/'
         TBLPROPERTIES ("orc.compress"="ZSTD");
-        """
-    ).format(
+        """).format(
         db=database_name,
         table=table,
         fields=",\n".join(
@@ -208,8 +206,7 @@ def generate_subdataset(
     )
 
     # Create SWHID temporary table
-    create_swhid_table_query = textwrap.dedent(
-        """\
+    create_swhid_table_query = textwrap.dedent("""\
         CREATE EXTERNAL TABLE IF NOT EXISTS {newdb}.swhids (
             swhprefix string,
             version int,
@@ -220,8 +217,7 @@ def generate_subdataset(
         FIELDS TERMINATED BY ':'
         STORED AS TEXTFILE
         LOCATION '{location}/swhids/'
-        """
-    ).format(newdb=subdataset_db, location=subdataset_s3_path)
+        """).format(newdb=subdataset_db, location=subdataset_s3_path)
     query(
         athena_client,
         create_swhid_table_query,
@@ -234,8 +230,7 @@ def generate_subdataset(
     )
 
     # Create join tables
-    query_tpl = textwrap.dedent(
-        """\
+    query_tpl = textwrap.dedent("""\
         CREATE TABLE IF NOT EXISTS {newdb}.{table}
         WITH (
             format = 'ORC',
@@ -244,8 +239,7 @@ def generate_subdataset(
         )
         AS SELECT * FROM {basedb}.{table}
         WHERE {field} IN (select hash from swhids)
-        """
-    )
+        """)
     tables_join_field = [
         ("origin", "lower(to_hex(sha1(to_utf8(url))))"),
         ("origin_visit", "lower(to_hex(sha1(to_utf8(origin))))"),

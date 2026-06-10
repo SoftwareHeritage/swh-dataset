@@ -281,7 +281,7 @@ class ParallelJournalProcessor:
             def fetch_insert_partition_id(partition_id):
                 logger.debug("Fetching offset for partition %s", partition_id)
                 tp = TopicPartition(topic_name, partition_id)
-                (lo, hi) = client.consumer.get_watermark_offsets(tp)
+                lo, hi = client.consumer.get_watermark_offsets(tp)
                 logger.debug(
                     "[%s] watermark offset (lo,hi)=(%s, %s)", partition_id, lo, hi
                 )
@@ -344,7 +344,7 @@ class ParallelJournalProcessor:
         with ProcessPoolExecutor(self.processes + 1) as pool:
             futures = []
             for i in range(self.processes):
-                (_fd, persons_file) = tempfile.mkstemp(
+                _fd, persons_file = tempfile.mkstemp(
                     dir=self.persons_dir, suffix=".csv"
                 )
                 futures.append(
@@ -642,7 +642,7 @@ def _turn_message_into_objects(
     object_type: str,
     msg: tuple[bytes, dict],
 ) -> Tuple[bytes, Optional[BaseModel]]:
-    (key, d) = msg
+    key, d = msg
     cls = SWH_MODEL_OBJECT_TYPES[object_type]
     if object_type == "directory":
         assert set(d) <= {
