@@ -585,11 +585,6 @@ class ExportTopic(luigi.Task):
                     config=config,
                     object_types=[obj_type.name],
                     export_path=self.local_export_path / f.name,
-                    sensitive_export_path=(
-                        self.local_sensitive_export_path / f.name
-                        if self.local_sensitive_export_path is not None
-                        else None
-                    ),
                 )
                 for f in self.formats
             ]

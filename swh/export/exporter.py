@@ -1,4 +1,4 @@
-# Copyright (C) 2020  The Software Heritage developers
+# Copyright (C) 2020-2026  The Software Heritage developers
 # See the AUTHORS file at the top-level directory of this distribution
 # License: GNU General Public License version 3, or any later version
 # See top-level LICENSE file for more information
@@ -33,24 +33,16 @@ class Exporter:
         config: Dict[str, Any],
         object_types: List[str],
         export_path,
-        sensitive_export_path=None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
         self.config: Dict[str, Any] = config
         self.object_types = object_types
         self.export_path = pathlib.Path(export_path)
-        self.sensitive_export_path = (
-            pathlib.Path(sensitive_export_path)
-            if sensitive_export_path is not None
-            else None
-        )
         self.exit_stack = contextlib.ExitStack()
 
     def __enter__(self) -> "Exporter":
         self.export_path.mkdir(exist_ok=True, parents=True)
-        if self.sensitive_export_path:
-            self.sensitive_export_path.mkdir(exist_ok=True, parents=True)
         self.exit_stack.__enter__()
         return self
 
