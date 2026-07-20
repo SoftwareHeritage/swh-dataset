@@ -91,8 +91,6 @@ def test_cli_graph_export_to_orc(
     result = cli_runner.invoke(
         export_cli_group,
         args=[
-            "-C",
-            str(config_path),
             "graph",
             "export",
             "--export-id",
@@ -103,6 +101,7 @@ def test_cli_graph_export_to_orc(
             object_type,
             str(export_path),
         ],
+        env={"SWH_CONFIG_FILENAME": str(config_path)},
     )
     assert result.exit_code == 0, result.output
 
