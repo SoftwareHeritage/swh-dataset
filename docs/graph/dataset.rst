@@ -86,6 +86,8 @@ decompressed with ``unzstd`` before they can be used with swh-graph.
 Changelog
 ---------
 
+- **2026-06-04** and newer: starting with this graph, the MPH changed from PTHash to FMPHGO.
+  swh-graph v12 or newer is needed to read these graphs.
 - Graphs **2024-05-16, 2024-08-23, 2024-12-06, 2025-05-18** and their related history-hosting
   and teaser graphs were compressed inefficiently, causing their ``.graph`` and ``.ef``
   files to be 40% thand they should be.
@@ -109,6 +111,18 @@ Summary of dataset versions
      - # Edges
      - Columnar
      - Compressed
+
+   * - `2026-06-04`_
+     - 58,675,740,295
+     - 1,101,018,460,510
+     - ✔
+     - ✔
+
+   * - `2026-03-02`_
+     - 57,268,096,450
+     - 1,072,900,078,798
+     - ✔
+     - ✔
 
    * - `2025-10-08`_
      - 53,529,848,761
@@ -248,6 +262,48 @@ Full graph datasets
 
 Because of their size, some of the latest datasets are only available for
 download from Amazon S3.
+
+.. _graph-dataset-2026-06-04:
+
+2026-06-04
+~~~~~~~~~~
+
+A full export of the graph dated June 2026
+
+- **Columnar tables (Apache ORC)**:
+
+  - **Total size**: 33 TiB
+  - **S3**: ``s3://softwareheritage/graph/2026-06-04/orc``
+
+- **Compressed graph**:
+
+  - **Total size**: 16 TiB
+  - **S3**: ``s3://softwareheritage/graph/2026-06-04/compressed``
+
+.. _graph-dataset-2026-03-02:
+
+2026-03-02
+~~~~~~~~~~
+
+A full export of the graph dated from March and April 2026
+
+- **Columnar tables (Apache ORC)**:
+
+  - **Total size**: 30 TiB
+  - **S3**: ``s3://softwareheritage/graph/2026-03-02/orc``
+
+- **Compressed graph**:
+
+  - **Total size**: 16 TiB
+  - **S3**: ``s3://softwareheritage/graph/2026-03-02/compressed``
+
+- **"History and hosting" Compressed graph**:
+
+  - This is a compressed graph of only the "history and hosting" layer (origins,
+    snapshots, releases, revisions) and the root directory (or rarely content) of
+    every revision/release; but most directories and contents are excluded
+  - **Total size**: 2.0 TiB
+  - **S3**: ``s3://softwareheritage/graph/2026-03-02-history-hosting/compressed``
 
 .. _graph-dataset-2025-10-08:
 
