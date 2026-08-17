@@ -63,9 +63,9 @@ example configuration file::
 
 The following configuration options can be used for the export:
 
-- ``max_rows``: a dictionary with table names are keys and maximum number
-  of rows in each file of this table. Upon reaching this number of rows,
-  the file it is closed and a new one is opened for the next rows.
+- ``max_rows``: a dictionary associating tables' names to their maximum number
+  of rows per file. Upon reaching this number of rows,
+  a file is closed and a new one is opened for the next rows.
 - ``remove_pull_requests``: a boolean indicating whether to remove all edges
   from origin to snapshot matching
   ``refs/*`` but not matching ``refs/heads/*`` or ``refs/tags/*``. This removes
