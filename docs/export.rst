@@ -63,8 +63,9 @@ example configuration file::
 
 The following configuration options can be used for the export:
 
-- ``max_rows``: maximum number of rows in a single file, before it is closed
-  and a new one is opened for the next rows.
+- ``max_rows``: a dictionary with table names are keys and maximum number
+  of rows in each file of this table. Upon reaching this number of rows,
+  the file it is closed and a new one is opened for the next rows.
 - ``remove_pull_requests``: remove all edges from origin to snapshot matching
   ``refs/*`` but not matching ``refs/heads/*`` or ``refs/tags/*``. This removes
   all the pull requests that are present in Software Heritage (archived with
