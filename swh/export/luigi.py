@@ -695,8 +695,12 @@ class ExportPersonsTable(luigi.Task):
         import shutil
         import uuid
 
+        import yaml
+
         from .fullnames import process_fullnames
 
+        with open(self.config_file) as f:
+            config = yaml.safe_load(f)
         logger = logging.getLogger(__name__)
 
         if self.local_sensitive_export_path is not None:
@@ -705,7 +709,11 @@ class ExportPersonsTable(luigi.Task):
                 for (fmt, clspath) in cli.AVAILABLE_EXPORTERS.items()
             )
             for fmt in self.formats:
-                exporter_cls = exporter_classes[fmt.name]
+                exporter = exporter_classes[fmt.name](
+                    config=config,
+                    object_types=[],
+                    export_path=self.local_sensitive_export_path / fmt.name,
+                )
                 fullnames_export_path = (
                     self.local_sensitive_export_path / fmt.name / "person"
                 )
@@ -718,7 +726,7 @@ class ExportPersonsTable(luigi.Task):
                     shutil.rmtree(fullnames_export_path)
 
                 fullnames_export_path.mkdir(parents=True)
-                writer = exporter_cls.new_person_writer(uuid.uuid4())
+                writer = exporter.new_person_writer(uuid.uuid4())
                 process_fullnames(
                     writer, self.local_export_path / "tmp" / "dup_persons"
                 )
