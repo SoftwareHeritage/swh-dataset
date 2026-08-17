@@ -547,11 +547,11 @@ class ExportTopic(luigi.Task):
             )
         )
 
-        exporter_cls = dict(
+        exporter_classes = dict(
             (fmt, importcls(clspath))
             for (fmt, clspath) in cli.AVAILABLE_EXPORTERS.items()
         )
-        exporter_cls = {fmt.name: exporter_cls[fmt.name] for fmt in self.formats}
+        exporter_cls = {fmt.name: exporter_classes[fmt.name] for fmt in self.formats}
 
         parallel_exporters = {}
         for obj_type in self.object_types:
