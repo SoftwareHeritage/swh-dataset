@@ -28,6 +28,7 @@ from swh.model.model import (
     Revision,
     SkippedContent,
     Snapshot,
+    TimestampWithTimezone,
 )
 from swh.model.tests.swh_model_data import TEST_OBJECTS
 from swh.objstorage.factory import get_objstorage
@@ -185,6 +186,52 @@ def test_export_skipped_content(exporter):
         {obj_type: TEST_OBJECTS[obj_type]}, [TEST_OBJECTS[obj_type][0].object_type.name]
     )
     assert_skipped_contents_exported(TEST_OBJECTS[obj_type], output["skipped_content"])
+
+
+def test_date_to_tuple():
+    ts = {"seconds": 123456, "microseconds": 1515}
+    assert tabular.swh_date_to_tuple(
+        TimestampWithTimezone.from_dict({"timestamp": ts, "offset_bytes": b"+0100"})
+    ) == (
+        (123456, 1515),
+        60,
+        b"+0100",
+    )
+
+    assert tabular.swh_date_to_tuple(
+        TimestampWithTimezone.from_dict(
+            {
+                "timestamp": ts,
+                "offset": 120,
+                "negative_utc": False,
+                "offset_bytes": b"+0100",
+            }
+        )
+    ) == ((123456, 1515), 60, b"+0100")
+
+    assert tabular.swh_date_to_tuple(
+        TimestampWithTimezone.from_dict(
+            {
+                "timestamp": ts,
+                "offset": 120,
+                "negative_utc": False,
+            }
+        )
+    ) == ((123456, 1515), 120, b"+0200")
+
+    assert tabular.swh_date_to_tuple(
+        TimestampWithTimezone.from_dict(
+            {
+                "timestamp": ts,
+                "offset": 0,
+                "negative_utc": True,
+            }
+        )
+    ) == (
+        (123456, 1515),
+        0,
+        b"-0000",
+    )
 
 
 # mapping of related tables for each main table (if any)
