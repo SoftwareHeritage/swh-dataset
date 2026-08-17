@@ -44,10 +44,15 @@ ORC_TYPE_MAP = {
     "smallint": SmallInt,
     "int": Int,
     "bigint": BigInt,
+    # a guaranteed "reasonable" timestamp (minted by a SWH loader)
     "visit_timestamp": Timestamp,
+    # a possibly wild timestamp (seen in the wild).
+    # Unlike with Parquet's, ORC's native timestamp type can represent a superset
+    # of what SWH supports.
     "timestamp": Timestamp,
     "binary": Binary,
 }
+
 
 EXPORT_SCHEMA = {
     table_name: Struct(
