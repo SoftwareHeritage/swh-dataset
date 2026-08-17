@@ -276,8 +276,8 @@ class BaseTabularExporter(ExporterDispatch, Generic[Writer]):
         )
 
     def process_revision(self, revision: Revision):
-        release_writer = self.get_writer_for("revision")
-        release_writer.write(
+        revision_writer = self.get_writer_for("revision")
+        revision_writer.write(
             (
                 hash_to_hex_or_none(revision.id),
                 revision.message,
