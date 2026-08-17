@@ -106,7 +106,7 @@ class ParquetWriter(BaseWriter):
         self.writer.close()
 
     def __del__(self):
-        if self.buffers[0]:
+        if hasattr(self, "buffers") and self.buffers[0]:
             raise ValueError("ParquetWriter deleted without flushing")
 
 
