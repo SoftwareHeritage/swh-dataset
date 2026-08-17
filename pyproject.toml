@@ -1,12 +1,12 @@
 [project]
 name = "swh.export"
 authors = [
-    {name="Software Heritage developers", email="swh-devel@inria.fr"},
+    { name = "Software Heritage developers", email = "swh-devel@inria.fr" },
 ]
 
 description = "Software Heritage dataset tools"
-readme = {file = "README.rst", content-type = "text/x-rst"}
-requires-python = ">=3.9"
+readme = { file = "README.rst", content-type = "text/x-rst" }
+requires-python = ">=3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Intended Audience :: Developers",
@@ -16,15 +16,6 @@ classifiers = [
 ]
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
-[tool.setuptools.packages.find]
-include = ["swh.*"]
-
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt", "requirements-swh.txt"]}
-
-[tool.setuptools.dynamic.optional-dependencies]
-testing = {file = ["requirements-test.txt"]}
-with_content = {file = ["requirements-swh-with-content.txt"]}
 
 [project.entry-points."swh.cli.subcommands"]
 "swh.export" = "swh.export.cli"
@@ -37,14 +28,25 @@ with_content = {file = ["requirements-swh-with-content.txt"]}
 "Source" = "https://gitlab.softwareheritage.org/swh/devel/swh-export.git"
 
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-requirements-txt", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
-fallback_version = "0.0.1"
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ["requirements.txt", "requirements-swh.txt"]
+
+[tool.hatch.metadata.hooks.requirements_txt.optional-dependencies]
+testing = ["requirements-test.txt"]
+with_content = ["requirements-swh-with-content.txt"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["swh"]
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.1"
 
 [tool.black]
-target-version = ['py39', 'py310', 'py311', 'py312']
+target-version = ['py311', 'py312', 'py313']
 
 [tool.isort]
 multi_line_output = 3
@@ -67,9 +69,7 @@ plugins = ["luigi.mypy"]
 
 # 3rd party libraries without stubs (yet)
 [[tool.mypy.overrides]]
-module = [
-    "plyvel.*",
-]
+module = ["plyvel.*"]
 ignore_missing_imports = true
 
 [tool.flake8]
@@ -78,7 +78,7 @@ ignore = [
     "E203", # whitespaces before ':' <https://github.com/psf/black/issues/315>
     "E231", # missing whitespace after ','
     "E501", # line too long, use B950 warning from flake8-bugbear instead
-    "W503" # line break before binary operator <https://github.com/psf/black/issues/52>
+    "W503", # line break before binary operator <https://github.com/psf/black/issues/52>
 ]
 max-line-length = 88
 extend-exclude = ["build/"]

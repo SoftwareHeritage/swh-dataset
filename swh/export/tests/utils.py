@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, Sequence, Tuple
 
 import pyarrow
+import pyarrow.parquet
 import pyorc
 
 from swh.export.exporters import orc, tabular

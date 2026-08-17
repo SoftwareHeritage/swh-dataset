@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Set
 
 import click
 
-from swh.core.cli import CONTEXT_SETTINGS
+from swh.core.cli import CONTEXT_SETTINGS, setup_config
 from swh.core.cli import swh as swh_cli_group
 
 from .relational import MAIN_TABLES
@@ -24,6 +24,7 @@ from .relational import MAIN_TABLES
     "-C",
     default=None,
     type=click.Path(exists=True, dir_okay=False),
+    deprecated=True,
     help="Configuration file.",
 )
 @click.pass_context
@@ -34,13 +35,7 @@ def export_cli_group(ctx, config_file):
     various formats.
 
     """
-    from swh.core import config
-
-    ctx.ensure_object(dict)
-    if not config_file:
-        config_file = os.environ.get("SWH_CONFIG_FILENAME")
-    conf = config.read(config_file)
-    ctx.obj["config"] = conf
+    setup_config(ctx, config_file)
 
 
 @export_cli_group.group("graph")
