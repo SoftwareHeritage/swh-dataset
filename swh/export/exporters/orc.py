@@ -133,7 +133,7 @@ class ORCExporter(BaseTabularExporter[ORCWriter]):
         self.with_data = config.get("with_data", False)
         self.remove_pull_requests = config.get("remove_pull_requests", False)
 
-        self._init_arrow_exporter(config)
+        self._init_tabular_exporter(config)
 
     def new_writer_for(self, table_name: str, unique_id: uuid.UUID) -> ORCWriter:
         object_type_dir = self.export_path / table_name

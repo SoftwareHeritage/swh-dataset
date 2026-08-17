@@ -112,7 +112,7 @@ class BaseTabularExporter(ExporterDispatch, Generic[Writer]):
     with_data: bool
     max_rows: dict[str, int]
 
-    def _init_arrow_exporter(self, config):
+    def _init_tabular_exporter(self, config):
         invalid_tables = [
             table_name for table_name in self.max_rows if table_name not in MAIN_TABLES
         ]
