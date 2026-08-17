@@ -135,7 +135,9 @@ class ParquetExporter(BaseTabularExporter[ParquetWriter]):
             path,
             schema,
             compression="zstd",
-            bloom_filter_options={col: True for col in BLOOM_FILTER_COLUMNS},
+            bloom_filter_options={
+                col: True for col in BLOOM_FILTER_COLUMNS[table_name]
+            },
         )
         return ParquetWriter(schema, writer, table_name, unique_id)
 
@@ -154,6 +156,6 @@ class ParquetExporter(BaseTabularExporter[ParquetWriter]):
             path,
             schema,
             compression="zstd",
-            bloom_filter_options={col: True for col in BLOOM_FILTER_COLUMNS},
+            bloom_filter_options={"fullname": True, "sha256_fullname": True},
         )
         return ParquetWriter(schema, writer, table_name, unique_id)
