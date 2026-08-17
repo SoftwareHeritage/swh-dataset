@@ -118,9 +118,8 @@ class BaseTabularExporter(ExporterDispatch, Generic[Writer]):
         ]
         if invalid_tables:
             raise ValueError(
-                "Limiting the number of secondary table (%s) is not supported "
-                "for now.",
-                invalid_tables,
+                f"Limiting the number of secondary table ({invalid_tables}) "
+                f"is not supported yet",
             )
         self.objstorage = None
         if self.with_data:
