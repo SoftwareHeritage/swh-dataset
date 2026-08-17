@@ -700,12 +700,12 @@ class ExportPersonsTable(luigi.Task):
         logger = logging.getLogger(__name__)
 
         if self.local_sensitive_export_path is not None:
-            exporter_cls = dict(
+            exporter_classes = dict(
                 (fmt, importcls(clspath))
                 for (fmt, clspath) in cli.AVAILABLE_EXPORTERS.items()
             )
             for fmt in self.formats:
-                exporter_cls = exporter_cls[fmt.name]
+                exporter_cls = exporter_classes[fmt.name]
                 fullnames_export_path = (
                     self.local_sensitive_export_path / fmt.name / "person"
                 )
