@@ -66,13 +66,14 @@ The following configuration options can be used for the export:
 - ``max_rows``: a dictionary with table names are keys and maximum number
   of rows in each file of this table. Upon reaching this number of rows,
   the file it is closed and a new one is opened for the next rows.
-- ``remove_pull_requests``: remove all edges from origin to snapshot matching
+- ``remove_pull_requests``: a boolean indicating whether to remove all edges
+  from origin to snapshot matching
   ``refs/*`` but not matching ``refs/heads/*`` or ``refs/tags/*``. This removes
   all the pull requests that are present in Software Heritage (archived with
   ``git clone --mirror``).
-- ``with_data``: whether to include the data of ``Content`` nodes, instead of
-  only their checksum and length. This significantly increases the size of the
-  ``content`` table.
+- ``with_data``: a boolean indicating whether to include the data of ``Content``
+  nodes, instead of only their checksum and length.
+  This significantly increases the size of the ``content`` table.
 
 
 Uploading on S3 & on the annex
