@@ -5,7 +5,7 @@
 
 from importlib.metadata import version
 import logging
-from typing import Any, Callable, Optional, Type
+from typing import Any
 import uuid
 
 import pyarrow
@@ -13,16 +13,6 @@ import pyarrow.parquet
 
 from ..relational import BLOOM_FILTER_COLUMNS, TABLES
 from .tabular import BaseTabularExporter, BaseWriter
-
-ObjNotFoundError: Type[Exception]
-get_objstorage: Optional[Callable]
-try:
-    from swh.objstorage.factory import get_objstorage
-    from swh.objstorage.objstorage import ObjNotFoundError
-except ImportError:
-    get_objstorage = None
-    ObjNotFoundError = Exception  # helps keep mypy happy
-
 
 logger = logging.getLogger(__name__)
 

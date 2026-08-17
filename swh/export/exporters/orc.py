@@ -6,7 +6,7 @@
 import datetime
 from importlib.metadata import version
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
 import uuid
 
 from pyorc import (
@@ -25,16 +25,6 @@ from pyorc.converters import ORCConverter
 
 from ..relational import BLOOM_FILTER_COLUMNS, TABLES
 from .tabular import BaseTabularExporter, BaseWriter, datetime_to_tuple
-
-ObjNotFoundError: Type[Exception]
-get_objstorage: Optional[Callable]
-try:
-    from swh.objstorage.factory import get_objstorage
-    from swh.objstorage.objstorage import ObjNotFoundError
-except ImportError:
-    get_objstorage = None
-    ObjNotFoundError = Exception  # helps keep mypy happy
-
 
 logger = logging.getLogger(__name__)
 
