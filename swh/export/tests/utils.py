@@ -74,30 +74,30 @@ def load(exporter, rootdir: Path) -> Dict[str, Any]:
 
 def assert_origins_exported(
     origins: Sequence[model.Origin],
-    orc_origins: Sequence[Tuple[Any, ...]],
+    exported_origins: Sequence[Tuple[Any, ...]],
 ):
     for ori in origins:
         sha1 = hashlib.sha1(ori.url.encode()).hexdigest()
-        assert (sha1, ori.url) in orc_origins
+        assert (sha1, ori.url) in exported_origins
 
 
 def assert_origin_visits_exported(
     origin_visits: Sequence[model.OriginVisit],
-    orc_origin_visits: Sequence[Tuple[Any, ...]],
+    exported_origin_visits: Sequence[Tuple[Any, ...]],
 ):
-    assert len(origin_visits) == len(orc_origin_visits)
+    assert len(origin_visits) == len(exported_origin_visits)
     for visit in origin_visits:
         assert (
             visit.origin,
             visit.visit,
             tabular.datetime_to_tuple(visit.date),
             visit.type,
-        ) in orc_origin_visits
+        ) in exported_origin_visits
 
 
 def assert_origin_visit_statuses_exported(
     origin_visit_statuses: Sequence[model.OriginVisitStatus],
-    orc_origin_visit_statuses: Sequence[Tuple[Any, ...]],
+    exported_origin_visit_statuses: Sequence[Tuple[Any, ...]],
 ):
     for visit_status in origin_visit_statuses:
         assert (
@@ -107,16 +107,16 @@ def assert_origin_visit_statuses_exported(
             visit_status.status,
             hash_to_hex_or_none(visit_status.snapshot),
             visit_status.type,
-        ) in orc_origin_visit_statuses
+        ) in exported_origin_visit_statuses
 
 
 def assert_snapshots_exported(
     snapshots: Sequence[model.Snapshot],
-    orc_snapshots: Sequence[Tuple[Any, ...]],
-    orc_snapshot_branches: Sequence[Tuple[Any, ...]],
+    exported_snapshots: Sequence[Tuple[Any, ...]],
+    exported_snapshot_branches: Sequence[Tuple[Any, ...]],
 ):
     for snp in snapshots:
-        assert (hash_to_hex_or_none(snp.id),) in orc_snapshots
+        assert (hash_to_hex_or_none(snp.id),) in exported_snapshots
         for branch_name, branch in snp.branches.items():
             if branch is None:
                 continue
@@ -125,12 +125,12 @@ def assert_snapshots_exported(
                 branch_name,
                 hash_to_hex_or_none(branch.target),
                 str(branch.target_type.value),
-            ) in orc_snapshot_branches
+            ) in exported_snapshot_branches
 
 
 def assert_releases_exported(
     releases: Sequence[model.Release],
-    orc_releases: Sequence[Tuple[Any, ...]],
+    exported_releases: Sequence[Tuple[Any, ...]],
 ):
     for rel in releases:
         assert (
@@ -142,13 +142,13 @@ def assert_releases_exported(
             rel.author.fullname if rel.author else None,
             *tabular.swh_date_to_tuple(getattr(rel, "date", None)),
             rel.raw_manifest,
-        ) in orc_releases
+        ) in exported_releases
 
 
 def assert_revisions_exported(
     revisions: Sequence[model.Revision],
-    orc_revisions: Sequence[Tuple[Any, ...]],
-    orc_revisions_history: Sequence[Tuple[Any, ...]],
+    exported_revisions: Sequence[Tuple[Any, ...]],
+    exported_revisions_history: Sequence[Tuple[Any, ...]],
 ):
     for rev in revisions:
         assert (
@@ -161,22 +161,22 @@ def assert_revisions_exported(
             hash_to_hex_or_none(rev.directory),
             rev.type.value,
             rev.raw_manifest,
-        ) in orc_revisions
+        ) in exported_revisions
         for i, parent in enumerate(rev.parents):
             assert (
                 hash_to_hex_or_none(rev.id),
                 hash_to_hex_or_none(parent),
                 i,
-            ) in orc_revisions_history
+            ) in exported_revisions_history
 
 
 def assert_directories_exported(
     directories: Sequence[model.Directory],
-    orc_directories: Sequence[Tuple[Any, ...]],
-    orc_directories_entries: Sequence[Tuple[Any, ...]],
+    exported_directories: Sequence[Tuple[Any, ...]],
+    exported_directories_entries: Sequence[Tuple[Any, ...]],
 ):
     for dir_ in directories:
-        assert (hash_to_hex_or_none(dir_.id), dir_.raw_manifest) in orc_directories
+        assert (hash_to_hex_or_none(dir_.id), dir_.raw_manifest) in exported_directories
         for entry in dir_.entries:
             assert (
                 hash_to_hex_or_none(dir_.id),
@@ -184,12 +184,12 @@ def assert_directories_exported(
                 entry.type,
                 hash_to_hex_or_none(entry.target),
                 entry.perms,
-            ) in orc_directories_entries
+            ) in exported_directories_entries
 
 
 def assert_contents_exported(
     contents: Sequence[model.Content],
-    orc_contents: Sequence[Tuple[Any, ...]],
+    exported_contents: Sequence[Tuple[Any, ...]],
 ):
     for cnt in contents:
         assert (
@@ -200,12 +200,12 @@ def assert_contents_exported(
             cnt.length,
             cnt.status,
             None,
-        ) in orc_contents
+        ) in exported_contents
 
 
 def assert_skipped_contents_exported(
     skipped_contents: Sequence[model.SkippedContent],
-    orc_skipped_contents: Sequence[Tuple[Any, ...]],
+    exported_skipped_contents: Sequence[Tuple[Any, ...]],
 ):
     for cnt in skipped_contents:
         assert (
@@ -216,4 +216,4 @@ def assert_skipped_contents_exported(
             cnt.length,
             cnt.status,
             cnt.reason,
-        ) in orc_skipped_contents
+        ) in exported_skipped_contents
