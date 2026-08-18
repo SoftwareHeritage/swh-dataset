@@ -855,6 +855,7 @@ class ExportGraph(luigi.Task):
             "flavor": "full",
             "export_start": start_date.isoformat(),
             "export_end": end_date.isoformat(),
+            "export_name": self.export_name,
             "brokers": conf["journal"]["brokers"],
             "prefix": conf["journal"]["prefix"],
             "formats": [format_.name for format_ in self.formats],
