@@ -26,8 +26,8 @@ ARROW_TYPE_MAP = {
     # a possibly wild timestamp (seen in the wild)
     "timestamp": pyarrow.struct(
         [
-            ("seconds", pyarrow.int64()),
-            ("nanoseconds", pyarrow.uint32()),
+            pyarrow.field("seconds", pyarrow.int64(), nullable=False),
+            pyarrow.field("nanoseconds", pyarrow.uint32(), nullable=False),
         ]
     ),
     "binary": pyarrow.binary(),
