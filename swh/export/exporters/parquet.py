@@ -22,7 +22,7 @@ ARROW_TYPE_MAP = {
     "int": pyarrow.int32(),
     "bigint": pyarrow.int64(),
     # a guaranteed "reasonable" timestamp (minted by a SWH loader)
-    "visit_timestamp": pyarrow.timestamp("us", tz="UTC"),
+    "visit_timestamp": pyarrow.timestamp("us"),
     # a possibly wild timestamp (seen in the wild)
     "timestamp": pyarrow.struct(
         [
