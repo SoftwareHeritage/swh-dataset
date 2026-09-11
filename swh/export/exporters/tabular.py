@@ -60,6 +60,7 @@ def hash_to_hex_or_none(hash):
 def swh_date_to_tuple(
     obj: Optional[TimestampWithTimezone],
 ) -> Union[Tuple[None, None, None], Tuple[Tuple[int, int], int, bytes]]:
+    """Returns ((seconds, microseconds), offset_minutes, offset_bytes)"""
     if obj is None or obj.timestamp is None:
         return (None, None, None)
     return (
@@ -70,6 +71,7 @@ def swh_date_to_tuple(
 
 
 def datetime_to_tuple(obj: Optional[datetime]) -> Optional[Tuple[int, int]]:
+    """Returns (seconds, microseconds)"""
     if obj is None:
         return None
     return (math.floor(obj.timestamp()), obj.microsecond)
