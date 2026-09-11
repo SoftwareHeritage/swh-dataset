@@ -5,17 +5,22 @@
 
 """Tests for the ORC and Parquet exporters"""
 
+import base64
 from contextlib import contextmanager
+import csv
+import hashlib
 import math
 from pathlib import Path
 import tempfile
 from typing import Any
+import uuid
 
 import pyarrow.parquet
 import pyorc
 import pytest
 
 from swh.export.exporters import orc, parquet, tabular
+from swh.export.fullnames import process_fullnames
 from swh.export.relational import MAIN_TABLES, RELATION_TABLES
 from swh.model.model import (
     Content,
@@ -90,11 +95,6 @@ def export(
                         for obj in objects:
                             exporter.process_object(object_type, obj)
                 yield tmpdir
-
-
-@pytest.fixture(params=["orc", "parquet"])
-def exporter_name(request):
-    return request.param
 
 
 @pytest.fixture
@@ -411,3 +411,32 @@ def test_export_content_with_data(exporter, monkeypatch, tmpdir):
             obj.status,
             obj.data,
         ) in output[obj_type.value]
+
+
+def test_export_persons(exporter_name, tmpdir):
+    exporter_cls = {"orc": orc.ORCExporter, "parquet": parquet.ParquetExporter}[
+        exporter_name
+    ]
+    sensitive_path = Path(tmpdir) / "sensitive" / exporter_name
+    (sensitive_path / "person").mkdir(parents=True)
+
+    dedup_dir = Path(tmpdir) / "dedup_persons"
+    dedup_dir.mkdir()
+    fullnames = [b"Alice", b"Alice", b"Bob", b"Carol"]
+    expected = {(fullname, hashlib.sha256(fullname).digest()) for fullname in fullnames}
+    with (dedup_dir / "persons.csv").open("w") as f:
+        writer = csv.writer(f)
+        for fullname in fullnames:
+            writer.writerow(
+                [
+                    base64.b64encode(fullname).decode(),
+                    base64.b64encode(hashlib.sha256(fullname).digest()).decode(),
+                ]
+            )
+
+    with exporter_cls({}, [], sensitive_path) as exporter:
+        writer = exporter.new_person_writer(uuid.uuid4())
+        process_fullnames(writer, dedup_dir)
+
+    exported = load(exporter_name, sensitive_path)
+    assert sorted(exported["person"]) == sorted(expected)

@@ -62,7 +62,12 @@ def load(exporter, rootdir: Path) -> Dict[str, Any]:
                         if isinstance(d, dict):
                             return tuple(map(to_tuple, d.values()))
                         elif isinstance(d, datetime.datetime):
-                            return datetime_to_tuple(d)
+                            # Parquet timestamps are stored as naive UTC; the
+                            # original datetimes are tz-aware UTC, so attach UTC
+                            # to compare with the expected instants.
+                            return datetime_to_tuple(
+                                d.replace(tzinfo=datetime.timezone.utc)
+                            )
                         else:
                             return d
 

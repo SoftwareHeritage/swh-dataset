@@ -70,11 +70,11 @@ def test_cli_graph_export(
     journal_writer,
     cli_runner,
     tmp_path,
+    exporter_name,
     objects,
     object_type,
     assert_objects_exported,
 ):
-
     journal_writer.write_additions(object_type, objects)
 
     config_path = tmp_path / "export_config.yml"
@@ -97,6 +97,8 @@ def test_cli_graph_export(
             f"test-{object_type}",
             "--export-name",
             object_type,
+            "--formats",
+            exporter_name,
             "--types",
             object_type,
             str(export_path),
@@ -105,17 +107,17 @@ def test_cli_graph_export(
     )
     assert result.exit_code == 0, result.output
 
-    orcs = load("orc", export_path / "orc")
+    exported = load(exporter_name, export_path / exporter_name)
 
-    assert object_type in orcs
+    assert object_type in exported
 
-    assert_params = [objects, orcs[object_type]]
+    assert_params = [objects, exported[object_type]]
 
     if object_type == "directory":
-        assert_params.append(orcs["directory_entry"])
+        assert_params.append(exported["directory_entry"])
     elif object_type == "revision":
-        assert_params.append(orcs["revision_history"])
+        assert_params.append(exported["revision_history"])
     elif object_type == "snapshot":
-        assert_params.append(orcs["snapshot_branch"])
+        assert_params.append(exported["snapshot_branch"])
 
     assert_objects_exported(*assert_params)
