@@ -69,7 +69,7 @@ plugins = ["luigi.mypy"]
 
 # 3rd party libraries without stubs (yet)
 [[tool.mypy.overrides]]
-module = ["plyvel.*"]
+module = ["plyvel.*", "pyarrow.*"]
 ignore_missing_imports = true
 
 [tool.flake8]

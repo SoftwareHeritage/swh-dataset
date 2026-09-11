@@ -48,6 +48,7 @@ def graph(ctx):
 AVAILABLE_EXPORTERS = {
     "edges": "swh.export.exporters.edges:GraphEdgesExporter",
     "orc": "swh.export.exporters.orc:ORCExporter",
+    "parquet": "swh.export.exporters.parquet:ParquetExporter",
 }
 
 

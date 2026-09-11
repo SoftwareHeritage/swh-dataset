@@ -8,6 +8,11 @@ import pytest
 from swh.journal.writer import get_journal_writer
 
 
+@pytest.fixture(params=["orc", "parquet"])
+def exporter_name(request):
+    return request.param
+
+
 @pytest.fixture
 def journal_client_config(
     kafka_server: str, kafka_prefix: str, kafka_consumer_group: str
