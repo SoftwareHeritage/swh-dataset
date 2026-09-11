@@ -164,7 +164,7 @@ def merge_lists(lists: Iterable[List[T]]) -> List[T]:
     return list(res)
 
 
-def importcls(clspath):
+def _importcls(clspath):
     from importlib import import_module
 
     mod, cls = clspath.split(":")
@@ -548,7 +548,7 @@ class ExportTopic(luigi.Task):
         )
 
         exporter_classes = dict(
-            (fmt, importcls(clspath))
+            (fmt, _importcls(clspath))
             for (fmt, clspath) in cli.AVAILABLE_EXPORTERS.items()
         )
         exporter_cls = {fmt.name: exporter_classes[fmt.name] for fmt in self.formats}
@@ -705,7 +705,7 @@ class ExportPersonsTable(luigi.Task):
 
         if self.local_sensitive_export_path is not None:
             exporter_classes = dict(
-                (fmt, importcls(clspath))
+                (fmt, _importcls(clspath))
                 for (fmt, clspath) in cli.AVAILABLE_EXPORTERS.items()
             )
             for fmt in self.formats:
