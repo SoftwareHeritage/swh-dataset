@@ -709,6 +709,9 @@ class ExportPersonsTable(luigi.Task):
                 for (fmt, clspath) in cli.AVAILABLE_EXPORTERS.items()
             )
             for fmt in self.formats:
+                if fmt.name == "edges":
+                    continue
+
                 exporter = exporter_classes[fmt.name](
                     config=config,
                     object_types=[],
