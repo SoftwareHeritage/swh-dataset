@@ -63,10 +63,17 @@ example configuration file::
 
 The following configuration options can be used for the export:
 
-- ``remove_pull_requests``: remove all edges from origin to snapshot matching
+- ``max_rows``: a dictionary associating tables' names to their maximum number
+  of rows per file. Upon reaching this number of rows,
+  a file is closed and a new one is opened for the next rows.
+- ``remove_pull_requests``: a boolean indicating whether to remove all edges
+  from origin to snapshot matching
   ``refs/*`` but not matching ``refs/heads/*`` or ``refs/tags/*``. This removes
   all the pull requests that are present in Software Heritage (archived with
   ``git clone --mirror``).
+- ``with_data``: a boolean indicating whether to include the data of ``Content``
+  nodes, instead of only their checksum and length.
+  This significantly increases the size of the ``content`` table.
 
 
 Uploading on S3 & on the annex
