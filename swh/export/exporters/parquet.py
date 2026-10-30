@@ -11,7 +11,7 @@ import uuid
 import pyarrow
 import pyarrow.parquet
 
-from ..relational import BLOOM_FILTER_COLUMNS, TABLES
+from ..relational import TABLES
 from .tabular import BaseTabularExporter, BaseWriter
 
 logger = logging.getLogger(__name__)
@@ -125,9 +125,13 @@ class ParquetExporter(BaseTabularExporter[ParquetWriter]):
             path,
             schema,
             compression="zstd",
-            bloom_filter_options={
-                col: True for col in BLOOM_FILTER_COLUMNS[table_name]
-            },
+            # We can't enable Bloom Filters, because Arrow C++ does not currently
+            # support spilling to disk or writing them in the middle of a file,
+            # so it takes terabytes of RAM to store them while writing. See:
+            # https://github.com/apache/arrow/blob/5585e501e2593b1c12ca688a7fdb160df0f07161/cpp/src/parquet/file_writer.cc
+            # bloom_filter_options={
+            #    col: True for col in BLOOM_FILTER_COLUMNS[table_name]
+            # },
         )
         return ParquetWriter(schema, writer, table_name, unique_id)
 
