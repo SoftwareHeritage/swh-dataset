@@ -292,7 +292,7 @@ def test_export_related_files(
                 uuid = orc_reader.user_metadata["swh_uuid"].decode()
                 assert path.basename == f"{obj_type}-{uuid}.orc"
                 orc_rows = list(orc_reader)
-                obj_ids = [row[0] for row in orc_rows]  # type: ignore[index]
+                obj_ids = [row[0] for row in orc_rows]
 
             # check the related tables
             for related in RELATED.get(obj_type.value, ()):
@@ -308,7 +308,7 @@ def test_export_related_files(
                     orc_rows = list(orc_reader)
                     # check branches in this file only concern current snapshot (obj_id)
                     for row in orc_rows:
-                        assert row[0] in obj_ids  # type: ignore[index]
+                        assert row[0] in obj_ids
     else:
         assert exporter_name == "parquet"
         if obj_type == ModelObjectType.SNAPSHOT:
