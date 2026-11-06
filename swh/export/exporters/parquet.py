@@ -77,7 +77,7 @@ class ParquetWriter(BaseWriter):
 
         self._current_row += 1
 
-        if len(buf) > 1024:
+        if len(buf) > 1_000_000:
             self.flush()
 
     def flush(self) -> None:
